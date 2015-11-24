@@ -23,10 +23,14 @@ More about Maven: https://maven.apache.org/
 
 Configuration (configuration.properties file)
 -
-`spgroup.task.file.path`:  Task file's path. By default, its value is <b>tasks.csv</b>. 
+`spgroup.task.file.path`:  Task file's path. By default, its value is <b>tasks.csv</b>.
+
 `spgroup.task.repositories.path`: Repositories folder's path. By default, its value is <b>repositories</b>.
+
 `spgroup.task.interface.path.test`: Test code's path. By default, its value is the common one used in Cucumber and RSpec projects.
+
 `spgroup.task.interface.path.toignore`: Files or folders to ignore when classifying production and test code.
+
 
 Execution
 -

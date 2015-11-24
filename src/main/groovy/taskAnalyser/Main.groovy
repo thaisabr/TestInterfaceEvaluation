@@ -1,12 +1,9 @@
 package taskAnalyser
 
-import util.Util
-
-
 class Main {
 
     public static void main(String[] args){
-        def tasks = TaskSearchManager.extractProductionAndTestTasks(Util.TASKS_FILE)
+        List<Task> tasks = TaskSearchManager.extractProductionAndTestTasks()
         println "number of tasks: ${tasks.size()}"
 
         def tasksChangingAcceptanceTest = TaskSearchManager.extractAcceptanceTestsForTasks(tasks)

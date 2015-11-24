@@ -7,26 +7,6 @@ import util.Util
 
 class TaskSearchManager {
 
-    private static List<Task> extractProductionAndTestTasks(String csvPath){
-        List<Task> tasks = []
-        CSVReader reader = new CSVReader(new FileReader(csvPath))
-        List<String[]> entries = reader.readAll()
-        reader.close()
-        entries.remove(0) //ignore header
-
-        //"index","repository_url","task_id","commits_hash","changed_production_files","changed_test_files","commits_message"
-        List<String[]> relevantEntries = entries.findAll{ !it[4].equals("[]") && !it[5].equals("[]") }
-
-        relevantEntries.each { entry ->
-            List<Commit> commits = []
-            def hashes = entry[3].tokenize(',[]')*.trim()
-            hashes.each { commits += new Commit(hash: it) }
-            tasks += new Task(repositoryIndex: entry[0], repositoryUrl: entry[1], id: entry[2], commits: commits,
-                        productionFiles: entry[4].tokenize(',[]')*.trim(), testFiles: entry[5].tokenize(',[]')*.trim())
-        }
-        return tasks
-    }
-
     private static List<GitRepository> downloadRepositories(List<Task> tasks){
         List<GitRepository> repositories = []
         def urls = tasks*.repositoryUrl.unique()
@@ -47,7 +27,27 @@ class TaskSearchManager {
         return commitsChangedGherkinFile
     }
 
-    private static List<Task> extractAcceptanceTestsForTasks(List<Task> tasks){
+    public static List<Task> extractProductionAndTestTasks(){
+        List<Task> tasks = []
+        CSVReader reader = new CSVReader(new FileReader(Util.TASKS_FILE))
+        List<String[]> entries = reader.readAll()
+        reader.close()
+        entries.remove(0) //ignore header
+
+        //"index","repository_url","task_id","commits_hash","changed_production_files","changed_test_files","commits_message"
+        List<String[]> relevantEntries = entries.findAll{ !it[4].equals("[]") && !it[5].equals("[]") }
+
+        relevantEntries.each { entry ->
+            List<Commit> commits = []
+            def hashes = entry[3].tokenize(',[]')*.trim()
+            hashes.each { commits += new Commit(hash: it) }
+            tasks += new Task(repositoryIndex: entry[0], repositoryUrl: entry[1], id: entry[2], commits: commits,
+                        productionFiles: entry[4].tokenize(',[]')*.trim(), testFiles: entry[5].tokenize(',[]')*.trim())
+        }
+        return tasks
+    }
+
+    public static List<Task> extractAcceptanceTestsForTasks(List<Task> tasks){
         List<GitRepository> repositories = downloadRepositories(tasks)
 
         tasks?.each{ task ->

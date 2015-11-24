@@ -1,7 +1,7 @@
 Test Interface Evaluation
 ==========
 
-Groovy code to support an evaluation study for a test-based approach to compute task interface.
+Groovy code to support an evaluation study of a test-based approach for compute task interface.
 
 Such an approach deals with GitHub repositories using Gherkin-based acceptance test tool (like <b>Cucumber</b>) that maintain a link among tasks and code changes. Such a link is defined by the occurrence of task ID in commit messages. That is, if it possible to identify changes at the production code and at the test code related to a same task, which in turn is identified by an ID.
 The task is a programming activity, such as the development of a new feature, a feature change, bug fix or refactoring.

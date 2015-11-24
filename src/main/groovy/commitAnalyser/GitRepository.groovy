@@ -33,7 +33,7 @@ class GitRepository {
     public GitRepository(String url){
         this.url = url + Util.GIT_EXTENSION
         this.name = Util.configureGitRepositoryName(url)
-        this.localPath = Util.REPOSITORY_FOLDER_NAME + name
+        this.localPath = Util.REPOSITORY_FOLDER_PATH + name
         this.git = checkoutRepository()
         this.reader = git.repository.newObjectReader()
     }
@@ -84,7 +84,7 @@ class GitRepository {
         //return stream.toString().split(System.lineSeparator())
     }
 
-    private List<CodeChange> extractAllCodeChangeFromDiffs(List<DiffEntry> diffs) {
+    private static List<CodeChange> extractAllCodeChangeFromDiffs(List<DiffEntry> diffs) {
         List<CodeChange> codeChanges = []
         if (!diffs?.empty) {
             diffs.each{ entry ->
@@ -179,7 +179,7 @@ class GitRepository {
         List<String> fileContent = extractFileContent(commitID, filename)
         fileContent.eachWithIndex { line, i ->
             RevCommit c = blameResult?.getSourceCommit(i)
-            if(c?.name.equals(hash)) changedLines += i
+            if(c?.name?.equals(hash)) changedLines += i
         }
 
         return changedLines
@@ -238,7 +238,7 @@ class GitRepository {
         commits.each { commit ->
             commit.gherkinChanges.each { change ->
                 change.lines = extractChangedLines(commit.hash, change)
-                def path = Util.REPOSITORY_FOLDER_PATH+File.separator+localPath+File.separator+change.filename
+                def path = localPath+File.separator+change.filename
                 scenarios += ParserGherkinJson.extractScenariosByLine(path, *change.lines)
             }
         }

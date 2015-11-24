@@ -16,8 +16,7 @@ class Util {
 
     static final String JSON_PATH = "json${File.separator}"
     static final String REPOSITORY_FOLDER_PATH
-    static final String REPOSITORY_FOLDER_NAME = "repositories${File.separator}"
-    static final String TASKS_FILE = "input${File.separator}tasks.csv"
+    static final String TASKS_FILE
 
     static final String PROPERTIES_FILE_NAME = "configuration.properties"
     static final Properties properties
@@ -31,6 +30,7 @@ class Util {
         regex_testCode = configureTestCodeRegex()
         excludedPath = configureExcludedPath()
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
+        TASKS_FILE = configureTasksFilePath()
     }
 
     private static loadProperties(){
@@ -39,10 +39,20 @@ class Util {
         properties.load(is)
     }
 
+    private static configureTasksFilePath(){
+        String value = properties.'spgroup.task.file.path'
+        if(value!=null && !value.isEmpty()) return value.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        else return "tasks.csv"
+    }
+
     private static configureRepositoryFolderPath(){
         String value = properties.'spgroup.task.repositories.path'
-        if(value!=null && !value.isEmpty()) return value.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        else return REPOSITORY_FOLDER_NAME
+        if(value!=null && !value.isEmpty()){
+            value = value.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+            if(!value.endsWith(File.separator)) value += File.separator
+        }
+        else value = "repositories${File.separator}"
+        return value
     }
 
     private static configureExcludedPath(){
@@ -94,7 +104,7 @@ class Util {
     }
 
     static String configureGitRepositoryName(String url){
-        String name = url - Util.GITHUB_URL - Util.GIT_EXTENSION
+        String name = url - GITHUB_URL - GIT_EXTENSION
         return name.replaceAll("/", "_")
     }
 }

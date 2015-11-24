@@ -21,6 +21,8 @@ class ParserGherkinJson {
     }
 
     private static void generateJson(StringBuilder json, String jsonPath){
+        File dir = new File(Util.JSON_PATH)
+        if(!dir.exists()) dir.mkdir()
         FileWriter file = new FileWriter(jsonPath)
         file.write(json.toString())
         file.flush()

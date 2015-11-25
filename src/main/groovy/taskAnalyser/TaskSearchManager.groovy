@@ -47,7 +47,7 @@ class TaskSearchManager {
         return tasks
     }
 
-    public static List<Task> extractAcceptanceTestsForTasks(List<Task> tasks){
+    public static List<Task> findAllTasksChangingGherkinFile(List<Task> tasks){
         List<GitRepository> repositories = downloadRepositories(tasks)
 
         tasks?.each{ task ->
@@ -55,15 +55,15 @@ class TaskSearchManager {
             task.commits = gitRepository.searchBySha(*(task.commits*.hash))
             List<Commit> commitsChangedGherkinFile = identifyChangedGherkinFiles(task)
             if(commitsChangedGherkinFile.isEmpty()){
-                task.scenarios = []
+                task.changedGherkinFiles = []
             }
             else{
-                task.scenarios = gitRepository.extractScenariosFromCommit(commitsChangedGherkinFile)
+                gitRepository.extractFeaturesFromCommit(task, commitsChangedGherkinFile)
             }
 
         }
 
-        return tasks?.findAll{ !it.scenarios.isEmpty() }
+        return tasks?.findAll{ !it.changedGherkinFiles.isEmpty() }
     }
 
 }

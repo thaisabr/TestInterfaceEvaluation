@@ -1,7 +1,8 @@
 package commitAnalyser
 
-import gherkinParser.ParserGherkinJson
-import gherkinParser.Scenario
+import gherkin.Parser
+import gherkin.ast.Feature
+import taskAnalyser.GherkinFile
 import org.eclipse.jgit.api.BlameCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.blame.BlameResult
@@ -17,6 +18,7 @@ import org.eclipse.jgit.revwalk.RevTree
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.PathFilter
+import taskAnalyser.Task
 import util.Util
 
 import java.util.regex.Matcher
@@ -232,18 +234,27 @@ class GitRepository {
      * @param commits
      * @return
      */
-    List<Scenario> extractScenariosFromCommit(List<Commit> commits) {
-        Set<Scenario> scenarios = []
+    def extractFeaturesFromCommit(Task task, List<Commit> commits) {
+        Parser<Feature> featureParser = new Parser<>()
+        task.changedGherkinFiles = []
 
         commits.each { commit ->
             commit.gherkinChanges.each { change ->
                 change.lines = extractChangedLines(commit.hash, change)
                 def path = localPath+File.separator+change.filename
-                scenarios += ParserGherkinJson.extractScenariosByLine(path, *change.lines)
+                try{
+                    Feature feature = featureParser.parse(new FileReader(path))
+                    def changedScenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line in change.lines }
+                    if(changedScenarioDefinitions){
+                        task.changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
+                                feature:feature, changedScenarioDefinitions:changedScenarioDefinitions)
+                    }
+
+                } catch(FileNotFoundException ex){
+                    println "Problem to parse Gherkin file: ${ex.message}"
+                }
             }
         }
-
-        return scenarios as List
     }
 
 }

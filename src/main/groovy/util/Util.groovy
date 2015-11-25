@@ -10,11 +10,9 @@ class Util {
     static final NEW_LINE_REGEX = /\r\n|\n/
 
     static final String FEATURE_FILENAME_EXTENSION = ".feature"
-    static final String JSON_FILENAME_EXTENSION = ".json"
     static final String GIT_EXTENSION = ".git"
     static final String GITHUB_URL = "https://github.com/";
 
-    static final String JSON_PATH = "json${File.separator}"
     static final String REPOSITORY_FOLDER_PATH
     static final String TASKS_FILE
 
@@ -94,13 +92,6 @@ class Util {
     static boolean isTestCode(String path){
         if( !(excludedPath).any{ path.contains(it)} && path==~/$regex_testCode/ ) true
         else false
-    }
-
-    static String getJsonFileName(String path){
-        def beginIndex = path.lastIndexOf(File.separator)
-        def name = path.substring(beginIndex+1)
-        def jsonName = JSON_PATH + (name - FEATURE_FILENAME_EXTENSION) + JSON_FILENAME_EXTENSION
-        return jsonName
     }
 
     static String configureGitRepositoryName(String url){

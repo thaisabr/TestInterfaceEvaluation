@@ -1,7 +1,6 @@
 package taskAnalyser
 
 import commitAnalyser.Commit
-import gherkinParser.Scenario
 import util.Util
 
 
@@ -13,7 +12,7 @@ class Task {
     List<Commit> commits
     List<String> productionFiles
     List<String> testFiles
-    List<Scenario> scenarios
+    List<GherkinFile> changedGherkinFiles
 
     public Task(){
 
@@ -26,6 +25,7 @@ class Task {
         commits = []
         productionFiles = []
         testFiles = []
+        changedGherkinFiles = []
     }
 
     public Task(String index, String url, String id, List<Commit> commits){

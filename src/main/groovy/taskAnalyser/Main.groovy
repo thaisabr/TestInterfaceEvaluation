@@ -6,14 +6,19 @@ class Main {
         List<Task> tasks = TaskSearchManager.extractProductionAndTestTasks()
         println "number of tasks: ${tasks.size()}"
 
-        def tasksChangingAcceptanceTest = TaskSearchManager.extractAcceptanceTestsForTasks(tasks)
-        println "number of tasks that changed acceptance test: ${tasksChangingAcceptanceTest.size()}"
-        tasksChangingAcceptanceTest.each{ t ->
+        def tasksChangingGherkinFile = TaskSearchManager.findAllTasksChangingGherkinFile(tasks)
+        println "number of tasks that changed Gherkin files: ${tasksChangingGherkinFile.size()}"
+        tasksChangingGherkinFile.each{ t ->
             println "task id: ${t.id}"
-            println "scenarios: "
-            t.scenarios.each{ scen ->
-                println scen
+            t.changedGherkinFiles.each{ gherkinFile ->
+                println "Gherkin file: ${gherkinFile.path}"
+                println "Feature: ${gherkinFile.feature.name}"
+                println "Changed scenario definitions: "
+                gherkinFile.changedScenarioDefinitions.each{ definition ->
+                    println "Scenario (line ${definition.location.line}): ${definition.name}"
+                }
             }
+
         }
 
     }

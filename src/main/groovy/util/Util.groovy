@@ -15,6 +15,8 @@ class Util {
 
     static final String REPOSITORY_FOLDER_PATH
     static final String TASKS_FILE
+    static final String GHERKIN_FILES_RELATIVE_PATH
+    static final String STEPS_FILES_RELATIVE_PATH
 
     static final String PROPERTIES_FILE_NAME = "configuration.properties"
     static final Properties properties
@@ -29,6 +31,10 @@ class Util {
         excludedPath = configureExcludedPath()
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
         TASKS_FILE = configureTasksFilePath()
+        GHERKIN_FILES_RELATIVE_PATH = (properties.'spgroup.gherkin.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+                Matcher.quoteReplacement(File.separator))
+        STEPS_FILES_RELATIVE_PATH = (properties.'spgroup.steps.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+                Matcher.quoteReplacement(File.separator))
     }
 
     private static loadProperties(){
@@ -77,13 +83,25 @@ class Util {
                 Matcher.quoteReplacement(File.separator)+Matcher.quoteReplacement(File.separator))
     }
 
-    static List getProductionFiles(List<CodeChange> changes){
+    static List findAllProductionFiles(List<String> files){
+        files?.findAll{ file ->
+            !(excludedPath).any{ file.contains(it)} && !isTestCode(file)
+        }
+    }
+
+    static List findAllProductionFilesFromCodeChanges(List<CodeChange> changes){
         changes?.findAll{ change ->
             !(excludedPath).any{ change.filename.contains(it)} && !isTestCode(change.filename)
         }
     }
 
-    static List getTestFiles(List<CodeChange> changes){
+    static List findAllTestFiles(List<String> files){
+        files?.findAll{ file ->
+            isTestCode(file)
+        }
+    }
+
+    static List findAllTestFilesFromCodeChanges(List<CodeChange> changes){
         changes?.findAll{ change ->
             isTestCode(change.filename)
         }
@@ -98,4 +116,21 @@ class Util {
         String name = url - GITHUB_URL - GIT_EXTENSION
         return name.replaceAll("/", "_")
     }
+
+    static List<String> findFilesFromDirectory(String directory){
+        def f = new File(directory)
+        def files = []
+        f.eachDirRecurse{ dir ->
+            dir.listFiles().each{
+                if(it.isFile()){
+                    files += it.absolutePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+                }
+            }
+        }
+        f.eachFile{
+            files += it.absolutePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        }
+        files
+    }
+
 }

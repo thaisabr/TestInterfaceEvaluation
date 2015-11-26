@@ -18,12 +18,13 @@ import org.eclipse.jgit.revwalk.RevTree
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.PathFilter
-import taskAnalyser.Task
 import util.Util
 
 import java.util.regex.Matcher
 
-
+/***
+ * Represents a git repository to be downloaded for analysis purpose.
+ */
 class GitRepository {
 
     String url
@@ -79,11 +80,10 @@ class GitRepository {
         DiffFormatter formatter = new DiffFormatter(stream)
         formatter.setRepository(git.repository)
         formatter.setDetectRenames(true)
-        formatter.setContext(1) //identifica quantas linhas serão mostradas antes e depois das linhas alteradas
+        formatter.setContext(1)
         formatter.format(entry)
         println "DIFF: "
         println stream
-        //return stream.toString().split(System.lineSeparator())
     }
 
     private static List<CodeChange> extractAllCodeChangeFromDiffs(List<DiffEntry> diffs) {
@@ -160,8 +160,8 @@ class GitRepository {
         def commits = []
         logs.each{ c ->
             List<CodeChange> codeChanges = extractAllCodeChangesFromCommit(c)
-            List<CodeChange> prodFiles = Util.getProductionFiles(codeChanges)
-            List<CodeChange> testFiles = Util.getTestFiles(codeChanges)
+            List<CodeChange> prodFiles = Util.findAllProductionFilesFromCodeChanges(codeChanges)
+            List<CodeChange> testFiles = Util.findAllTestFilesFromCodeChanges(codeChanges)
             commits += new Commit(hash:c.name, message:c.fullMessage.replaceAll(Util.NEW_LINE_REGEX," "),
                     author:c.authorIdent.name, date:c.commitTime, productionChanges: prodFiles,
                     testChanges: testFiles, codeChanges: (prodFiles+testFiles).unique())
@@ -169,7 +169,7 @@ class GitRepository {
         return commits
     }
 
-    //* Oen problem: Deal with removed lines. */
+    //* PROBLEM: Deal with removed lines. */
     private List<Integer> computeChanges(ObjectId commitID, String hash, String filename){
         def changedLines = []
 
@@ -189,7 +189,7 @@ class GitRepository {
 
     /* Important: DiffEntry.ChangeType.RENAME and DiffEntry.ChangeType.COPY are ignored. As consequence, if a renamed
        file also has code changes, such changes are also ignored. */
-    private List<Integer> extractChangedLines(String hash, CodeChange codeChange) {
+    private List<Integer> identifyChangedLines(String hash, CodeChange codeChange) {
         def changedLines = []
         RevCommit commit = extractCommit(hash)
         ObjectId commitID = ObjectId.fromString(commit.name)
@@ -228,25 +228,24 @@ class GitRepository {
         return extractCommitsFromLogs(logs).sort{ it.date }
     }
 
-
     /***
-     *
-     * @param commits
-     * @return
+     * Defines the gherkin files (features) and scenarios definitions changed by a group of commits.
+     * @param commits commits that caused changes in gherkin files
+     * @return changed gherkin content
      */
-    def extractFeaturesFromCommit(Task task, List<Commit> commits) {
+    List<GherkinFile> identifyChangedGherkinContent(List<Commit> commits) {
         Parser<Feature> featureParser = new Parser<>()
-        task.changedGherkinFiles = []
+        List<GherkinFile> changedGherkinFiles = []
 
         commits.each { commit ->
             commit.gherkinChanges.each { change ->
-                change.lines = extractChangedLines(commit.hash, change)
+                change.lines = identifyChangedLines(commit.hash, change)
                 def path = localPath+File.separator+change.filename
                 try{
                     Feature feature = featureParser.parse(new FileReader(path))
                     def changedScenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line in change.lines }
                     if(changedScenarioDefinitions){
-                        task.changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
+                        changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
                                 feature:feature, changedScenarioDefinitions:changedScenarioDefinitions)
                     }
 
@@ -255,6 +254,8 @@ class GitRepository {
                 }
             }
         }
+
+        return changedGherkinFiles
     }
 
 }

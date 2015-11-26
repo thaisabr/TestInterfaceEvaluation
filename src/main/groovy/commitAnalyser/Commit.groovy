@@ -1,5 +1,8 @@
 package commitAnalyser
 
+/***
+ * Represents a git commit.
+ */
 class Commit {
 
     String hash

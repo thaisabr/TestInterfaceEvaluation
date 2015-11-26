@@ -2,68 +2,34 @@ package taskAnalyser
 
 import au.com.bytecode.opencsv.CSVReader
 import commitAnalyser.Commit
-import commitAnalyser.GitRepository
+import commitAnalyser.GitRepositoryManager
 import util.Util
 
 class TaskSearchManager {
 
-    private static List<GitRepository> downloadRepositories(List<Task> tasks){
-        List<GitRepository> repositories = []
-        def urls = tasks*.repositoryUrl.unique()
-        urls?.each{ url ->
-            repositories += new GitRepository(url)
-        }
-        return repositories
-    }
-
-    private static List<Commit> identifyChangedGherkinFiles(Task task){
-        List<Commit> commitsChangedGherkinFile = []
-        task.commits.each{ commit ->
-            commit.gherkinChanges = commit.testChanges.findAll{ it.filename.endsWith(Util.FEATURE_FILENAME_EXTENSION) }
-            if( !commit.gherkinChanges.isEmpty()){
-                commitsChangedGherkinFile += commit
-            }
-        }
-        return commitsChangedGherkinFile
-    }
-
-    public static List<Task> extractProductionAndTestTasks(){
-        List<Task> tasks = []
+    private static List<String[]> readCSV(){
         CSVReader reader = new CSVReader(new FileReader(Util.TASKS_FILE))
         List<String[]> entries = reader.readAll()
         reader.close()
         entries.remove(0) //ignore header
+        return entries
+    }
+
+    public static List<Task> extractProductionAndTestTasksFromCSV(){
+        List<String[]> entries = readCSV()
 
         //"index","repository_url","task_id","commits_hash","changed_production_files","changed_test_files","commits_message"
         List<String[]> relevantEntries = entries.findAll{ !it[4].equals("[]") && !it[5].equals("[]") }
 
+        List<Task> tasks = []
         relevantEntries.each { entry ->
             List<Commit> commits = []
             def hashes = entry[3].tokenize(',[]')*.trim()
             hashes.each { commits += new Commit(hash: it) }
             tasks += new Task(repositoryIndex: entry[0], repositoryUrl: entry[1], id: entry[2], commits: commits,
-                        productionFiles: entry[4].tokenize(',[]')*.trim(), testFiles: entry[5].tokenize(',[]')*.trim())
+                    changedGherkinFiles:[], gitRepository:GitRepositoryManager.getRepository(entry[1]))
         }
         return tasks
-    }
-
-    public static List<Task> findAllTasksChangingGherkinFile(List<Task> tasks){
-        List<GitRepository> repositories = downloadRepositories(tasks)
-
-        tasks?.each{ task ->
-            def gitRepository = repositories.find{ (it.url - Util.GIT_EXTENSION).equals(task.repositoryUrl) }
-            task.commits = gitRepository.searchBySha(*(task.commits*.hash))
-            List<Commit> commitsChangedGherkinFile = identifyChangedGherkinFiles(task)
-            if(commitsChangedGherkinFile.isEmpty()){
-                task.changedGherkinFiles = []
-            }
-            else{
-                gitRepository.extractFeaturesFromCommit(task, commitsChangedGherkinFile)
-            }
-
-        }
-
-        return tasks?.findAll{ !it.changedGherkinFiles.isEmpty() }
     }
 
 }

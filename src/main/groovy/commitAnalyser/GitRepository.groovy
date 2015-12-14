@@ -2,6 +2,7 @@ package commitAnalyser
 
 import gherkin.Parser
 import gherkin.ast.Feature
+import org.eclipse.jgit.api.ListBranchCommand
 import taskAnalyser.GherkinFile
 import org.eclipse.jgit.api.BlameCommand
 import org.eclipse.jgit.api.Git
@@ -36,10 +37,13 @@ class GitRepository {
         this.url = url + Util.GIT_EXTENSION
         this.name = Util.configureGitRepositoryName(url)
         this.localPath = Util.REPOSITORY_FOLDER_PATH + name
-        checkoutRepository()
+        cloneRepository()
     }
 
-    private checkoutRepository(){
+    /***
+     * Clones a repository if it was not cloned yet.
+     */
+    private cloneRepository(){
         File dir = new File(localPath)
         File[] files = dir.listFiles()
         if(files){
@@ -52,6 +56,13 @@ class GitRepository {
         }
     }
 
+    /***
+     * Computes the difference between two versions of a file.
+     * @param filename file to evaluate
+     * @param newTree the tree that contains a new version of the file.
+     * @param oldTree the tree that contains an older version of the file.
+     * @return a list of DiffEntry objects that represents the difference between two versions of a file.
+     */
     private List<DiffEntry> extractDiff(String filename, RevTree newTree, RevTree oldTree){
         def git = Git.open(new File(localPath))
 
@@ -73,6 +84,10 @@ class GitRepository {
         return result
     }
 
+    /***
+     * Prints a file content showing the differences between it and its previous version.
+     * @param entry the DiffEntry object that represents the difference between two versions of a file.
+     */
     private showDiff(DiffEntry entry){
         def git = Git.open(new File(localPath))
         ByteArrayOutputStream stream = new ByteArrayOutputStream()
@@ -86,6 +101,9 @@ class GitRepository {
         println stream
     }
 
+    /***
+     * Converts a list of DiffEntry objects into CodeChange objects.
+     */
     private static List<CodeChange> extractAllCodeChangeFromDiffs(List<DiffEntry> diffs) {
         List<CodeChange> codeChanges = []
         if (!diffs?.empty) {
@@ -103,6 +121,11 @@ class GitRepository {
         return codeChanges
     }
 
+    /***
+     * Retrieves a commit.
+     * @param sha the commit's identification.
+     * @return the commit.
+     */
     private RevCommit extractCommit(String sha){
         def git = Git.open(new File(localPath))
         def result = git.log().call().find{ it.name == sha }
@@ -276,12 +299,23 @@ class GitRepository {
         return changedGherkinFiles
     }
 
+    /***
+     * Checkouts a specific version of git repository.
+     * @param sha the commit's identification.
+     */
     def reset(String sha){
         def git = Git.open(new File(localPath))
-        git.checkout().setForce(true).setCreateBranch(true).setName("spgroup-tag${counter++}").setStartPoint(sha).call()
+        def branchName = "spgroup-tag" + counter++
+        def branch = git.branchList().setListMode(ListBranchCommand.ListMode.ALL).call().find{ it.name.endsWith(branchName) }
+        if(branch) git.branchDelete().setBranchNames(branch.name).call()
+        //git.checkout().setForce(true).setName(branchName).call()
+        git.checkout().setForce(true).setCreateBranch(true).setName(branchName).setStartPoint(sha).call()
         git.close()
     }
 
+    /***
+     * Checkouts the last version of git repository.
+     */
     def reset(){
         def git = Git.open(new File(localPath))
         git.checkout().setForce(true).setName("master").call()

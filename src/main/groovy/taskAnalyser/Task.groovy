@@ -1,59 +1,48 @@
 package taskAnalyser
 
-import commitAnalyser.Commit
 import commitAnalyser.GitRepository
+import commitAnalyser.GitRepositoryManager
+import testCodeAnalyser.TestCodeAbstractParser
+import testCodeAnalyser.groovy.GroovyTestCodeParser
+import testCodeAnalyser.java.JavaTestCodeParser
+import testCodeAnalyser.ruby.RubyTestCodeParser
+import util.LanguageOption
 import util.Util
+import util.exception.InvalidLanguageException
 
 
-class Task {
+abstract class Task {
 
-    String repositoryIndex
-    String repositoryUrl
     String id
-    List<Commit> commits
-    List<GherkinFile> changedGherkinFiles
     GitRepository gitRepository
+    TestCodeAbstractParser testCodeParser
 
-    private List<GherkinFile> identifyChangedGherkinFiles(){
-        List<GherkinFile> changedGherkinFiles = []
-        List<Commit> commitsChangedGherkinFile = []
-
-        commits.each{ commit ->
-            commit.gherkinChanges = commit.testChanges.findAll{ it.filename.endsWith(Util.FEATURE_FILENAME_EXTENSION) }
-            if( !commit.gherkinChanges.isEmpty()){
-                commitsChangedGherkinFile += commit
-            }
+    Task(String rootDirectory, boolean isRemote, String id){
+        this.id = id
+        if(isRemote){
+            this.gitRepository = GitRepositoryManager.getRepository(rootDirectory)
+            configureTestCodeParser(gitRepository.localPath)
         }
-
-        if(!commitsChangedGherkinFile.isEmpty()){
-            changedGherkinFiles = gitRepository.identifyChangedGherkinContent(commitsChangedGherkinFile)
+        else{
+            configureTestCodeParser(rootDirectory)
         }
-
-        return changedGherkinFiles
     }
 
-    def TaskInterface computeTestBasedInterface(){
-        commits = gitRepository.searchBySha(*(commits*.hash))
-
-        //identify changed gherkin files and scenario definitions
-        changedGherkinFiles = identifyChangedGherkinFiles()
-        if(!changedGherkinFiles.isEmpty()) {
-            println "Task id: $id"
-            changedGherkinFiles.each{
-                println it.toString()
-            }
+    def configureTestCodeParser(String path){
+        switch (Util.TEST_CODE_LANGUAGE){
+            case LanguageOption.JAVA:
+                testCodeParser = new JavaTestCodeParser(path)
+                break
+            case LanguageOption.GROOVY:
+                testCodeParser = new GroovyTestCodeParser(path)
+                break
+            case LanguageOption.RUBY:
+                testCodeParser = new RubyTestCodeParser(path)
+                break
+            default: throw new InvalidLanguageException()
         }
-
-        //for each changed scenario definition, identify steps implementation
-        //for each step implementation, extract production method call
-
-        new TaskInterface()
     }
 
-    def TaskInterface computeRealInterface(){
-        def files = commits*.files?.flatten().unique()
-        def productionFiles = Util.findAllProductionFiles(files)
-        new TaskInterface(changedFiles: productionFiles)
-    }
+    abstract TaskInterface computeTestBasedInterface()
 
 }

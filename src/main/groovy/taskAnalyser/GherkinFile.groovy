@@ -8,10 +8,27 @@ import gherkin.ast.ScenarioDefinition
  */
 class GherkinFile {
 
+    /***
+     * Identifies the commit responsible for the code change
+     */
     String commitHash
-    String path //local path
+
+    /***
+    * Gherkin file path (local path)
+     */
+    String path
+
+    /***
+     * Node that represents a feature in a gherkin file and its all elements
+     */
     Feature feature
-    List<ScenarioDefinition> changedScenarioDefinitions
+
+    /***
+     * Node list of scenario definitions that was changed by the commit. The assumption is only the test code changed
+     * by the commit is really related to the task the commit represents. As consequence, only this information is used
+     * to compute test-based task interfaces.
+     */
+    List<ScenarioDefinition> changedScenarioDefinitions = []
 
     @Override
     String toString() {

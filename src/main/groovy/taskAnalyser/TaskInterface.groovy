@@ -1,8 +1,90 @@
 package taskAnalyser
 
+import util.Util
+
 
 class TaskInterface {
 
-    List<String> changedFiles
+    /******************************************* ORGANIZAR ************************************/
+    Set classes //instantiated classes; keys:[name, file]
+    Set methods //static and non-static called methods; keys:[name, type, file]
+    Set staticFields //declared static fields; [name, type, value, file]
+    Set fields //declared fields; [name, type, value, file]
+    Set accessedProperties //accessed fields and constants, for example: "foo.bar"
+    /******************************************************************************************/
+
+    /************** Specific to web-based tests. When we have a GSP parser such code should be removed! ***************/
+    def calledPageMethods //help to identify referenced pages (GSP files); methods "to" and "at"
+    def referencedPages
+    /******************************************************************************************************************/
+
+    TaskInterface() {
+        this.classes = [] as Set
+        this.methods = [] as Set
+        this.staticFields = [] as Set
+        this.fields = [] as Set
+        this.accessedProperties = [] as Set
+        this.calledPageMethods = [] as Set
+        this.referencedPages = [] as Set
+    }
+
+    @Override
+    /***
+     * AJEITAR MÉTODO DEPOIS
+     */
+    String toString() {
+        def files = findAllFiles()
+        if(files.isEmpty()) return ""
+        else{
+            def text = "Files:\n"
+            files.each{
+                if(it) text += it - Util.getRepositoriesCanonicalPath()  + ",\n"
+            }
+            def index = text.lastIndexOf(",")
+            if(index != -1) return text.substring(0,index)
+            else return ""
+        }
+    }
+
+
+    /***
+     * Lists all production files related to the task.
+     * Until the moment, the identification of such files is made by the usage of production classes and methods only.
+     *
+     * @return a list of files
+     */
+    Set<String> findAllFiles(){
+        //production classes
+        def classes =  (classes?.findAll{ it.file && !Util.isTestCode(it.file) })*.file
+        /*println "CLASSES"
+        this.classes.each{ c ->
+            println c
+        }*/
+
+        //production methods
+        def methods = methods?.findAll{ it.type && !Util.isTestCode(it.file) }*.file
+        /*println "METODOS CHAMADOS"
+        this.methods.each{ m ->
+            println m
+        }*/
+
+        return ((classes+methods) as Set)?.sort()
+    }
+
+    def colapseInterfaces(TaskInterface task) {
+        this.classes += task.classes
+        this.methods += task.methods
+        this.staticFields += task.staticFields
+        this.fields += task.fields
+        this.accessedProperties += task.accessedProperties
+        this.calledPageMethods += task.calledPageMethods
+        this.referencedPages += task.referencedPages
+    }
+
+    static TaskInterface colapseInterfaces(List<TaskInterface> interfaces) {
+        def taskInterface = new TaskInterface()
+        interfaces.each{ taskInterface.colapseInterfaces(it) }
+        return taskInterface
+    }
 
 }

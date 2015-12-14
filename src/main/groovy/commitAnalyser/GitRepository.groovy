@@ -12,7 +12,6 @@ import org.eclipse.jgit.diff.RawTextComparator
 import org.eclipse.jgit.errors.MissingObjectException
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.ObjectLoader
-import org.eclipse.jgit.lib.ObjectReader
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.revwalk.RevTree
 import org.eclipse.jgit.revwalk.RevWalk
@@ -30,42 +29,41 @@ class GitRepository {
     String url
     String name
     String localPath
-    Git git
-    ObjectReader reader
+
+    static int counter = 0 //used to compute branch name
 
     public GitRepository(String url){
         this.url = url + Util.GIT_EXTENSION
         this.name = Util.configureGitRepositoryName(url)
         this.localPath = Util.REPOSITORY_FOLDER_PATH + name
-        this.git = checkoutRepository()
-        this.reader = git.repository.newObjectReader()
+        checkoutRepository()
     }
 
-    private Git checkoutRepository(){
-        Git result
+    private checkoutRepository(){
         File dir = new File(localPath)
         File[] files = dir.listFiles()
         if(files){
-            result = Git.open(dir)
             System.out.println("Already cloned from " + url + " to " + localPath)
         }
         else{
-            result = Git.cloneRepository().setURI(url).setDirectory(dir).call()
+            def result = Git.cloneRepository().setURI(url).setDirectory(dir).call()
+            result.close()
             System.out.println("Cloned from " + url + " to " + localPath)
         }
-
-        return result
-        // Note: the call() returns an opened repository already which needs to be closed to avoid file handle leaks!
-        //result.getRepository().close()
     }
 
     private List<DiffEntry> extractDiff(String filename, RevTree newTree, RevTree oldTree){
+        def git = Git.open(new File(localPath))
+
         DiffFormatter df = new DiffFormatter(new ByteArrayOutputStream())
         df.setRepository(git.repository)
         df.setDiffComparator(RawTextComparator.DEFAULT)
         df.setDetectRenames(true)
+
         if(filename!=null && !filename.isEmpty()) df.setPathFilter(PathFilter.create(filename))
         List<DiffEntry> diffs = df.scan(oldTree, newTree)
+        git.close()
+
         List<DiffEntry> result = []
         diffs.each{
             it.oldPath = it.oldPath.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
@@ -76,12 +74,14 @@ class GitRepository {
     }
 
     private showDiff(DiffEntry entry){
+        def git = Git.open(new File(localPath))
         ByteArrayOutputStream stream = new ByteArrayOutputStream()
         DiffFormatter formatter = new DiffFormatter(stream)
         formatter.setRepository(git.repository)
         formatter.setDetectRenames(true)
         formatter.setContext(1)
         formatter.format(entry)
+        git.close()
         println "DIFF: "
         println stream
     }
@@ -104,19 +104,26 @@ class GitRepository {
     }
 
     private RevCommit extractCommit(String sha){
-        return git.log().call().find{ it.name == sha }
+        def git = Git.open(new File(localPath))
+        def result = git.log().call().find{ it.name == sha }
+        git.close()
+        return result
     }
 
     private TreeWalk generateTreeWalk(RevTree tree, String filename){
+        def git = Git.open(new File(localPath))
         TreeWalk treeWalk = new TreeWalk(git.repository)
         treeWalk.addTree(tree)
         treeWalk.setRecursive(true)
         if(filename) treeWalk.setFilter(PathFilter.create(filename))
         treeWalk.next()
+        git.close()
         return treeWalk
     }
 
     private List<String> extractFileContent(ObjectId commitID, String filename) {
+        def result = []
+        def git = Git.open(new File(localPath))
         filename = filename.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
         RevWalk revWalk = new RevWalk(git.repository)
         RevCommit commit = revWalk.parseCommit(commitID)
@@ -127,13 +134,16 @@ class GitRepository {
             ByteArrayOutputStream stream = new ByteArrayOutputStream()
             loader.copyTo(stream)
             revWalk.dispose()
-            return stream.toString().readLines()
+            result = stream.toString().readLines()
         }
         catch(MissingObjectException exception){
             if(objectId.equals(ObjectId.zeroId()))
                 println "There is no ObjectID for the commit tree. Verify the file separator used in the filename."
-            return []
         }
+
+        git.close()
+
+        return result
     }
 
     private List<CodeChange> extractAllCodeChangesFromCommit(RevCommit commit){
@@ -143,6 +153,7 @@ class GitRepository {
             codeChanges = extractAllCodeChangeFromDiffs(diffs)
         }
         else{ //first commit
+            def git = Git.open(new File(localPath))
             TreeWalk tw = new TreeWalk(git.repository)
             tw.reset()
             tw.setRecursive(true)
@@ -151,6 +162,7 @@ class GitRepository {
                 codeChanges += new CodeChange(filename: tw.pathString, type:DiffEntry.ChangeType.ADD)
             }
             tw.release()
+            git.close()
         }
 
         return codeChanges
@@ -172,7 +184,7 @@ class GitRepository {
     //* PROBLEM: Deal with removed lines. */
     private List<Integer> computeChanges(ObjectId commitID, String hash, String filename){
         def changedLines = []
-
+        def git = Git.open(new File(localPath))
         BlameCommand blamer = new BlameCommand(git.repository)
         blamer.setStartCommit(commitID)
         blamer.setFilePath(filename.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/")))
@@ -183,6 +195,8 @@ class GitRepository {
             RevCommit c = blameResult?.getSourceCommit(i)
             if(c?.name?.equals(hash)) changedLines += i
         }
+
+        git.close()
 
         return changedLines
     }
@@ -212,8 +226,9 @@ class GitRepository {
      * @return a list of commits.
      */
     List<Commit> searchAllCommits(){
-        Git git = new Git(git.repository)
+        def git = Git.open(new File(localPath))
         Iterable<RevCommit> logs = git.log().call()
+        git.close()
         return extractCommitsFromLogs(logs).sort{ it.date }
     }
 
@@ -223,8 +238,9 @@ class GitRepository {
      * @return a list of commits that satisfy the search criteria.
      */
     List<Commit> searchBySha(String... hash) {
-        Git git = new Git(git.repository)
+        def git = Git.open(new File(localPath))
         def logs = git.log().call().findAll{ it.name in hash }
+        git.close()
         return extractCommitsFromLogs(logs).sort{ it.date }
     }
 
@@ -241,8 +257,10 @@ class GitRepository {
             commit.gherkinChanges.each { change ->
                 change.lines = identifyChangedLines(commit.hash, change)
                 def path = localPath+File.separator+change.filename
+                def reader = new FileReader(path)
                 try{
-                    Feature feature = featureParser.parse(new FileReader(path))
+                    Feature feature = featureParser.parse(reader)
+                    reader.close()
                     def changedScenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line in change.lines }
                     if(changedScenarioDefinitions){
                         changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
@@ -256,6 +274,18 @@ class GitRepository {
         }
 
         return changedGherkinFiles
+    }
+
+    def reset(String sha){
+        def git = Git.open(new File(localPath))
+        git.checkout().setForce(true).setCreateBranch(true).setName("spgroup-tag${counter++}").setStartPoint(sha).call()
+        git.close()
+    }
+
+    def reset(){
+        def git = Git.open(new File(localPath))
+        git.checkout().setForce(true).setName("master").call()
+        git.close()
     }
 
 }

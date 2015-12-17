@@ -13,11 +13,13 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     SourceUnit source
     TaskInterface taskInterface
     List<String> projectFiles //valid files
+    String lastVisitedFile
 
-    public GroovyTestCodeVisitor(String repositoryPath){
+    public GroovyTestCodeVisitor(String repositoryPath, String currentFile){
         this.source = null
         this.projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         this.taskInterface = new TaskInterface()
+        this.lastVisitedFile = currentFile
     }
 
     private registryMethodCall(MethodCallExpression call){

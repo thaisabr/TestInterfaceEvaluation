@@ -53,7 +53,8 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
      */
     TestCodeVisitor parseStepBody(def file) {
         def node = generateAst(file.path)
-        def visitor = new RubyTestCodeVisitor(repositoryPath)
+        def visitor = new RubyTestCodeVisitor(repositoryPath, file.path)
+        visitor.lastVisitedFile = file.path
         def testCodeVisitor = new RubyStepsFileVisitor(file.lines, visitor)
         node.accept(testCodeVisitor)
         visitor
@@ -69,6 +70,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
      */
     def visitFile(def file, TestCodeVisitor visitor) {
         def node = generateAst(file.path)
+        visitor.lastVisitedFile = file.path
         def auxVisitor = new RubyMethodVisitor(file.methods, (RubyTestCodeVisitor) visitor)
         node.accept(auxVisitor)
     }

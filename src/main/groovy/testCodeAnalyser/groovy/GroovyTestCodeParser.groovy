@@ -47,7 +47,7 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
         }
     }
 
-    private generateAst(String path){
+    private static generateAst(String path){
         def file = new File(path)
         SourceUnit unit = SourceUnit.create(file.name, file.text) //or file.absolutePath
         CompilationUnit compUnit = new CompilationUnit(classLoader) //CompilationUnit compUnit =  new CompilationUnit()
@@ -80,7 +80,7 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
      */
     TestCodeVisitor parseStepBody(def file){
         def ast = generateAst(file.path)
-        def visitor = new GroovyTestCodeVisitor(repositoryPath)
+        def visitor = new GroovyTestCodeVisitor(repositoryPath, file.path)
         def testCodeVisitor = new GroovyStepsFileVisitor(file.lines, visitor)
         ast.classes.get(0).visitContents(testCodeVisitor)
         visitor
@@ -96,6 +96,7 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
      */
     def visitFile(def file, TestCodeVisitor visitor) {
         def ast = generateAst(file.path)
+        visitor.lastVisitedFile = file.path
         def auxVisitor = new GroovyMethodVisitor(file.methods, (GroovyTestCodeVisitor) visitor)
         ast.classes.get(0).visitContents(auxVisitor)
     }

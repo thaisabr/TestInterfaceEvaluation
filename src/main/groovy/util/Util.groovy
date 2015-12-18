@@ -28,8 +28,10 @@ class Util {
     static final String GHERKIN_FILES_RELATIVE_PATH
     static final String STEPS_FILES_RELATIVE_PATH
     static final String PRODUCTION_FILES_RELATIVE_PATH
+    static final String VIEWS_FILES_RELATIVE_PATH
 
     static final List<String> STEP_KEYWORDS = new GherkinDialectProvider().defaultDialect.stepKeywords.unique()*.trim()
+    static final List<String> PAGE_METHODS = ["to", "at"]
 
     static final LanguageOption TEST_CODE_LANGUAGE
 
@@ -48,10 +50,11 @@ class Util {
         TASKS_FILE = configureTasksFilePath()
         GHERKIN_FILES_RELATIVE_PATH = (properties.'spgroup.gherkin.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        STEPS_FILES_RELATIVE_PATH = (properties.'spgroup.steps.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+        STEPS_FILES_RELATIVE_PATH = File.separator+(properties.'spgroup.steps.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        PRODUCTION_FILES_RELATIVE_PATH = (properties.'spgroup.production.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+        PRODUCTION_FILES_RELATIVE_PATH = File.separator+(properties.'spgroup.production.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
+        VIEWS_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "views"
         TEST_CODE_LANGUAGE = (properties.'spgroup.language').trim().toUpperCase() as LanguageOption
     }
 
@@ -144,10 +147,6 @@ class Util {
         return name.replaceAll("/", "_")
     }
 
-    static List<String> getStepKeywords(){
-        new GherkinDialectProvider().defaultDialect.stepKeywords.unique()*.trim()
-    }
-
     static String getRepositoriesCanonicalPath(){
         new File(".").getCanonicalPath() + File.separator + REPOSITORY_FOLDER_PATH
     }
@@ -167,8 +166,6 @@ class Util {
             }
         }
     }
-
-    /********** A PARTIR DAQUI, TUDO FOI INCLUÍDO APÓS INTEGRAÇÃO COM ANALISADOR DE CÓDIGO GROOVY. *******************/
 
     static List<String> findFilesFromDirectoryByLanguage(String directory){
         def files = findFilesFromDirectory(directory)
@@ -203,6 +200,8 @@ class Util {
         files
     }
 
+    /********** A PARTIR DAQUI, TUDO FOI INCLUÍDO APÓS INTEGRAÇÃO COM ANALISADOR DE CÓDIGO GROOVY. *******************/
+
     static findJarFilesFromDirectory(String directory){
         def files = findFilesFromDirectory(directory)
         files.findAll{it.contains(JAR_FILENAME_EXTENSION)}
@@ -215,26 +214,71 @@ class Util {
         return className
     }
 
+    static boolean isPageMethod(String referencedMethod){
+        if(referencedMethod in PAGE_METHODS) true
+        else false
+    }
+
+    /***
+     *
+     * @param className
+     * @param extension
+     * @param projectFiles
+     * @return
+     */
     private static getClassPath(String className, String extension, Collection<String> projectFiles){
         def name = ClassUtils.convertClassNameToResourcePath(className)+extension
         name = name.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         projectFiles?.find{ it.endsWith(File.separator+name) }
     }
 
+    /***
+     * Provides the file path of a Groovy class.
+     * @param className class full name
+     * @param projectFiles list of file names
+     * @return the file name that matches to the class name
+     */
     static String getClassPathForGroovy(String className, Collection<String> projectFiles){
         getClassPath(className, GROOVY_EXTENSION, projectFiles)
     }
 
+    /***
+     * Provides the file path of a Java class.
+     * @param className class full name
+     * @param projectFiles list of file names
+     * @return the file name that matches to the class name
+     */
     static String getClassPathForJava(String className, Collection<String> projectFiles){
         getClassPath(className, JAVA_EXTENSION, projectFiles)
     }
 
+    /***
+     * Provides the file path of a Ruby class or module.
+     * @param className class or module short name
+     * @param projectFiles list of file names
+     * @return the file name that matches to the class or module name
+     */
     static String getClassPathForRuby(String className, Collection<String> projectFiles){
-        getClassPath(className.toLowerCase(), RUBY_EXTENSION, projectFiles)
+        def name = (className.toLowerCase()+RUBY_EXTENSION).replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def regex_expression = ".*${Matcher.quoteReplacement(File.separator)}$name"
+        projectFiles?.find{ it ==~ /$regex_expression/ }
     }
 
-    /***
-     * ISSO É ESPECÍFICO PARA GROOVY. GENERALIZAR.
+    static String findViewPath(String resourcePath, List projectFiles){
+        def name = resourcePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        int n = name.count(File.separator)
+        if(n>1){
+            def index = name.lastIndexOf(File.separator)
+            name = name.substring(0,index)
+        }
+        def match = projectFiles?.find{ it.contains(name) }
+        if(match) name = match
+        else name = ""
+        name
+    }
+
+    /**
+     * ISSO É ESPECÍFICO PARA GROOVY
      */
     static boolean isValidClassByAPI(String referencedClass){
         def INVALID_CLASS_REGEX = /.*(groovy|java|springframework|apache|grails|spock|geb|selenium|cucumber).*/
@@ -245,7 +289,8 @@ class Util {
         else true
     }
 
-    /***
+    /**
+     * ISSO É ESPECÍFICO PARA GROOVY
      * Filters method calls to ignore methods provided by API.
      * @param referencedClass
      * @param path

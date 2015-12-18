@@ -16,6 +16,9 @@ abstract class TestCodeAbstractParser {
     String repositoryPath
     String stepsFilePath
     List<StepRegex> regexList = []
+    Set methods = [] as Set
+    List<String> projectFiles
+    List<String> viewFiles
 
     /***
      * Initializes fields used to link step declaration and code.
@@ -24,9 +27,9 @@ abstract class TestCodeAbstractParser {
      */
     TestCodeAbstractParser(String repositoryPath){
         this.repositoryPath = repositoryPath
-        stepsFilePath = repositoryPath + File.separator + Util.STEPS_FILES_RELATIVE_PATH
-        //def files = Util.findFilesFromDirectoryByLanguage(stepsFilePath)
-        //files.each{ regexList += doExtractStepsRegex(it) }
+        projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
+        stepsFilePath = repositoryPath + Util.STEPS_FILES_RELATIVE_PATH
+        viewFiles = Util.findFilesFromDirectory(repositoryPath+Util.VIEWS_FILES_RELATIVE_PATH)
     }
 
     /***
@@ -50,6 +53,16 @@ abstract class TestCodeAbstractParser {
         regexList = []
         def files = Util.findFilesFromDirectoryByLanguage(stepsFilePath)
         files.each{ regexList += doExtractStepsRegex(it) }
+    }
+
+    def configureMethodsList(){
+        methods = []
+        projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
+        projectFiles.each{ methods += doExtractMethodDefinitions(it) }
+    }
+
+    def configureViewFiles(){
+        viewFiles = Util.findFilesFromDirectory(repositoryPath+Util.VIEWS_FILES_RELATIVE_PATH)
     }
 
     /***
@@ -157,6 +170,8 @@ abstract class TestCodeAbstractParser {
      */
     TaskInterface computeInterfaceForDoneTask(List<GherkinFile> gherkinFiles){
         configureRegexList() // Updates regex list used to match step definition and step code
+        configureMethodsList()
+        configureViewFiles()
         computeInterfaceForTodoTask(gherkinFiles)
     }
 
@@ -197,6 +212,11 @@ abstract class TestCodeAbstractParser {
                 def lastCalledMethods = testCodeVisitor.taskInterface.methods - backupCalledMethods
                 filesToVisit = listFilesToVisit(lastCalledMethods, visitedFiles)
             }
+
+            /* searches for view files */
+            findAllPages(testCodeVisitor)
+
+            /* updates task interface */
             interfaces += testCodeVisitor.taskInterface
         }
 
@@ -205,12 +225,25 @@ abstract class TestCodeAbstractParser {
     }
 
     /***
+     * Updates a visitor's task interface by identifying related view files.
+     *
+     * @param visitor
+     */
+    abstract void findAllPages(TestCodeVisitor visitor)
+
+    /***
      * Finds all regex expression in a source code file.
      *
-     * @param path ruby file
+     * @param path file path
      * @return map identifying the file and its regexs
      */
     abstract List<StepRegex> doExtractStepsRegex(String path)
+
+    /***
+     * Finds all methods declaration in source code file.
+     * @param path file path
+     */
+    abstract Set doExtractMethodDefinitions(String path)
 
     /***
      * Visits a step body and method calls inside it. The result is stored as a field of the returned visitor.

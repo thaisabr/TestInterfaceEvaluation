@@ -49,10 +49,10 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
 
     private static generateAst(String path){
         def file = new File(path)
-        SourceUnit unit = SourceUnit.create(file.name, file.text) //or file.absolutePath
-        CompilationUnit compUnit = new CompilationUnit(classLoader) //CompilationUnit compUnit =  new CompilationUnit()
+        SourceUnit unit = SourceUnit.create(file.name, file.text)
+        CompilationUnit compUnit = new CompilationUnit(classLoader)
         compUnit.addSource(unit)
-        compUnit.compile(Phases.SEMANTIC_ANALYSIS) //compUnit.compile(Phases.CONVERSION)
+        compUnit.compile(Phases.SEMANTIC_ANALYSIS)
         unit.getAST()
     }
 
@@ -69,6 +69,22 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
         ClassNode classNode = node.scriptClassDummy
         classNode.visitContents(visitor)
         visitor.regexs
+    }
+
+    @Override
+    Set doExtractMethodDefinitions(String path) {
+        def methods = [] as Set
+        CompilationUnit compUnit =  new CompilationUnit()
+        def file = new File(path)
+        SourceUnit unit = SourceUnit.create(file.name, file.text)
+        compUnit.addSource(unit)
+        compUnit.compile(Phases.CONVERSION)
+        def node = unit.getAST()
+        ClassNode classNode = node.scriptClassDummy
+        classNode.methods.each{
+            methods += [name:it.name, className:classNode.name, path:path]
+        }
+        methods
     }
 
     @Override
@@ -99,6 +115,18 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
         visitor.lastVisitedFile = file.path
         def auxVisitor = new GroovyMethodVisitor(file.methods, (GroovyTestCodeVisitor) visitor)
         ast.classes.get(0).visitContents(auxVisitor)
+    }
+
+    @Override
+    void findAllPages(TestCodeVisitor visitor) {
+        def pageCodeVisitor = new GroovyPageVisitor(viewFiles)
+        def filesToVisit = visitor?.taskInterface?.calledPageMethods*.file as Set
+        filesToVisit?.each{ f ->
+            if(f != null){ //f could be null if the test code references a class or file that does not exist
+                generateAst(f).classes.get(0).visitContents(pageCodeVisitor)
+            }
+        }
+        visitor?.taskInterface?.referencedPages = pageCodeVisitor.pages
     }
 
 }

@@ -43,7 +43,7 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
 
         if (call.implicitThis && isValidMethod(call.methodAsString)) { //call from test code
             result = true
-            /*if( Util.isPageMethod(call.methodAsString) ){ //PEGAR NOME DE ARQUIVO GSP
+            if( Util.isPageMethod(call.methodAsString) ){ //find gsp file
                 def value = call.arguments.text
                 def className = value.substring(1,value.length()-1)
                 def path = Util.getClassPathForGroovy(className, projectFiles)
@@ -52,7 +52,7 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
             else {
                 //calls for other methods do not need to be registered
                 //methods += [name: call.methodAsString, type: className]
-            }*/
+            }
         }
 
         return result

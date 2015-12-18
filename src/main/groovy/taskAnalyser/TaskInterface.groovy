@@ -14,8 +14,8 @@ class TaskInterface {
     /******************************************************************************************/
 
     /************** Specific to web-based tests. When we have a GSP parser such code should be removed! ***************/
-    def calledPageMethods //help to identify referenced pages (GSP files); methods "to" and "at"
-    def referencedPages
+    Set calledPageMethods //help to identify referenced pages (GSP files); methods "to" and "at"; keys:[name, arg, file]
+    Set<String> referencedPages
     /******************************************************************************************************************/
 
     TaskInterface() {
@@ -29,9 +29,6 @@ class TaskInterface {
     }
 
     @Override
-    /***
-     * AJEITAR MÉTODO DEPOIS
-     */
     String toString() {
         def files = findAllFiles()
         if(files.isEmpty()) return ""
@@ -62,13 +59,13 @@ class TaskInterface {
         }*/
 
         //production methods
-        def methods = methods?.findAll{ it.type && !Util.isTestCode(it.file) }*.file
+        def methodFiles = methods?.findAll{ it.type && !Util.isTestCode(it.file) }*.file
         /*println "METODOS CHAMADOS"
         this.methods.each{ m ->
             println m
         }*/
 
-        return ((classes+methods) as Set)?.sort()
+        return ((classes+methodFiles+referencedPages) as Set)?.sort()
     }
 
     def colapseInterfaces(TaskInterface task) {

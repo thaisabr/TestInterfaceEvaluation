@@ -14,6 +14,10 @@ class TaskSearchManager {
         return entries
     }
 
+    /***
+     * Extracts all tasks in a CSV file that changed production and test files.
+     * @return a list of tasks.
+     */
     static List<DoneTask> extractProductionAndTestTasksFromCSV(){
         List<String[]> entries = readCSV()
 

@@ -60,7 +60,8 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     * deixar documentado que isso pode acontecer. */
                     def receiver = methods.findAll{ it.name == iVisited && it.path == path }
                     if(receiver.isEmpty()){
-                        println "The method called by instance variable was not found!"
+                        println "The method called by instance variable was not found: " +
+                                "${iVisited.receiver.name}.${iVisited.name} (${iVisited.position.startLine}) $lastVisitedFile"
                     }
                 }
                 else{

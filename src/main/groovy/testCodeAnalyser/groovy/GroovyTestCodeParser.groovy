@@ -123,7 +123,7 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
         def filesToVisit = visitor?.taskInterface?.calledPageMethods*.file as Set
         filesToVisit?.each{ f ->
             if(f != null){ //f could be null if the test code references a class or file that does not exist
-                generateAst(f).classes.get(0).visitContents(pageCodeVisitor)
+                generateAst(f).classes.get(0).visitContents(pageCodeVisitor) //gets url
             }
         }
         visitor?.taskInterface?.referencedPages = pageCodeVisitor.pages

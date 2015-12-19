@@ -15,8 +15,9 @@ abstract class TestCodeAbstractParser {
 
     String repositoryPath
     String stepsFilePath
-    List<StepRegex> regexList = []
-    Set methods = [] as Set
+
+    List<StepRegex> regexList
+    Set methods
     List<String> projectFiles
     List<String> viewFiles
 
@@ -27,9 +28,11 @@ abstract class TestCodeAbstractParser {
      */
     TestCodeAbstractParser(String repositoryPath){
         this.repositoryPath = repositoryPath
-        projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         stepsFilePath = repositoryPath + Util.STEPS_FILES_RELATIVE_PATH
-        viewFiles = Util.findFilesFromDirectory(repositoryPath+Util.VIEWS_FILES_RELATIVE_PATH)
+        regexList = []
+        methods = [] as Set
+        projectFiles = []
+        viewFiles = []
     }
 
     /***

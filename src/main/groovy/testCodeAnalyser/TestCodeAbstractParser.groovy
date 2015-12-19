@@ -52,20 +52,23 @@ abstract class TestCodeAbstractParser {
         return acceptanceTests*.stepCodes.flatten().unique()
     }
 
-    def configureRegexList(){
+    def configureProperties(){
+        projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
+        configureRegexList() // Updates regex list used to match step definition and step code
+        configureMethodsList()
+        viewFiles = Util.findFilesFromDirectory(repositoryPath+Util.VIEWS_FILES_RELATIVE_PATH)
+    }
+
+    private configureRegexList(){
         regexList = []
         def files = Util.findFilesFromDirectoryByLanguage(stepsFilePath)
         files.each{ regexList += doExtractStepsRegex(it) }
     }
 
-    def configureMethodsList(){
+    private configureMethodsList(){
         methods = []
         projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         projectFiles.each{ methods += doExtractMethodDefinitions(it) }
-    }
-
-    def configureViewFiles(){
-        viewFiles = Util.findFilesFromDirectory(repositoryPath+Util.VIEWS_FILES_RELATIVE_PATH)
     }
 
     /***
@@ -172,9 +175,7 @@ abstract class TestCodeAbstractParser {
      * @return task interface
      */
     TaskInterface computeInterfaceForDoneTask(List<GherkinFile> gherkinFiles){
-        configureRegexList() // Updates regex list used to match step definition and step code
-        configureMethodsList()
-        configureViewFiles()
+        configureProperties()
         computeInterfaceForTodoTask(gherkinFiles)
     }
 

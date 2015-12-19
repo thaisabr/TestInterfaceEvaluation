@@ -23,7 +23,7 @@ class TodoTask extends Task {
     TodoTask(String rootDirectory, boolean isRemote, String id, def scenarios){
         super(rootDirectory, isRemote, id)
 
-        testCodeParser.configureRegexList()
+        testCodeParser.configureProperties()
 
         if(isRemote) testDescription = findAllRelatedGherkinFile(gitRepository.localPath, scenarios)
         else testDescription = findAllRelatedGherkinFile(rootDirectory, scenarios)

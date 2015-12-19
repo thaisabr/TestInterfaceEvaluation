@@ -187,14 +187,17 @@ class Util {
     static List<String> findFilesFromDirectory(String directory){
         def f = new File(directory)
         def files = []
-        f.eachDirRecurse{ dir ->
+
+        if(!f.exists()) return files
+
+        f?.eachDirRecurse{ dir ->
             dir.listFiles().each{
                 if(it.isFile()){
                     files += it.absolutePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
                 }
             }
         }
-        f.eachFile{
+        f?.eachFile{
             files += it.absolutePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         }
         files
@@ -264,7 +267,29 @@ class Util {
         projectFiles?.find{ it ==~ /$regex_expression/ }
     }
 
-    static String findViewPath(String resourcePath, List projectFiles){
+    /**
+     * (A FAZER; DEFINIR REGRA DE MAPEAMENTO) ISSO É ESPECÍFICO PARA RUBY
+     * @param resourcePath pode ser url, diretório local ou arquivo local
+     * @param projectFiles
+     * @return
+     */
+    static String findViewPathForRailsProjects(String resourcePath, List projectFiles){
+        def name = resourcePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        int n = name.count(File.separator)
+        if(n>1){
+            def index = name.lastIndexOf(File.separator)
+            name = name.substring(0,index)
+        }
+        def match = projectFiles?.find{ it.contains(name) }
+        if(match) name = match
+        else name = ""
+        name
+    }
+
+    /**
+     * ISSO É ESPECÍFICO PARA GROOVY
+     */
+    static String findViewPathForGrailsProjects(String resourcePath, List projectFiles){
         def name = resourcePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         int n = name.count(File.separator)
         if(n>1){

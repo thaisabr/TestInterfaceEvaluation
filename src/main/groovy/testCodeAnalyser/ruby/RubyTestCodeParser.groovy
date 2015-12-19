@@ -45,6 +45,20 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     }
 
     @Override
+    Set doExtractMethodDefinitions(String file) {
+        RubyMethodDefinitionVisitor visitor = new RubyMethodDefinitionVisitor()
+        Parser rubyParser = new Parser()
+        CompatVersion version = CompatVersion.RUBY2_0
+        ParserConfiguration config = new ParserConfiguration(0, version)
+        visitor.path = file
+        FileReader reader = new FileReader(file)
+        def node = rubyParser.parse("<code>", reader, config)
+        node.accept(visitor)
+        reader.close()
+        visitor.methods
+    }
+
+    @Override
     /***
      * Visits a step body and method calls inside it. The result is stored as a field of the returned visitor.
      *
@@ -53,7 +67,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
      */
     TestCodeVisitor parseStepBody(def file) {
         def node = generateAst(file.path)
-        def visitor = new RubyTestCodeVisitor(repositoryPath, file.path)
+        def visitor = new RubyTestCodeVisitor(projectFiles, file.path, methods)
         visitor.lastVisitedFile = file.path
         def testCodeVisitor = new RubyStepsFileVisitor(file.lines, visitor)
         node.accept(testCodeVisitor)
@@ -73,6 +87,19 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         visitor.lastVisitedFile = file.path
         def auxVisitor = new RubyMethodVisitor(file.methods, (RubyTestCodeVisitor) visitor)
         node.accept(auxVisitor)
+    }
+
+    @Override
+    void findAllPages(TestCodeVisitor visitor) {
+        def pageVisitor = new RubyPageVisitor(viewFiles)
+        def filesToVisit = visitor?.taskInterface?.calledPageMethods
+        filesToVisit?.each{ f ->
+            if(f != null){ //f could be null if the test code references a class or file that does not exist
+                pageVisitor.methodName = f.arg
+                generateAst(f.file).accept(pageVisitor)
+            }
+        }
+        visitor?.taskInterface?.referencedPages = pageVisitor.pages
     }
 
 }

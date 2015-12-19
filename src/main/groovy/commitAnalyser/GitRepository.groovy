@@ -308,7 +308,6 @@ class GitRepository {
         def branchName = "spgroup-tag" + counter++
         def branch = git.branchList().setListMode(ListBranchCommand.ListMode.ALL).call().find{ it.name.endsWith(branchName) }
         if(branch) git.branchDelete().setBranchNames(branch.name).call()
-        //git.checkout().setForce(true).setName(branchName).call()
         git.checkout().setForce(true).setCreateBranch(true).setName(branchName).setStartPoint(sha).call()
         git.close()
     }

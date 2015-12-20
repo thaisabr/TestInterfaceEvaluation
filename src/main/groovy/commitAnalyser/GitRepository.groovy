@@ -197,9 +197,17 @@ class GitRepository {
             List<CodeChange> codeChanges = extractAllCodeChangesFromCommit(c)
             List<CodeChange> prodFiles = Util.findAllProductionFilesFromCodeChanges(codeChanges)
             List<CodeChange> testFiles = Util.findAllTestFilesFromCodeChanges(codeChanges)
+
+            /* identifies changed gherkin files and scenario definitions */
+            List<CodeChange> gherkinChanges = testFiles.findAll{ it.filename.endsWith(Util.FEATURE_FILENAME_EXTENSION) }
+
+            /* identifies changed rspec files */
+            List<CodeChange> unitChanges = testFiles.findAll{ it.filename.contains(Util.UNIT_TEST_FILES_RELATIVE_PATH) }
+
             commits += new Commit(hash:c.name, message:c.fullMessage.replaceAll(Util.NEW_LINE_REGEX," "),
                     author:c.authorIdent.name, date:c.commitTime, productionChanges: prodFiles,
-                    testChanges: testFiles, codeChanges: (prodFiles+testFiles).unique())
+                    testChanges: testFiles, codeChanges: (prodFiles+testFiles).unique(),
+                    gherkinChanges:gherkinChanges, unitChanges:unitChanges)
         }
         return commits
     }

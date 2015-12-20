@@ -28,14 +28,12 @@ class DoneTask extends Task {
         /* retrieves commits code */
         commits = gitRepository.searchBySha(*(commits*.hash))
 
+        /* identifies changed rspec files */
+        List<Commit> commitsChangedRspecFile = commits.findAll{ !it.unitChanges.isEmpty() }
+
         /* identifies changed gherkin files and scenario definitions */
-        List<Commit> commitsChangedGherkinFile = []
-        commits.each{ commit ->
-            commit.gherkinChanges = commit.testChanges.findAll{ it.filename.endsWith(Util.FEATURE_FILENAME_EXTENSION) }
-            if( !commit.gherkinChanges.isEmpty()){
-                commitsChangedGherkinFile += commit
-            }
-        }
+        List<Commit> commitsChangedGherkinFile = commits.findAll{ !it.gherkinChanges.isEmpty() }
+
         if(!commitsChangedGherkinFile.isEmpty()){
             /* resets repository to the state of the last commit to extract changes */
             gitRepository.reset(commits?.last()?.hash)

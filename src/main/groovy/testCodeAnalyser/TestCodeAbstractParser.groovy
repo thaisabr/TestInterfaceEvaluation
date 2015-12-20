@@ -43,8 +43,12 @@ abstract class TestCodeAbstractParser {
         gherkinFiles?.each { gherkinFile ->
             /* finds step code for changed scenario definitions from a Gherkin file */
             gherkinFile.changedScenarioDefinitions?.each { definition ->
-                def test = findStepCode(definition, gherkinFile.path)
-                if(test) acceptanceTests += test
+                try{
+                    def test = findStepCode(definition, gherkinFile.path)
+                    if(test) acceptanceTests += test
+                }catch (StepCodeNotFoundException ex){
+                    println ex.message
+                }
             }
         }
         acceptanceTests?.each { println it }
@@ -87,7 +91,9 @@ abstract class TestCodeAbstractParser {
                 stepCodeMatch = stepCodeMatch.get(0)
                 StepCode stepCode = new StepCode(step:step, codePath:stepCodeMatch.path, line:stepCodeMatch.line)
                 codes += stepCode
-            } else println "step code was not found!"
+            } else {
+                throw new StepCodeNotFoundException(step.text, scenarioDefinitionPath, step.location.line)
+            }
         }
 
         if(codes.isEmpty()){
@@ -166,7 +172,6 @@ abstract class TestCodeAbstractParser {
         }
         return result
     }
-
 
     /***
      * Template method to compute test-based task interface for done tasks (evaluation study).

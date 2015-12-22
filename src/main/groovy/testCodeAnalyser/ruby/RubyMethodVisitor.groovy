@@ -5,7 +5,7 @@ import org.jrubyparser.ast.DefsNode
 import org.jrubyparser.util.NoopVisitor
 
 /***
- * Visits methods body searching for other method calls.
+ * Visits methods body searching for other method calls. It should be used associated to RubyTestCodeVisitor.
  */
 class RubyMethodVisitor extends NoopVisitor {
 
@@ -21,12 +21,14 @@ class RubyMethodVisitor extends NoopVisitor {
     Object visitDefnNode(DefnNode iVisited) {
         super.visitDefnNode(iVisited)
         if(iVisited.name in methods) iVisited.accept(methodBodyVisitor)
+        return iVisited
     }
 
     @Override
     Object visitDefsNode(DefsNode iVisited) {
         super.visitDefsNode(iVisited)
         if(iVisited.name in methods) iVisited.accept(methodBodyVisitor)
+        return iVisited
     }
 
 }

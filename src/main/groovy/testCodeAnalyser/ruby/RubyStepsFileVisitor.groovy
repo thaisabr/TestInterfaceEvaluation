@@ -11,7 +11,7 @@ class RubyStepsFileVisitor extends NoopVisitor {
     List lines
     RubyTestCodeVisitor methodCallVisitor
 
-    public RubyStepsFileVisitor(List lines, RubyTestCodeVisitor methodCallVisitor){
+    RubyStepsFileVisitor(List lines, RubyTestCodeVisitor methodCallVisitor){
         this.lines = lines
         this.methodCallVisitor = methodCallVisitor
     }
@@ -21,9 +21,11 @@ class RubyStepsFileVisitor extends NoopVisitor {
      * FCallNode represents a method call with self as an implicit receiver. Step code are identified here.
      */
     Object visitFCallNode(FCallNode iVisited) {
+        super.visitFCallNode(iVisited)
         if( iVisited.position.startLine in lines) {
             iVisited.accept(methodCallVisitor)
         }
+        return iVisited
     }
 
 }

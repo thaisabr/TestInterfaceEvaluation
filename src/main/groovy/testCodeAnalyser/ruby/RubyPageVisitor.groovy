@@ -24,7 +24,7 @@ class RubyPageVisitor extends NoopVisitor {
 
     private extractViewPathFromNode(MethodDefNode iVisited){
         if(iVisited.name == methodName){
-            def lines = iVisited.position.startLine ..< iVisited.position.endLine
+            def lines = iVisited.position.startLine .. iVisited.position.endLine
             def nodes = returnNodes?.findAll{ it.line in lines }
 
             /* se o metodo pode retornar diferentes valores, provavelmente ele é um método de propósito geral, o que significa

@@ -53,7 +53,7 @@ class Util {
                 Matcher.quoteReplacement(File.separator))
         STEPS_FILES_RELATIVE_PATH = File.separator+(properties.'spgroup.steps.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        UNIT_TEST_FILES_RELATIVE_PATH = File.separator+(properties.'spgroup.rspec.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+        UNIT_TEST_FILES_RELATIVE_PATH = (properties.'spgroup.rspec.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
         PRODUCTION_FILES_RELATIVE_PATH = File.separator+(properties.'spgroup.production.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))

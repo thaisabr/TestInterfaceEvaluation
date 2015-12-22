@@ -1,8 +1,8 @@
 package testCodeAnalyser
 
 import gherkin.ast.Step
+import util.Util
 
-import java.text.Normalizer
 
 /***
  * Represents a match result among a Gherkin step and its implementation code.
@@ -26,10 +26,7 @@ class StepCode {
 
     @Override
     String toString() {
-        def header = "C:${File.separator}Users${File.separator}Thais${File.separator}Documents${File.separator}GitHub${File.separator}" +
-                "TestInterfaceEvaluation${File.separator}repositories${File.separator}"
-        def location = Normalizer.normalize(codePath, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "") - header
+        def location = codePath - Util.getRepositoriesCanonicalPath()
         return "${step.text} >>> $location (${line})"
-        //return "${step.text} >>> $codePath (${line})"
     }
 }

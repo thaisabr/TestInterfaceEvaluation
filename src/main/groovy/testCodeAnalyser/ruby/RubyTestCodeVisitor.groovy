@@ -22,6 +22,8 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     String lastVisitedFile
     Set methods //keys: name, class, path; todos os métodos do projeto; usado para identificar origem dos métodos chamados
 
+    def productionClass //keys: name, path; used when visiting RSpec files; try a better way to represent it!
+
     public RubyTestCodeVisitor(List<String> projectFiles, String currentFile, Set methods){
         this.projectFiles = projectFiles
         this.viewFiles = projectFiles.findAll{ it.contains(Util.VIEWS_FILES_RELATIVE_PATH) }
@@ -37,61 +39,65 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
 
-        //println "Method call: ${iVisited.name} (${iVisited.position.startLine+1});   Receptor: ${iVisited.receiver.name}"
+        //println "Method call: ${iVisited.name} (${iVisited.position.startLine});   Receptor: ${iVisited.receiver.name}"
 
-        switch (iVisited.receiver.class){
-            case ConstNode: //constant expression; static method call; example: User.find_by_email("trashmail@meurio.org.br")
-                def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
-                taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file:path]
-                break
-            case Colon3Node: //superclass method
-            case Colon2ConstNode: //call example: "ActionMailer::Base.deliveries"
-                def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
-                taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file:path]
-                path = Util.getClassPathForRuby(iVisited.receiver.leftNode.name, projectFiles)
-                taskInterface.classes += [name: iVisited.receiver.leftNode.name, file:path]
-                break
-            case InstVarNode: //instance variable, example: @user.should_not be_nil
-                def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
-                if(path){
+        /* unit test file */
+        if(productionClass && iVisited.receiver.properties.containsKey("name") && iVisited.receiver.name == "subject") {
+            taskInterface.methods += [name: iVisited.name, type: productionClass.name, file: productionClass.path]
+        }
+        else {
+            switch (iVisited.receiver.class) {
+                case ConstNode: //constant expression; static method call; example: User.find_by_email("trashmail@meurio.org.br")
+                    def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
                     taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
-                    /* verifica se o método realmente existe no arquivo. Tem método que é incluido dinamicamente por frameworks
-                    * e podem não aparecer na fase em que a AST é gerada. Estou deixando essa verificação apenas para
-                    * deixar documentado que isso pode acontecer. */
-                    def receiver = methods.findAll{ it.name == iVisited && it.path == path }
-                    if(receiver.isEmpty()){
-                        println "The method called by instance variable was not found: " +
-                                "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine})"
+                    break
+                case Colon3Node: //superclass method
+                case Colon2ConstNode: //call example: "ActionMailer::Base.deliveries"
+                    def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
+                    taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
+                    path = Util.getClassPathForRuby(iVisited.receiver.leftNode.name, projectFiles)
+                    taskInterface.classes += [name: iVisited.receiver.leftNode.name, file: path]
+                    break
+                case InstVarNode: //instance variable, example: @user.should_not be_nil
+                    def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
+                    if (path) {
+                        taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
+                        /* verifica se o método realmente existe no arquivo. Tem método que é incluido dinamicamente por frameworks
+                        * e podem não aparecer na fase em que a AST é gerada. Estou deixando essa verificação apenas para
+                        * deixar documentado que isso pode acontecer. */
+                        def receiver = methods.findAll { it.name == iVisited && it.path == path }
+                        if (receiver.isEmpty()) {
+                            println "The method called by instance variable was not found: " +
+                                    "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine})"
+                        }
+                    } else {
+                        taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
                     }
-                }
-                else{
-                    taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
-                }
-                break
-            case DVarNode: //dynamic variable (e.g. block scope local variable)
-                [name: iVisited.name, type: iVisited.receiver.name, file:null]
-                break
-            case GlobalVarNode: //access to a global variable; usage of "?"
-                if(!iVisited.receiver.name == "?"){
-                    println "CALL BY GLOBAL VARIABLE \nPROPERTIES:"
-                    iVisited.receiver.properties.each{k,v -> println "$k: $v"}
-                }
-                break
-            case FCallNode: //method call with self as an implicit receiver
-            case VCallNode: //method call without any arguments
-            case CallNode: //method call
-                def receiver = methods.findAll{ it.name == iVisited.name }
-                if(receiver.isEmpty()){
-                    taskInterface.methods += [name: iVisited.name, type: null, file: null]
-                }
-                else{
-                    receiver.each {
-                        taskInterface.methods += [name: iVisited.name, type: it.className, file: it.path]
+                    break
+                case DVarNode: //dynamic variable (e.g. block scope local variable)
+                    [name: iVisited.name, type: iVisited.receiver.name, file: null]
+                    break
+                case GlobalVarNode: //access to a global variable; usage of "?"
+                    if (!iVisited.receiver.name == "?") {
+                        println "CALL BY GLOBAL VARIABLE \nPROPERTIES:"
+                        iVisited.receiver.properties.each { k, v -> println "$k: $v" }
                     }
-                }
-                break
-            default:
-                println "RECEIVER DEFAULT! Receiver type: ${iVisited.receiver.class}"
+                    break
+                case FCallNode: //method call with self as an implicit receiver
+                case VCallNode: //method call without any arguments
+                case CallNode: //method call
+                    def receiver = methods.findAll { it.name == iVisited.name }
+                    if (receiver.isEmpty()) {
+                        taskInterface.methods += [name: iVisited.name, type: null, file: null]
+                    } else {
+                        receiver.each {
+                            taskInterface.methods += [name: iVisited.name, type: it.className, file: it.path]
+                        }
+                    }
+                    break
+                default:
+                    println "RECEIVER DEFAULT! Receiver type: ${iVisited.receiver.class}"
+            }
         }
         iVisited
     }
@@ -103,7 +109,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
 
-        //println "Method call: ${iVisited.name} (${iVisited.position.startLine+1});   Receptor: self"
+        //println "Method call: ${iVisited.name} (${iVisited.position.startLine});   Receptor: self"
 
         if(iVisited.name == "visit"){ //indicates de view
             /* if the argument is a literal, the view was found */
@@ -134,7 +140,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     Object visitVCallNode(VCallNode iVisited) {
         super.visitVCallNode(iVisited)
 
-        //println "Method call: ${iVisited.name} (${iVisited.position.startLine+1})"
+        //println "Method call: ${iVisited.name} (${iVisited.position.startLine})"
 
         def receiverName = methods.findAll{ it.name == iVisited.name }
         if(!receiverName) taskInterface.methods += [name: iVisited.name, type: null, file: null]

@@ -4,6 +4,7 @@ import org.jrubyparser.CompatVersion
 import org.jrubyparser.Parser
 import org.jrubyparser.ast.Node
 import org.jrubyparser.parser.ParserConfiguration
+import taskAnalyser.UnitFile
 import testCodeAnalyser.StepRegex
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.TestCodeVisitor
@@ -100,6 +101,17 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             }
         }
         visitor?.taskInterface?.referencedPages = pageVisitor.pages
+    }
+
+    @Override
+    TestCodeVisitor parseUnitBody(UnitFile file) {
+        def node = generateAst(file.path)
+        def visitor = new RubyTestCodeVisitor(projectFiles, file.path, methods)
+        visitor.lastVisitedFile = file.path
+        visitor.productionClass = file.productionClass //keywords: name, path
+        def testCodeVisitor = new RSpecFileVisitor(file.tests*.lines, visitor)
+        node.accept(testCodeVisitor)
+        visitor
     }
 
 }

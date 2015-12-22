@@ -18,6 +18,9 @@ import org.eclipse.jgit.revwalk.RevTree
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.PathFilter
+import taskAnalyser.UnitFile
+import testCodeAnalyser.ruby.RSpecTestDefinitionVisitor
+import testCodeAnalyser.ruby.RubyTestCodeParser
 import util.Util
 
 import java.util.regex.Matcher
@@ -57,8 +60,9 @@ class GitRepository {
     }
 
     /***
-     * Computes the difference between two versions of a file.
-     * @param filename file to evaluate
+     * Computes the difference between two versions of a file or files tree.
+     *
+     * @param filename file to evaluate. If the filname is empty, it is computed all diferentes between file trees.
      * @param newTree the tree that contains a new version of the file.
      * @param oldTree the tree that contains an older version of the file.
      * @return a list of DiffEntry objects that represents the difference between two versions of a file.
@@ -73,6 +77,7 @@ class GitRepository {
 
         if(filename!=null && !filename.isEmpty()) df.setPathFilter(PathFilter.create(filename))
         List<DiffEntry> diffs = df.scan(oldTree, newTree)
+        df.release()
         git.close()
 
         List<DiffEntry> result = []
@@ -86,6 +91,7 @@ class GitRepository {
 
     /***
      * Prints a file content showing the differences between it and its previous version.
+     *
      * @param entry the DiffEntry object that represents the difference between two versions of a file.
      */
     private showDiff(DiffEntry entry){
@@ -96,25 +102,39 @@ class GitRepository {
         formatter.setDetectRenames(true)
         formatter.setContext(1)
         formatter.format(entry)
-        git.close()
         println "DIFF: "
         println stream
+        git.close()
+        stream.reset()
+        formatter.release()
     }
 
     /***
      * Converts a list of DiffEntry objects into CodeChange objects.
+     * Important: DiffEntry.ChangeType.RENAME and DiffEntry.ChangeType.COPY are ignored. As consequence, if a renamed
+     * file also has code changes, such changes are also ignored.
      */
-    private static List<CodeChange> extractAllCodeChangeFromDiffs(List<DiffEntry> diffs) {
+    private List<CodeChange> extractAllCodeChangeFromDiffs(RevCommit commit, List<DiffEntry> diffs) {
         List<CodeChange> codeChanges = []
         if (!diffs?.empty) {
             diffs.each{ entry ->
-                if( entry.changeType.equals(DiffEntry.ChangeType.DELETE) ){
-                    codeChanges += new CodeChange(filename:entry.oldPath, type:entry.changeType)
-                }
-                else {
-                    //showDiff(entry)
-                    codeChanges += new CodeChange(filename:entry.newPath, type:entry.changeType)
-                    //if(entry.changeType==DiffEntry.ChangeType.RENAME) println "<RENAME> old:${entry.oldPath}; new:${entry.newPath}"
+                switch(entry.changeType){
+                    case DiffEntry.ChangeType.ADD: //it is necessary to know the file size because all lines were changed
+                        def result = extractFileContent(commit, entry.newPath)
+                        codeChanges += new CodeChange(filename:entry.newPath, type:entry.changeType, lines:0..<result.size())
+                        break
+                    case DiffEntry.ChangeType.DELETE: //the file size is already known
+                        def result = extractFileContent(commit.parents.first(), entry.oldPath)
+                        codeChanges += new CodeChange(filename:entry.oldPath, type:entry.changeType, lines:0..<result.size())
+                        break
+                    case DiffEntry.ChangeType.MODIFY:
+                        def lines = computeChanges(commit, entry.newPath)
+                        codeChanges += new CodeChange(filename:entry.newPath, type:entry.changeType, lines:lines)
+                        break
+                    case DiffEntry.ChangeType.RENAME:
+                        println "<RENAME> old:${entry.oldPath}; new:${entry.newPath}"
+                    case DiffEntry.ChangeType.COPY:
+                        codeChanges += new CodeChange(filename:entry.newPath, type:entry.changeType, lines:[])
                 }
             }
         }
@@ -123,6 +143,7 @@ class GitRepository {
 
     /***
      * Retrieves a commit.
+     *
      * @param sha the commit's identification.
      * @return the commit.
      */
@@ -144,12 +165,11 @@ class GitRepository {
         return treeWalk
     }
 
-    private List<String> extractFileContent(ObjectId commitID, String filename) {
+    private List<String> extractFileContent(RevCommit commit, String filename) {
         def result = []
         def git = Git.open(new File(localPath))
         filename = filename.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
         RevWalk revWalk = new RevWalk(git.repository)
-        RevCommit commit = revWalk.parseCommit(commitID)
         TreeWalk treeWalk = generateTreeWalk(commit?.tree, filename)
         ObjectId objectId = treeWalk.getObjectId(0)
         try{
@@ -158,6 +178,7 @@ class GitRepository {
             loader.copyTo(stream)
             revWalk.dispose()
             result = stream.toString().readLines()
+            stream.reset()
         }
         catch(MissingObjectException exception){
             if(objectId.equals(ObjectId.zeroId()))
@@ -173,7 +194,7 @@ class GitRepository {
         List<CodeChange> codeChanges = []
         if(commit.parentCount>0) {
             def diffs = extractDiff(null, commit.tree, commit.parents.first().tree)
-            codeChanges = extractAllCodeChangeFromDiffs(diffs)
+            codeChanges = extractAllCodeChangeFromDiffs(commit, diffs)
         }
         else{ //first commit
             def git = Git.open(new File(localPath))
@@ -213,47 +234,30 @@ class GitRepository {
     }
 
     //* PROBLEM: Deal with removed lines. */
-    private List<Integer> computeChanges(ObjectId commitID, String hash, String filename){
+    private List<Integer> computeChanges(RevCommit commit, String filename){
         def changedLines = []
         def git = Git.open(new File(localPath))
         BlameCommand blamer = new BlameCommand(git.repository)
-        blamer.setStartCommit(commitID)
+        blamer.setStartCommit(ObjectId.fromString(commit.name))
         blamer.setFilePath(filename.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/")))
         BlameResult blameResult = blamer.call()
 
-        List<String> fileContent = extractFileContent(commitID, filename)
+        List<String> fileContent = extractFileContent(commit, filename)
         fileContent.eachWithIndex { line, i ->
             RevCommit c = blameResult?.getSourceCommit(i)
-            if(c?.name?.equals(hash)) changedLines += i
+            if(c?.name?.equals(commit.name)) changedLines += i
         }
 
         git.close()
 
-        return changedLines
-    }
-
-    /* Important: DiffEntry.ChangeType.RENAME and DiffEntry.ChangeType.COPY are ignored. As consequence, if a renamed
-       file also has code changes, such changes are also ignored. */
-    private List<Integer> identifyChangedLines(String hash, CodeChange codeChange) {
-        def changedLines = []
-        RevCommit commit = extractCommit(hash)
-        ObjectId commitID = ObjectId.fromString(commit.name)
-
-        switch(codeChange.type){
-            case DiffEntry.ChangeType.ADD:
-            case DiffEntry.ChangeType.DELETE:
-                List<String> fileContent = extractFileContent(commitID, codeChange.filename)
-                def lines = fileContent.size()
-                changedLines = (0 ..< lines)
-                break
-            case DiffEntry.ChangeType.MODIFY:
-                changedLines = computeChanges(commitID, hash, codeChange.filename)
-        }
+        /* if the result is empty, it means changes were removed lines only; the blame command can not deal with
+        * this type of change; a new strategy should be defined!!!! */
         return changedLines
     }
 
     /***
      * Searches all commits from a Git repository.
+     *
      * @return a list of commits.
      */
     List<Commit> searchAllCommits(){
@@ -265,6 +269,7 @@ class GitRepository {
 
     /***
      * Searches commits from a Git repository by hash value.
+     *
      * @param hash a set of hash value
      * @return a list of commits that satisfy the search criteria.
      */
@@ -276,35 +281,68 @@ class GitRepository {
     }
 
     /***
-     * Defines the gherkin files (features) and scenarios definitions changed by a group of commits.
-     * @param commits commits that caused changes in gherkin files
+     * Defines the gherkin files (features) and scenarios definitions changed by a commit.
+     * It is used only when dealing with done tasks.
+     *
+     * @param commit commit that caused changes in gherkin files
      * @return changed gherkin content
      */
-    List<GherkinFile> identifyChangedGherkinContent(List<Commit> commits) {
+    List<GherkinFile> identifyChangedGherkinContent(Commit commit) {
         Parser<Feature> featureParser = new Parser<>()
         List<GherkinFile> changedGherkinFiles = []
 
-        commits.each { commit ->
-            commit.gherkinChanges.each { change ->
-                change.lines = identifyChangedLines(commit.hash, change)
-                def path = localPath+File.separator+change.filename
-                def reader = new FileReader(path)
-                try{
-                    Feature feature = featureParser.parse(reader)
-                    reader.close()
-                    def changedScenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line in change.lines }
-                    if(changedScenarioDefinitions){
-                        changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
-                                feature:feature, changedScenarioDefinitions:changedScenarioDefinitions)
-                    }
-
-                } catch(FileNotFoundException ex){
-                    println "Problem to parse Gherkin file: ${ex.message}"
+        commit.gherkinChanges.each { change ->
+            def path = localPath+File.separator+change.filename
+            def reader = new FileReader(path)
+            try{
+                Feature feature = featureParser.parse(reader)
+                reader.close()
+                def changedScenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line-1 in change.lines }
+                if(changedScenarioDefinitions){
+                    changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
+                            feature:feature, changedScenarioDefinitions:changedScenarioDefinitions)
                 }
+
+            } catch(FileNotFoundException ex){
+                println "Problem to parse Gherkin file: ${ex.message}. Reason: The commit deleted it."
             }
         }
 
         return changedGherkinFiles
+    }
+
+    List<UnitFile> identifyChangedUnitTestContent(Commit commit){
+        def changedUnitFiles = []
+        //println "All changed unit test files: ${commit.unitChanges*.filename}"
+
+        commit.unitChanges.each{ change ->
+            def path = localPath+File.separator+change.filename
+            try{
+                def visitor = new RSpecTestDefinitionVisitor(localPath, path)
+                def node = RubyTestCodeParser.generateAst(path)
+                node.accept(visitor)
+                if(visitor.tests.isEmpty()){
+                    println "The unit file does not contain any test definition!"
+                }
+                else{
+                    def changedTests = visitor.tests.findAll{ it.lines.intersect(change.lines) }
+                    if(changedTests){
+                        /*println "All changed unit tests: "
+                        changedTests.each{ println it }*/
+
+                        def unitFile = new UnitFile(commitHash:commit.hash, path:path, tests:changedTests, productionClass:visitor.productionClass)
+                        changedUnitFiles += unitFile
+                    }
+                    else{
+                        println "No unit test was changed or the changed one was not found!"
+                    }
+                }
+            } catch(FileNotFoundException ex){
+                println "Problem to parse unit test file: ${ex.message}. Reason: The commit deleted it."
+            }
+        }
+
+        return changedUnitFiles
     }
 
     /***

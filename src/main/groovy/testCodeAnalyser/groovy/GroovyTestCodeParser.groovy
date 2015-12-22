@@ -4,6 +4,7 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.Phases
 import org.codehaus.groovy.control.SourceUnit
+import taskAnalyser.UnitFile
 import testCodeAnalyser.StepRegex
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.TestCodeVisitor
@@ -127,6 +128,11 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
             }
         }
         visitor?.taskInterface?.referencedPages = pageCodeVisitor.pages
+    }
+
+    @Override
+    TestCodeVisitor parseUnitBody(UnitFile file) {
+        return null
     }
 
 }

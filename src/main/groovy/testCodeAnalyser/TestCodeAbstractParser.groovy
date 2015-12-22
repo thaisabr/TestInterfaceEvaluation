@@ -4,6 +4,7 @@ package testCodeAnalyser
 import gherkin.ast.ScenarioDefinition
 import taskAnalyser.GherkinFile
 import taskAnalyser.TaskInterface
+import taskAnalyser.UnitFile
 import util.Util
 
 
@@ -173,6 +174,41 @@ abstract class TestCodeAbstractParser {
         return result
     }
 
+    TaskInterface computeInterfaceForDoneTaskByUnitTest(List<UnitFile> unitFiles){
+        def interfaces = []
+
+        unitFiles.each { file ->
+            /* first level: To identify method calls from unit test body. */
+            TestCodeVisitor testCodeVisitor = parseUnitBody(file)
+
+            /* second level: To visit methods until there is no more method calls of methods defined in test code. */
+            def visitedFiles = []
+            def filesToVisit = listFilesToVisit(testCodeVisitor.taskInterface.methods, visitedFiles)
+
+            while (!filesToVisit.isEmpty()) {
+                /* copies methods from task interface */
+                def backupCalledMethods = testCodeVisitor.taskInterface.methods
+
+                /* visits each file */
+                filesToVisit.each { f -> visitFile(f, testCodeVisitor) }
+
+                /* computes methods to visit based on visit history */
+                visitedFiles = updateVisitedFiles(visitedFiles, filesToVisit)
+                def lastCalledMethods = testCodeVisitor.taskInterface.methods - backupCalledMethods
+                filesToVisit = listFilesToVisit(lastCalledMethods, visitedFiles)
+            }
+
+            /* searches for view files */
+            findAllPages(testCodeVisitor)
+
+            /* updates task interface */
+            interfaces += testCodeVisitor.taskInterface
+        }
+
+        /* collapses step code interfaces to define the interface for the whole task */
+        TaskInterface.colapseInterfaces(interfaces)
+    }
+
     /***
      * Template method to compute test-based task interface for done tasks (evaluation study).
      *
@@ -191,14 +227,13 @@ abstract class TestCodeAbstractParser {
      * @return task interface
      */
     TaskInterface computeInterfaceForTodoTask(List<GherkinFile> gherkinFiles){
+        def interfaces = []
         List<StepCode> stepCodes = extractStepCode(gherkinFiles)
 
         /* Identifies files to parse. The files are identified by path and lines of interest. */
         def filesToParse = identifyMethodsPerFileToVisit(stepCodes)
 
         /* parses step nodes and records method calls */
-        def interfaces = []
-
         /* visits each step body and each method called from there */
         filesToParse.eachWithIndex{ stepCode, index ->
 
@@ -270,5 +305,12 @@ abstract class TestCodeAbstractParser {
      * @param visitor visitor to visit method bodies
      */
     abstract visitFile(def file, TestCodeVisitor visitor)
+
+    /***
+     *
+     * @param file
+     * @return
+     */
+    abstract TestCodeVisitor parseUnitBody(UnitFile file)
 
 }

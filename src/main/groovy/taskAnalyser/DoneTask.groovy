@@ -13,52 +13,98 @@ class DoneTask extends Task {
     String repositoryIndex
     List<Commit> commits
     List<GherkinFile> changedGherkinFiles
+    List<UnitFile> changedUnitFiles
 
     DoneTask(String repositoryIndex, String repositoryUrl, String id, List<Commit> commits) {
         super(repositoryUrl, true, id)
-        this.repositoryIndex = repositoryIndex
-        this.commits = commits
-        this.changedGherkinFiles = []
-    }
 
-    @Override
-    TaskInterface computeTestBasedInterface(){
-        TaskInterface taskInterface = new TaskInterface()
+        this.repositoryIndex = repositoryIndex
+        this.changedGherkinFiles = []
+        this.changedUnitFiles = []
 
         /* retrieves commits code */
-        commits = gitRepository.searchBySha(*(commits*.hash))
+        this.commits = gitRepository.searchBySha(*(commits*.hash))
+    }
 
-        /* identifies changed rspec files */
+    TaskInterface computeUnitTestBasedInterface(){
+        println "TASK ID: $id"
+        def interfaces = []
+
+        /* identifies changed unit test files */
         List<Commit> commitsChangedRspecFile = commits.findAll{ !it.unitChanges.isEmpty() }
 
-        /* identifies changed gherkin files and scenario definitions */
-        List<Commit> commitsChangedGherkinFile = commits.findAll{ !it.gherkinChanges.isEmpty() }
+        commitsChangedRspecFile?.each{ commit ->
+            println "\nCommit: ${commit.hash}"
 
-        if(!commitsChangedGherkinFile.isEmpty()){
-            /* resets repository to the state of the last commit to extract changes */
-            gitRepository.reset(commits?.last()?.hash)
-            changedGherkinFiles = gitRepository.identifyChangedGherkinContent(commitsChangedGherkinFile)
+            /* resets repository to the state of the commit to extract changes */
+            gitRepository.reset(commit.hash)
 
-            /* computes task interface based on the production code exercised by tests */
-            println "Task id: $id"
-            taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles)
+            /* translates changed lines in unit test files to changed unit tests */
+            List<UnitFile> changes = gitRepository.identifyChangedUnitTestContent(commit)
+
+            if(!changes.isEmpty()){
+                changedUnitFiles += changes
+
+                /* computes task interface based on the production code exercised by tests */
+                interfaces += testCodeParser.computeInterfaceForDoneTaskByUnitTest(changes)
+            }
+            else{
+                println "No changes in unit test!\n"
+            }
 
             /* resets repository to last version */
             gitRepository.reset()
         }
 
-        return taskInterface
+        /* collapses step code interfaces to define the interface for the whole task */
+        TaskInterface.colapseInterfaces(interfaces)
     }
 
-    /* TERMINAR / CORRIGIR
+    @Override
+    TaskInterface computeTestBasedInterface(){
+        println "TASK ID: $id"
+        def interfaces = []
+
+        /* identifies changed gherkin files and scenario definitions */
+        List<Commit> commitsChangedGherkinFile = commits.findAll{ !it.gherkinChanges.isEmpty() }
+
+        commitsChangedGherkinFile?.each{ commit ->
+            println "\nCommit: ${commit.hash}"
+
+            /* resets repository to the state of the commit to extract changes */
+            gitRepository.reset(commit.hash)
+
+            /* translates changed lines in Gherkin files to changed acceptance tests */
+            List<GherkinFile> changes = gitRepository.identifyChangedGherkinContent(commit)
+
+            if(!changes.isEmpty()){
+                changedGherkinFiles += changes
+
+                /* computes task interface based on the production code exercised by tests */
+                interfaces += testCodeParser.computeInterfaceForDoneTask(changes)
+            }
+            else{
+                println "No changes in acceptance tests!\n"
+            }
+
+            /* resets repository to last version */
+            gitRepository.reset()
+        }
+
+        /* collapses step code interfaces to define the interface for the whole task */
+        TaskInterface.colapseInterfaces(interfaces)
+    }
+
     TaskInterface computeRealInterface(){
         def taskInterface = new TaskInterface()
         if(commits){
             def files = commits*.codeChanges*.filename*.flatten()?.unique()
             def productionFiles = Util.findAllProductionFiles(files)
-            taskInterface.files = productionFiles
+            productionFiles.each{ file ->
+                taskInterface.classes += [name:"", file:file]
+            }
         }
         return taskInterface
-    }*/
+    }
 
 }

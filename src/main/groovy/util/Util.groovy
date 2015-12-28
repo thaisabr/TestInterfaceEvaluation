@@ -117,6 +117,19 @@ class Util {
     }
 
     /***
+     * Checks if a local file contains production code based on its path.
+     * The criteria used (file type to ignore and production path) is defined at configuration.properties file.
+     *
+     * @param path the file path
+     * @return true if the file contains production code. Otherwise, it returns false
+     */
+    static boolean isProductionCode(String path){
+        if(path == null || path == "") false
+        else if( !(excludedPath).any{ path.contains(it)} && path.contains(PRODUCTION_FILES_RELATIVE_PATH) ) true
+        else false
+    }
+
+    /***
      * Finds all production files among a list of files.
      *
      * @param files a list of file paths
@@ -170,8 +183,14 @@ class Util {
      * @return true if the file contains test code. Otherwise, it returns false
      */
     static boolean isTestCode(String path){
-        if( !(excludedPath).any{ path?.contains(it) } && path==~/$regex_testCode/ ) true
+        if(path == null || path == "") false
+        else if( !(excludedPath).any{ path?.contains(it) } && path==~/$regex_testCode/ ) true
         else false
+    }
+
+    static boolean isValidCode(String path){
+        if(path == null || path == "" || (excludedPath).any{ path?.contains(it) }) false
+        else true
     }
 
     /**

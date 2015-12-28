@@ -116,28 +116,28 @@ class GitRepository {
      */
     private List<CodeChange> extractAllCodeChangeFromDiffs(RevCommit commit, List<DiffEntry> diffs) {
         List<CodeChange> codeChanges = []
-        if (!diffs?.empty) {
-            diffs.each{ entry ->
-                switch(entry.changeType){
-                    case DiffEntry.ChangeType.ADD: //it is necessary to know the file size because all lines were changed
-                        def result = extractFileContent(commit, entry.newPath)
-                        codeChanges += new CodeChange(filename:entry.newPath, type:entry.changeType, lines:0..<result.size())
-                        break
-                    case DiffEntry.ChangeType.DELETE: //the file size is already known
-                        def result = extractFileContent(commit.parents.first(), entry.oldPath)
-                        codeChanges += new CodeChange(filename:entry.oldPath, type:entry.changeType, lines:0..<result.size())
-                        break
-                    case DiffEntry.ChangeType.MODIFY:
-                        def lines = computeChanges(commit, entry.newPath)
-                        codeChanges += new CodeChange(filename:entry.newPath, type:entry.changeType, lines:lines)
-                        break
-                    case DiffEntry.ChangeType.RENAME:
-                        println "<RENAME> old:${entry.oldPath}; new:${entry.newPath}"
-                    case DiffEntry.ChangeType.COPY:
-                        codeChanges += new CodeChange(filename:entry.newPath, type:entry.changeType, lines:[])
+            diffs?.each{ entry ->
+                if(Util.isValidCode(entry.newPath) || Util.isValidCode(entry.oldPath)) {
+                    switch (entry.changeType) {
+                        case DiffEntry.ChangeType.ADD: //it is necessary to know the file size because all lines were changed
+                            def result = extractFileContent(commit, entry.newPath)
+                            codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: 0..<result.size())
+                            break
+                        case DiffEntry.ChangeType.DELETE: //the file size is already known
+                            def result = extractFileContent(commit.parents.first(), entry.oldPath)
+                            codeChanges += new CodeChange(filename: entry.oldPath, type: entry.changeType, lines: 0..<result.size())
+                            break
+                        case DiffEntry.ChangeType.MODIFY:
+                            def lines = computeChanges(commit, entry.newPath)
+                            codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: lines)
+                            break
+                        case DiffEntry.ChangeType.RENAME:
+                            println "<RENAME> old:${entry.oldPath}; new:${entry.newPath}"
+                        case DiffEntry.ChangeType.COPY:
+                            codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [])
+                    }
                 }
             }
-        }
         return codeChanges
     }
 

@@ -26,6 +26,11 @@ class DoneTask extends Task {
         this.commits = gitRepository.searchBySha(*(commits*.hash))
     }
 
+    /***
+     * Computes task interface based in unit test code.
+     * It can be seen as a future refinement for task interface.
+     * @return task interface
+     */
     TaskInterface computeUnitTestBasedInterface(){
         println "TASK ID: $id"
         def interfaces = []
@@ -34,8 +39,6 @@ class DoneTask extends Task {
         List<Commit> commitsChangedRspecFile = commits.findAll{ !it.unitChanges.isEmpty() }
 
         commitsChangedRspecFile?.each{ commit ->
-            println "\nCommit: ${commit.hash}"
-
             /* resets repository to the state of the commit to extract changes */
             gitRepository.reset(commit.hash)
 
@@ -58,6 +61,36 @@ class DoneTask extends Task {
 
         /* collapses step code interfaces to define the interface for the whole task */
         TaskInterface.colapseInterfaces(interfaces)
+    }
+
+    /***
+     * (TO VALIDATE)
+     * Computes task interface based in unit test code.
+     * It can be seen as a future refinement for task interface.
+     * Changes interpretation are based in the checkou of the last commit of the task. It could introduce error and
+     * after validation it should be removed.
+     * @return task interface
+     */
+    TaskInterface computeUnitTestBasedInterfaceVersion2(){
+        println "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
+        TaskInterface taskInterface = new TaskInterface()
+
+        /* identifies changed unit test files */
+        List<Commit> commitsChangedRspecFile = commits.findAll{ !it.unitChanges.isEmpty() }
+
+        if(!commitsChangedRspecFile.isEmpty()){
+            /* resets repository to the state of the last commit to extract changes */
+            gitRepository.reset(commits?.last()?.hash)
+            changedUnitFiles = gitRepository.identifyChangedUnitTestContent(commitsChangedRspecFile)
+
+            /* computes task interface based on the production code exercised by tests */
+            taskInterface = testCodeParser.computeInterfaceForDoneTaskByUnitTest(changedUnitFiles)
+
+            /* resets repository to last version */
+            gitRepository.reset()
+        }
+
+        taskInterface
     }
 
     @Override

@@ -19,7 +19,7 @@ import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.PathFilter
 import taskAnalyser.UnitFile
-import testCodeAnalyser.ruby.RSpecTestDefinitionVisitor
+import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
 import testCodeAnalyser.ruby.RubyTestCodeParser
 import util.Util
 
@@ -281,7 +281,7 @@ class GitRepository {
     }
 
     /***
-     * Defines the gherkin files (features) and scenarios definitions changed by a commit.
+     * Interprets changed lines by a commits as changed scenarios definitions at gherkin files (features).
      * It is used only when dealing with done tasks.
      *
      * @param commit commit that caused changes in gherkin files
@@ -311,12 +311,56 @@ class GitRepository {
         return changedGherkinFiles
     }
 
+    /***
+     * (TO VALIDATE)
+     * Interprets changed lines by a group of commits as changed scenarios definitions at gherkin files (features).
+     * It is used only when dealing with done tasks.
+     * It could introduce error and after validation it should be removed.
+     *
+     * @param commits commits that caused changes in gherkin files
+     * @return changed gherkin content
+     */
+    List<GherkinFile> identifyChangedGherkinContent(List<Commit> commits) {
+        Parser<Feature> featureParser = new Parser<>()
+        List<GherkinFile> changedGherkinFiles = []
+
+        commits.each { commit ->
+            commit.gherkinChanges.each { change ->
+                def path = localPath+File.separator+change.filename
+                def reader = new FileReader(path)
+                try{
+                    Feature feature = featureParser.parse(reader)
+                    reader.close()
+                    def changedScenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line-1 in change.lines }
+                    if(changedScenarioDefinitions){
+                        changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
+                                feature:feature, changedScenarioDefinitions:changedScenarioDefinitions)
+                    }
+
+                } catch(FileNotFoundException ex){
+                    println "Problem to parse Gherkin file: ${ex.message}"
+                }
+            }
+        }
+
+        return changedGherkinFiles
+    }
+
+    /***
+     * Interprets changed lines in unit test files.
+     * It is used only when dealing with done tasks.
+     *
+     * @param commit commit that caused changes in unit test files
+     * @return list of changed unit test files
+     */
     List<UnitFile> identifyChangedUnitTestContent(Commit commit){
         def changedUnitFiles = []
         //println "All changed unit test files: ${commit.unitChanges*.filename}"
 
+        println "\nCommit: ${commit.hash}"
         commit.unitChanges.each{ change ->
-            def path = localPath+File.separator+change.filename
+            def path = localPath + File.separator + change.filename
+            println "\nChange path: $path"
             try{
                 def visitor = new RSpecTestDefinitionVisitor(localPath, path)
                 def node = RubyTestCodeParser.generateAst(path)
@@ -339,6 +383,50 @@ class GitRepository {
                 }
             } catch(FileNotFoundException ex){
                 println "Problem to parse unit test file: ${ex.message}. Reason: The commit deleted it."
+            }
+        }
+
+        return changedUnitFiles
+    }
+
+    /***
+     * (TO VALIDATE)
+     * Changes interpretation are based in the checkout of the last commit of the task. It is used only when dealing with done tasks.
+     * It could introduce error and after validation it should be removed.
+     *
+     * @param commits commits that caused changes in unit test files
+     * @return list of changed unit test files
+     */
+    List<UnitFile> identifyChangedUnitTestContent(List<Commit> commits){
+        def changedUnitFiles = []
+        //println "All changed unit test files: ${commit.unitChanges*.filename}"
+
+        commits.each { commit ->
+            println "\nCommit: ${commit.hash}"
+            commit.unitChanges.each { change ->
+                def path = localPath + File.separator + change.filename
+                println "\nChange path: $path"
+                try {
+                    def visitor = new RSpecTestDefinitionVisitor(localPath, path)
+                    def node = RubyTestCodeParser.generateAst(path)
+                    node.accept(visitor)
+                    if (visitor.tests.isEmpty()) {
+                        println "The unit file does not contain any test definition!"
+                    } else {
+                        def changedTests = visitor.tests.findAll { it.lines.intersect(change.lines) }
+                        if (changedTests) {
+                            /*println "All changed unit tests: "
+                            changedTests.each{ println it }*/
+
+                            def unitFile = new UnitFile(commitHash: commit.hash, path: path, tests: changedTests, productionClass: visitor.productionClass)
+                            changedUnitFiles += unitFile
+                        } else {
+                            println "No unit test was changed or the changed one was not found!"
+                        }
+                    }
+                } catch (FileNotFoundException ex) {
+                    println "Problem to parse unit test file: ${ex.message}. Reason: The commit deleted it."
+                }
             }
         }
 

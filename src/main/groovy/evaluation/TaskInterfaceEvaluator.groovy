@@ -20,6 +20,13 @@ class TaskInterfaceEvaluator {
         ITest.findAllFiles().intersect(IReal.findAllFiles())
     }
 
+    /***
+     * Calculates precision of test based task interface considering files only.
+     *
+     * @param ITest task interface based in test code
+     * @param IReal task interface computed after task is done
+     * @return value between 0 and 1
+     */
     static double calculateFilesPrecision(TaskInterface ITest, TaskInterface IReal){
         double result = 0
         def testFiles = ITest.findAllFiles()
@@ -32,6 +39,13 @@ class TaskInterfaceEvaluator {
         return result
     }
 
+    /***
+     * Calculates recall of test based task interface considering files only.
+     *
+     * @param ITest ITest task interface based in test code
+     * @param IReal task interface computed after task is done
+     * @return value between 0 and 1
+     */
     static double calculateFilesRecall(TaskInterface ITest, TaskInterface IReal){
         double result = 0
         def realFiles = IReal.findAllFiles()

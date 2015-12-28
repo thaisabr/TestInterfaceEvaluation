@@ -28,47 +28,6 @@ class Main {
         println "number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
         printInterfaces(nonEmptyInterfaces)
 
-
-        /* RUBY: TEST INTERFACE BASED ON UNIT TEST CODE - VERSION 1 */
-        def unitCounter = 0
-        def nonEmptyUnitTestInterfaces = []
-        tasks.each{ task ->
-            def taskInterface = task.computeUnitTestBasedInterface()
-            if(!task.changedUnitFiles.isEmpty()){
-                unitCounter++
-                if(taskInterface.toString() != "") nonEmptyUnitTestInterfaces += [task:task, interface:taskInterface]
-            }
-        }
-        println "number of tasks that changed unit test files: $unitCounter"
-        println "number of non empty task interfaces: ${nonEmptyUnitTestInterfaces.size()}"
-        printInterfaces(nonEmptyUnitTestInterfaces)
-
-        /* RUBY: TEST INTERFACE BASED ON UNIT TEST CODE - VERSION 2 */
-        unitCounter = 0
-        nonEmptyUnitTestInterfaces = []
-        tasks.each{ task ->
-            def taskInterface = task.computeUnitTestBasedInterfaceVersion2()
-            if(!task.changedUnitFiles.isEmpty()){
-                unitCounter++
-                if(taskInterface.toString() != "") nonEmptyUnitTestInterfaces += [task:task, interface:taskInterface]
-            }
-        }
-        println "number of tasks that changed unit test files: $unitCounter"
-        println "number of non empty task interfaces: ${nonEmptyUnitTestInterfaces.size()}"
-        printInterfaces(nonEmptyUnitTestInterfaces)
-
-
-        /* RUBY: JOIN TEST INTERFACES (ACCEPTANCE TEST AND UNIT TEST) */
-        def combinedInterfaces = []
-        nonEmptyInterfaces.each{ acceptanceInterface ->
-            def entry = nonEmptyUnitTestInterfaces.find{ it.task.id == acceptanceInterface.task.id}
-            if(entry){
-                def interfaces = [entry.interface, acceptanceInterface.interface]
-                combinedInterfaces += TaskInterface.colapseInterfaces(interfaces)
-            }
-        }
-        println "number of tasks with acceptance and unit test based interfaces: ${combinedInterfaces.size()}"
-        printInterfaces(combinedInterfaces)
     }
 
 }

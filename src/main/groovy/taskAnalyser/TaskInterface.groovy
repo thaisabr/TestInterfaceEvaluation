@@ -35,7 +35,7 @@ class TaskInterface {
         else{
             def text = "Files:\n"
             files.each{
-                if(it) text += it - Util.getRepositoriesCanonicalPath()  + ",\n"
+                if(it) text += it + ",\n"
             }
             def index = text.lastIndexOf(",")
             if(index != -1) return text.substring(0,index)
@@ -65,7 +65,13 @@ class TaskInterface {
             println m
         }*/
 
-        return ((classes+methodFiles+referencedPages) as Set)?.sort()
+        def files = ((classes+methodFiles+referencedPages) as Set)?.sort()
+        def result = []
+        files.each{
+            if(it) result += it - Util.getRepositoriesCanonicalPath()
+        }
+
+        return result
     }
 
     def colapseInterfaces(TaskInterface task) {

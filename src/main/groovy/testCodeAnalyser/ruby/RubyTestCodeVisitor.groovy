@@ -1,5 +1,6 @@
 package testCodeAnalyser.ruby
 
+import org.jrubyparser.ast.ArrayNode
 import org.jrubyparser.ast.CallNode
 import org.jrubyparser.ast.Colon2ConstNode
 import org.jrubyparser.ast.Colon3Node
@@ -8,6 +9,7 @@ import org.jrubyparser.ast.DVarNode
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.ast.GlobalVarNode
 import org.jrubyparser.ast.InstVarNode
+import org.jrubyparser.ast.NewlineNode
 import org.jrubyparser.ast.VCallNode
 import org.jrubyparser.util.NoopVisitor
 import taskAnalyser.TaskInterface
@@ -20,7 +22,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     List<String> projectFiles
     List<String> viewFiles
     String lastVisitedFile
-    Set methods //keys: name, class, path; todos os métodos do projeto; usado para identificar origem dos métodos chamados
+    Set methods //keys: name, args, path; all methods from project
 
     def productionClass //keys: name, path; used when visiting RSpec files; try a better way to represent it!
 
@@ -94,6 +96,12 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                             taskInterface.methods += [name: iVisited.name, type: it.className, file: it.path]
                         }
                     }
+                    break
+                case ArrayNode: //Represents an array. This could be an array literal, quoted words or some args stuff.
+                    taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
+                    break
+                case NewlineNode: //A new (logical) source code line
+                    // the found situation does not make sense: (DB.tables - [:schema_migrations]).each { |table| DB[table].truncate }
                     break
                 default:
                     println "RECEIVER DEFAULT! Receiver type: ${iVisited.receiver.class}"

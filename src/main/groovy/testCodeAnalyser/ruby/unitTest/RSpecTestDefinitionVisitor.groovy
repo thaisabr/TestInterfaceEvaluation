@@ -1,4 +1,4 @@
-package testCodeAnalyser.ruby
+package testCodeAnalyser.ruby.unitTest
 
 import org.jrubyparser.ast.CallNode
 import org.jrubyparser.ast.ConstNode

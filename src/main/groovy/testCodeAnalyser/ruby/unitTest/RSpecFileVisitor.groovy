@@ -1,7 +1,8 @@
-package testCodeAnalyser.ruby
+package testCodeAnalyser.ruby.unitTest
 
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.util.NoopVisitor
+import testCodeAnalyser.ruby.RubyTestCodeVisitor
 
 /***
  * Visits unit test declaration of interest and its body looking for production method calls.

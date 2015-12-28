@@ -8,6 +8,7 @@ import taskAnalyser.UnitFile
 import testCodeAnalyser.StepRegex
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.TestCodeVisitor
+import testCodeAnalyser.ruby.unitTest.RSpecFileVisitor
 
 
 class RubyTestCodeParser extends TestCodeAbstractParser {

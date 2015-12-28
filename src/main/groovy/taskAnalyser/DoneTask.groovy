@@ -117,7 +117,7 @@ class DoneTask extends Task {
                 interfaces += testCodeParser.computeInterfaceForDoneTask(changes)
             }
             else{
-                println "No changes in acceptance tests!\n"
+                println "No changes in acceptance tests!"
             }
 
             /* resets repository to last version */
@@ -131,10 +131,10 @@ class DoneTask extends Task {
     TaskInterface computeRealInterface(){
         def taskInterface = new TaskInterface()
         if(commits){
-            def files = commits*.codeChanges*.filename*.flatten()?.unique()
+            def files = commits.collect{ commit -> commit.codeChanges*.filename }?.flatten()?.unique()
             def productionFiles = Util.findAllProductionFiles(files)
             productionFiles.each{ file ->
-                taskInterface.classes += [name:"", file:file]
+                taskInterface.classes += [name:"", file:gitRepository.name+File.separator+file]
             }
         }
         return taskInterface

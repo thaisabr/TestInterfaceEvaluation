@@ -1,11 +1,18 @@
 package taskAnalyser
 
+import evaluation.TaskInterfaceEvaluator
+
 class Main {
 
     static printInterfaces(def taskInterfaces){
         taskInterfaces.each{ entry ->
-            println "Task id: ${entry.task.id}"
-            println "${entry.interface}\n"
+            println "\nTask id: ${entry.task.id}"
+            println "ITEST:"
+            println "${entry.itest}\n"
+            println "IREAL:"
+            println "${entry.ireal}\n"
+            println "Files precision: ${TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)}"
+            println "Files recall: ${TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)}"
         }
     }
 
@@ -21,11 +28,15 @@ class Main {
             def taskInterface = task.computeTestBasedInterface()
             if(!task.changedGherkinFiles.isEmpty()){
                 gherkinCounter++
-                if(taskInterface.toString() != "") nonEmptyInterfaces += [task:task, interface:taskInterface]
+                if(taskInterface.toString() != ""){
+                    nonEmptyInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface()]
+                }
             }
         }
-        println "number of tasks that changed Gherkin files: $gherkinCounter"
+
+        println "\nnumber of tasks that changed Gherkin files: $gherkinCounter"
         println "number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
+
         printInterfaces(nonEmptyInterfaces)
 
     }

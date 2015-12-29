@@ -305,6 +305,8 @@ class GitRepository {
 
             } catch(FileNotFoundException ex){
                 println "Problem to parse Gherkin file: ${ex.message}. Reason: The commit deleted it."
+            } catch(Exception ex){
+                println "Problem to parse Gherkin file: ${ex.message}.\n Please, check the file language."
             }
         }
 

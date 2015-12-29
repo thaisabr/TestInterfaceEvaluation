@@ -25,6 +25,7 @@ class Util {
     static final String REPOSITORY_FOLDER_PATH
     static final String TASKS_FILE
     static final String DEFAULT_TASK_FILE = "tasks.csv"
+    static final String DEFAULT_EVALUATION_FILE = "output${File.separator}evaluation_result.csv"
     static final String GHERKIN_FILES_RELATIVE_PATH
     static final String STEPS_FILES_RELATIVE_PATH
     static final String UNIT_TEST_FILES_RELATIVE_PATH

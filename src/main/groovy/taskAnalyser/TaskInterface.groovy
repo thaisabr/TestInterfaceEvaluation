@@ -33,9 +33,9 @@ class TaskInterface {
         def files = findAllFiles()
         if(files.isEmpty()) return ""
         else{
-            def text = "Files:\n"
+            def text = ""
             files.each{
-                if(it) text += it + ",\n"
+                if(it) text += it + ", "
             }
             def index = text.lastIndexOf(",")
             if(index != -1) return text.substring(0,index)

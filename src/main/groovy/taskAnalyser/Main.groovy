@@ -1,19 +1,32 @@
 package taskAnalyser
 
+import au.com.bytecode.opencsv.CSVWriter
 import evaluation.TaskInterfaceEvaluator
+import util.Util
 
 class Main {
 
-    static printInterfaces(def taskInterfaces){
+    static exportResult(def taskInterfaces){
+        CSVWriter writer = new CSVWriter(new FileWriter(Util.DEFAULT_EVALUATION_FILE))
+        String[] header = ["Task","ITest","IReal","Precision","Recal"]
+        writer.writeNext(header)
+
         taskInterfaces.each{ entry ->
+            def precision = TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)
+            def recall = TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)
+            String[] line = [entry.task.id, entry.itest, entry.ireal, precision, recall]
+            writer.writeNext(line)
+
             println "\nTask id: ${entry.task.id}"
             println "ITEST:"
             println "${entry.itest}\n"
             println "IREAL:"
             println "${entry.ireal}\n"
-            println "Files precision: ${TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)}"
-            println "Files recall: ${TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)}"
+            println "Files precision: $precision"
+            println "Files recall: $recall"
         }
+
+        writer.close()
     }
 
     public static void main(String[] args){
@@ -37,7 +50,7 @@ class Main {
         println "\nnumber of tasks that changed Gherkin files: $gherkinCounter"
         println "number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
 
-        printInterfaces(nonEmptyInterfaces)
+        exportResult(nonEmptyInterfaces)
 
     }
 

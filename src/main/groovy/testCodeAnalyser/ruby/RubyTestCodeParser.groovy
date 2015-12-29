@@ -3,6 +3,7 @@ package testCodeAnalyser.ruby
 import org.jrubyparser.CompatVersion
 import org.jrubyparser.Parser
 import org.jrubyparser.ast.Node
+import org.jrubyparser.lexer.SyntaxException
 import org.jrubyparser.parser.ParserConfiguration
 import taskAnalyser.UnitFile
 import testCodeAnalyser.StepRegex
@@ -48,16 +49,24 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     @Override
     Set doExtractMethodDefinitions(String file) {
+        def result = [] as Set
         RubyMethodDefinitionVisitor visitor = new RubyMethodDefinitionVisitor()
         Parser rubyParser = new Parser()
         CompatVersion version = CompatVersion.RUBY2_0
         ParserConfiguration config = new ParserConfiguration(0, version)
         visitor.path = file
         FileReader reader = new FileReader(file)
-        def node = rubyParser.parse("<code>", reader, config)
-        node.accept(visitor)
-        reader.close()
-        visitor.methods
+        try{
+            def node = rubyParser.parse("<code>", reader, config)
+            node.accept(visitor)
+            result = visitor.methods
+        } catch(SyntaxException ex){
+            println "Problem to visit file $file: ${ex.message}."
+        }
+        finally {
+            reader.close()
+        }
+        result
     }
 
     @Override

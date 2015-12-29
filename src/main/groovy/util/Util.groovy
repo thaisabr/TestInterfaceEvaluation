@@ -40,6 +40,8 @@ class Util {
     static final Properties properties
 
     private static List<String> excludedPath
+    private static List<String> excludedExtensions
+    private static List<String> excludedFolders
     private static regex_testCode
 
     static {
@@ -47,6 +49,8 @@ class Util {
         loadProperties()
         regex_testCode = configureTestCodeRegex()
         excludedPath = configureExcludedPath()
+        excludedExtensions = excludedPath.findAll{ it.startsWith(".") }
+        excludedFolders = excludedPath - excludedExtensions
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
         TASKS_FILE = configureTasksFilePath()
         GHERKIN_FILES_RELATIVE_PATH = File.separator+(properties.'spgroup.gherkin.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
@@ -189,7 +193,8 @@ class Util {
     }
 
     static boolean isValidCode(String path){
-        if(path == null || path == "" || (excludedPath).any{ path?.contains(it) }) false
+        if(path == null || path == "" || (excludedFolders).any{ path?.contains(it) } ||
+                (excludedExtensions).any{ path?.endsWith(it) } ) false
         else true
     }
 

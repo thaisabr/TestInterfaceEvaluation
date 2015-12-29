@@ -243,6 +243,7 @@ class GitRepository {
         BlameResult blameResult = blamer.call()
 
         List<String> fileContent = extractFileContent(commit, filename)
+        //println "commit: ${commit.name}; filename: $filename; file size: ${fileContent.size()}"
         fileContent.eachWithIndex { line, i ->
             RevCommit c = blameResult?.getSourceCommit(i)
             if(c?.name?.equals(commit.name)) changedLines += i
@@ -293,8 +294,9 @@ class GitRepository {
 
         commit.gherkinChanges.each { change ->
             def path = localPath+File.separator+change.filename
-            def reader = new FileReader(path)
+            def reader
             try{
+                reader = new FileReader(path)
                 Feature feature = featureParser.parse(reader)
                 reader.close()
                 def changedScenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line-1 in change.lines }
@@ -307,6 +309,9 @@ class GitRepository {
                 println "Problem to parse Gherkin file: ${ex.message}. Reason: The commit deleted it."
             } catch(Exception ex){
                 println "Problem to parse Gherkin file: ${ex.message}.\n Please, check the file language."
+            }
+            finally {
+                reader?.close()
             }
         }
 
@@ -329,10 +334,10 @@ class GitRepository {
         commits.each { commit ->
             commit.gherkinChanges.each { change ->
                 def path = localPath+File.separator+change.filename
-                def reader = new FileReader(path)
+                def reader
                 try{
+                    reader = new FileReader(path)
                     Feature feature = featureParser.parse(reader)
-                    reader.close()
                     def changedScenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line-1 in change.lines }
                     if(changedScenarioDefinitions){
                         changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
@@ -341,6 +346,9 @@ class GitRepository {
 
                 } catch(FileNotFoundException ex){
                     println "Problem to parse Gherkin file: ${ex.message}"
+                }
+                finally {
+                    reader?.close()
                 }
             }
         }

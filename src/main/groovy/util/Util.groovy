@@ -60,8 +60,8 @@ class Util {
                 Matcher.quoteReplacement(File.separator))
         UNIT_TEST_FILES_RELATIVE_PATH = (properties.'spgroup.rspec.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        PRODUCTION_FILES_RELATIVE_PATH = File.separator+(properties.'spgroup.production.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
+        PRODUCTION_FILES_RELATIVE_PATH = (properties.'spgroup.production.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+                Matcher.quoteReplacement(File.separator))+File.separator
         VIEWS_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "views"
         TEST_CODE_LANGUAGE = (properties.'spgroup.language').trim().toUpperCase() as LanguageOption
     }
@@ -108,8 +108,13 @@ class Util {
             regex_testCode = ".*${testPath.get(0)}.*"
         }
 
-        return regex_testCode.replaceAll(FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator)+Matcher.quoteReplacement(File.separator))
+        if(File.separator == "\\"){
+            return regex_testCode.replaceAll(FILE_SEPARATOR_REGEX,
+                    Matcher.quoteReplacement(File.separator)+Matcher.quoteReplacement(File.separator))
+        }
+        else {
+            return regex_testCode.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        }
     }
 
     static String configureGitRepositoryName(String url){

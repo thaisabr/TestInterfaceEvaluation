@@ -46,12 +46,8 @@ abstract class TestCodeAbstractParser {
         gherkinFiles?.each { gherkinFile ->
             /* finds step code for changed scenario definitions from a Gherkin file */
             gherkinFile.changedScenarioDefinitions?.each { definition ->
-                try{
-                    def test = findStepCode(definition, gherkinFile.path)
-                    if(test) acceptanceTests += test
-                }catch (StepCodeNotFoundException ex){
-                    log.warn ex.message
-                }
+                def test = findStepCode(definition, gherkinFile.path)
+                if(test) acceptanceTests += test
             }
         }
         acceptanceTests?.each { log.info it.toString() }
@@ -95,7 +91,7 @@ abstract class TestCodeAbstractParser {
                 StepCode stepCode = new StepCode(step:step, codePath:stepCodeMatch.path, line:stepCodeMatch.line)
                 codes += stepCode
             } else {
-                throw new StepCodeNotFoundException(step.text, scenarioDefinitionPath, step.location.line)
+                log.warn "Step code was not found: ${step.text}; $scenarioDefinitionPath (${step.location.line})"
             }
         }
 

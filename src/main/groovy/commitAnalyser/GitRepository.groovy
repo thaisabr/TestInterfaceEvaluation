@@ -88,7 +88,16 @@ class GitRepository {
             it.newPath = it.newPath.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
             result += it
         }
-        return result
+
+        /*include only source code files (groovy, java or ruby) and gherkin files.*/
+        /*return result.findAll{ file -> file.newPath.endsWith(Util.CODE_LANGUAGE.extension) ||
+                file.newPath.endsWith(Util.FEATURE_FILENAME_EXTENSION) ||
+                file.oldPath.endsWith(Util.CODE_LANGUAGE.extension) ||
+                file.oldPath.endsWith(Util.FEATURE_FILENAME_EXTENSION)}*/
+
+        /* exclude invalid files */
+        return result.findAll{ file -> !(Util.excludedExtensions).any{ file.newPath.endsWith(it)} ||
+                !(Util.excludedExtensions).any{ file.oldPath.endsWith(it)} }
     }
 
     /***
@@ -303,7 +312,7 @@ class GitRepository {
 
         commit.gherkinChanges.each { change ->
             def path = localPath+File.separator+change.filename
-            def reader
+            def reader = null
             try{
                 reader = new FileReader(path)
                 Feature feature = featureParser.parse(reader)
@@ -343,7 +352,7 @@ class GitRepository {
         commits.each { commit ->
             commit.gherkinChanges.each { change ->
                 def path = localPath+File.separator+change.filename
-                def reader
+                def reader = null
                 try{
                     reader = new FileReader(path)
                     Feature feature = featureParser.parse(reader)

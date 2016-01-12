@@ -54,7 +54,7 @@ abstract class TestCodeAbstractParser {
                 }
             }
         }
-        acceptanceTests?.each { log.info it }
+        acceptanceTests?.each { log.info it.toString() }
 
         return acceptanceTests*.stepCodes.flatten().unique()
     }

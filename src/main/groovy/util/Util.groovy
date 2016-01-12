@@ -25,7 +25,8 @@ class Util {
     static final String REPOSITORY_FOLDER_PATH
     static final String TASKS_FILE
     static final String DEFAULT_TASK_FILE = "tasks.csv"
-    static final String DEFAULT_EVALUATION_FILE = "output${File.separator}evaluation_result.csv"
+    static final String DEFAULT_EVALUATION_FOLDER = "output"
+    static final String DEFAULT_EVALUATION_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result.csv"
     static final String GHERKIN_FILES_RELATIVE_PATH
     static final String STEPS_FILES_RELATIVE_PATH
     static final String UNIT_TEST_FILES_RELATIVE_PATH
@@ -35,14 +36,14 @@ class Util {
     static final List<String> STEP_KEYWORDS = new GherkinDialectProvider().defaultDialect.stepKeywords.unique()*.trim()
     static final List<String> PAGE_METHODS = ["to", "at"]
 
-    static final LanguageOption TEST_CODE_LANGUAGE
+    static final LanguageOption CODE_LANGUAGE
 
     static final String PROPERTIES_FILE_NAME = "configuration.properties"
     static final Properties properties
 
-    private static List<String> excludedPath
-    private static List<String> excludedExtensions
-    private static List<String> excludedFolders
+    static List<String> excludedPath
+    static List<String> excludedExtensions
+    static List<String> excludedFolders
     private static regex_testCode
 
     static {
@@ -63,7 +64,7 @@ class Util {
         PRODUCTION_FILES_RELATIVE_PATH = (properties.'spgroup.production.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
         VIEWS_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "views"
-        TEST_CODE_LANGUAGE = (properties.'spgroup.language').trim().toUpperCase() as LanguageOption
+        CODE_LANGUAGE = (properties.'spgroup.language').trim().toUpperCase() as LanguageOption
     }
 
     private static loadProperties(){
@@ -222,7 +223,7 @@ class Util {
 
     static List<String> findFilesFromDirectoryByLanguage(String directory){
         def files = findFilesFromDirectory(directory)
-        switch (TEST_CODE_LANGUAGE){
+        switch (CODE_LANGUAGE){
             case LanguageOption.JAVA:
                 files = files.findAll{it.contains(JAVA_EXTENSION)}
                 break

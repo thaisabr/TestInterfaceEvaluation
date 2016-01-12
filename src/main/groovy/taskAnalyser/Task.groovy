@@ -29,7 +29,7 @@ abstract class Task {
     }
 
     def configureTestCodeParser(String path){
-        switch (Util.TEST_CODE_LANGUAGE){
+        switch (Util.CODE_LANGUAGE){
             case LanguageOption.JAVA:
                 testCodeParser = new JavaTestCodeParser(path)
                 break

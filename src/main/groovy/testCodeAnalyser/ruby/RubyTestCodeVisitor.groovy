@@ -1,5 +1,6 @@
 package testCodeAnalyser.ruby
 
+import groovy.util.logging.Slf4j
 import org.jrubyparser.ast.ArrayNode
 import org.jrubyparser.ast.CallNode
 import org.jrubyparser.ast.Colon2ConstNode
@@ -7,15 +8,21 @@ import org.jrubyparser.ast.Colon3Node
 import org.jrubyparser.ast.ConstNode
 import org.jrubyparser.ast.DVarNode
 import org.jrubyparser.ast.FCallNode
+import org.jrubyparser.ast.FixnumNode
 import org.jrubyparser.ast.GlobalVarNode
 import org.jrubyparser.ast.InstVarNode
+import org.jrubyparser.ast.LocalVarNode
 import org.jrubyparser.ast.NewlineNode
+import org.jrubyparser.ast.OrNode
+import org.jrubyparser.ast.SelfNode
+import org.jrubyparser.ast.StrNode
 import org.jrubyparser.ast.VCallNode
 import org.jrubyparser.util.NoopVisitor
 import taskAnalyser.TaskInterface
 import testCodeAnalyser.TestCodeVisitor
 import util.Util
 
+@Slf4j
 class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
     TaskInterface taskInterface
@@ -28,7 +35,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
     public RubyTestCodeVisitor(List<String> projectFiles, String currentFile, Set methods){
         this.projectFiles = projectFiles
-        this.viewFiles = projectFiles.findAll{ it.contains(Util.VIEWS_FILES_RELATIVE_PATH) }
+        this.viewFiles = projectFiles.findAll{ it.contains(Util.VIEWS_FILES_RELATIVE_PATH+File.separator) }
         this.taskInterface = new TaskInterface()
         this.lastVisitedFile = currentFile
         this.methods = methods
@@ -60,6 +67,12 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     path = Util.getClassPathForRuby(iVisited.receiver.leftNode.name, projectFiles)
                     taskInterface.classes += [name: iVisited.receiver.leftNode.name, file: path]
                     break
+                case SelfNode: //Represents 'self' keyword
+                    log.info "SELF_NODE: ${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine})"
+                    //taskInterface.methods += [name: iVisited.name, type: "self", file: lastVisitedFile]
+                    break
+                case LocalVarNode: //Access a local variable
+                    log.info "LOCAL_VAR_NODE: ${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine})"
                 case InstVarNode: //instance variable, example: @user.should_not be_nil
                     def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
                     if (path) {
@@ -69,7 +82,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                         * deixar documentado que isso pode acontecer. */
                         def receiver = methods.findAll { it.name == iVisited && it.path == path }
                         if (receiver.isEmpty()) {
-                            println "The method called by instance variable was not found: " +
+                            log.warn "The method called by instance variable was not found: " +
                                     "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine})"
                         }
                     } else {
@@ -81,8 +94,8 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     break
                 case GlobalVarNode: //access to a global variable; usage of "?"
                     if (!iVisited.receiver.name == "?") {
-                        println "CALL BY GLOBAL VARIABLE \nPROPERTIES:"
-                        iVisited.receiver.properties.each { k, v -> println "$k: $v" }
+                        log.info "CALL BY GLOBAL VARIABLE \nPROPERTIES:"
+                        iVisited.receiver.properties.each { k, v -> log.info "$k: $v" }
                     }
                     break
                 case FCallNode: //method call with self as an implicit receiver
@@ -102,9 +115,12 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     break
                 case NewlineNode: //A new (logical) source code line
                     // the found situation does not make sense: (DB.tables - [:schema_migrations]).each { |table| DB[table].truncate }
+                case StrNode: //Representing a simple String literal
+                case FixnumNode: //Represents an integer literal
+                case OrNode: //represents '||' (or) statements
                     break
                 default:
-                    println "RECEIVER DEFAULT! Receiver type: ${iVisited.receiver.class}"
+                    log.warn "RECEIVER DEFAULT! Receiver type: ${iVisited.receiver.class}"
             }
         }
         iVisited

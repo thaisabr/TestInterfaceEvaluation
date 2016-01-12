@@ -2,6 +2,7 @@ package testCodeAnalyser
 
 
 import gherkin.ast.ScenarioDefinition
+import groovy.util.logging.Slf4j
 import taskAnalyser.GherkinFile
 import taskAnalyser.TaskInterface
 import taskAnalyser.UnitFile
@@ -12,6 +13,7 @@ import util.Util
  * Provides the common logic for test code parsers and the base method to compute task interfaces by
  * Template Method pattern.
  */
+@Slf4j
 abstract class TestCodeAbstractParser {
 
     String repositoryPath
@@ -48,11 +50,11 @@ abstract class TestCodeAbstractParser {
                     def test = findStepCode(definition, gherkinFile.path)
                     if(test) acceptanceTests += test
                 }catch (StepCodeNotFoundException ex){
-                    println ex.message
+                    log.warn ex.message
                 }
             }
         }
-        acceptanceTests?.each { println it }
+        acceptanceTests?.each { log.info it }
 
         return acceptanceTests*.stepCodes.flatten().unique()
     }
@@ -61,7 +63,7 @@ abstract class TestCodeAbstractParser {
         projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         configureRegexList() // Updates regex list used to match step definition and step code
         configureMethodsList()
-        viewFiles = Util.findFilesFromDirectory(repositoryPath+Util.VIEWS_FILES_RELATIVE_PATH)
+        viewFiles = Util.findFilesFromDirectory(repositoryPath+File.separator+Util.VIEWS_FILES_RELATIVE_PATH)
     }
 
     private configureRegexList(){
@@ -72,8 +74,8 @@ abstract class TestCodeAbstractParser {
 
     private configureMethodsList(){
         methods = []
-        projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
-        projectFiles.each{ methods += doExtractMethodDefinitions(it) }
+        def filesForSearchMethods = Util.findFilesFromDirectoryByLanguage(repositoryPath+File.separator+Util.PRODUCTION_FILES_RELATIVE_PATH)
+        filesForSearchMethods.each{ methods += doExtractMethodDefinitions(it) }
     }
 
     /***

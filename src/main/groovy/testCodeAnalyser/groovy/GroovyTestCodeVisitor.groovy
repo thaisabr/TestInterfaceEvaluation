@@ -1,5 +1,6 @@
 package testCodeAnalyser.groovy
 
+import groovy.util.logging.Slf4j
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.expr.*
@@ -8,6 +9,7 @@ import taskAnalyser.TaskInterface
 import testCodeAnalyser.TestCodeVisitor
 import util.Util
 
+@Slf4j
 class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeVisitor {
 
     SourceUnit source
@@ -72,13 +74,13 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     }
 
     private static printMethodCall(MethodCallExpression call){
-        println "!!!!!!!!!!!!! composite call !!!!!!!!!!!!!"
-        println "call text: $call.text"
-        println "call.receiver.class: ${call.receiver.toString()}"
+        log.warn "!!!!!!!!!!!!! composite call !!!!!!!!!!!!!"
+        log.warn "call text: $call.text"
+        log.warn "call.receiver.class: ${call.receiver.toString()}"
         call.properties.each{ k, v ->
-            println "$k: $v"
+            log.warn "$k: $v"
         }
-        println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        log.warn "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     }
 
     @Override

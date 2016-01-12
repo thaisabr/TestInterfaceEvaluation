@@ -2,12 +2,14 @@ package taskAnalyser
 
 import gherkin.Parser
 import gherkin.ast.Feature
+import groovy.util.logging.Slf4j
 import util.Util
 
 /***
  * Represents a new task, that is, a task that contains test code but the production code is not done yet. The task is
  * used to compute test-based task interfaces and prevent code conflicts.
  */
+@Slf4j
 class TodoTask extends Task {
 
     List<GherkinFile> testDescription
@@ -46,7 +48,7 @@ class TodoTask extends Task {
                 }
 
             } catch(FileNotFoundException ex){
-                println "Problem to parse Gherkin file: ${ex.message}"
+                log.warn "Problem to parse Gherkin file: ${ex.message}"
             }
         }
 
@@ -56,7 +58,7 @@ class TodoTask extends Task {
     @Override
     TaskInterface computeTestBasedInterface() {
         if(!testDescription.isEmpty()) {
-            println "Task id: $id"
+            log.info "Task id: $id"
             testCodeParser.computeInterfaceForTodoTask(testDescription)
         }
         else return null

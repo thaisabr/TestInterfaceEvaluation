@@ -2,13 +2,17 @@ package taskAnalyser
 
 import au.com.bytecode.opencsv.CSVWriter
 import evaluation.TaskInterfaceEvaluator
+import groovy.util.logging.Slf4j
 import util.Util
 
+@Slf4j
 class Main {
 
-    static exportResult(def taskInterfaces){
+    static exportResult(def taskInterfaces, def tasksCounter, def noEmptyInterfacesCounter){
         CSVWriter writer = new CSVWriter(new FileWriter(Util.DEFAULT_EVALUATION_FILE))
-        String[] header = ["Task","ITest","IReal","Precision","Recal"]
+        writer.writeNext("number of tasks that changed Gherkin files: $tasksCounter")
+        writer.writeNext("number of non empty task interfaces: $noEmptyInterfacesCounter")
+        String[] header = ["Task","ITest","IReal","Precision","Recall"]
         writer.writeNext(header)
 
         taskInterfaces.each{ entry ->
@@ -17,13 +21,18 @@ class Main {
             String[] line = [entry.task.id, entry.itest, entry.ireal, precision, recall]
             writer.writeNext(line)
 
-            println "\nTask id: ${entry.task.id}"
-            println "ITEST:"
-            println "${entry.itest}\n"
-            println "IREAL:"
-            println "${entry.ireal}\n"
-            println "Files precision: $precision"
-            println "Files recall: $recall"
+            log.info "\nTask id: ${entry.task.id}"
+            log.info "ITEST:"
+            log.info "${entry.itest}\n"
+            log.info "IREAL:"
+            log.info "${entry.ireal}\n"
+            log.info "Files precision: $precision"
+            log.info "Files recall: $recall"
+
+            /*println "changed test files: "
+            println entry.task.commits.collect{ commit -> commit.testChanges*.filename }?.flatten()?.unique()
+            println "changed production files: "
+            println entry.task.commits.collect{ commit -> commit.productionChanges*.filename }?.flatten()?.unique()*/
         }
 
         writer.close()
@@ -32,7 +41,7 @@ class Main {
     public static void main(String[] args){
         /********************************************* RUBY ***********************************************************/
         List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV()
-        println "number of tasks: ${tasks.size()}"
+        log.info "Number of tasks: ${tasks.size()}"
 
         /* RUBY: TEST INTERFACE BASED ON ACCEPTANCE TEST CODE */
         def gherkinCounter = 0
@@ -47,10 +56,10 @@ class Main {
             }
         }
 
-        println "\nnumber of tasks that changed Gherkin files: $gherkinCounter"
-        println "number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
+        log.info "\nnumber of tasks that changed Gherkin files: $gherkinCounter"
+        log.info "number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
 
-        exportResult(nonEmptyInterfaces)
+        exportResult(nonEmptyInterfaces, gherkinCounter, nonEmptyInterfaces.size())
 
     }
 

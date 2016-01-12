@@ -1,6 +1,7 @@
 package taskAnalyser
 
 import commitAnalyser.Commit
+import groovy.util.logging.Slf4j
 import util.Util
 
 /***
@@ -8,6 +9,7 @@ import util.Util
  * Git repository in GitHub. The task is used to evaluation study, to validate test-based task interfaces by comparing
  * them with real interfaces.
  */
+@Slf4j
 class DoneTask extends Task {
 
     String repositoryIndex
@@ -32,7 +34,7 @@ class DoneTask extends Task {
      * @return task interface
      */
     TaskInterface computeUnitTestBasedInterface(){
-        println "TASK ID: $id"
+        log.info "TASK ID: $id"
         def interfaces = []
 
         /* identifies changed unit test files */
@@ -52,12 +54,12 @@ class DoneTask extends Task {
                 interfaces += testCodeParser.computeInterfaceForDoneTaskByUnitTest(changes)
             }
             else{
-                println "No changes in unit test!\n"
+                log.info "No changes in unit test!\n"
             }
-
-            /* resets repository to last version */
-            gitRepository.reset()
         }
+
+        /* resets repository to last version */
+        gitRepository.reset()
 
         /* collapses step code interfaces to define the interface for the whole task */
         TaskInterface.colapseInterfaces(interfaces)
@@ -67,12 +69,12 @@ class DoneTask extends Task {
      * (TO VALIDATE)
      * Computes task interface based in unit test code.
      * It can be seen as a future refinement for task interface.
-     * Changes interpretation are based in the checkou of the last commit of the task. It could introduce error and
+     * Changes interpretation are based in the checkout of the last commit of the task. It could introduce error and
      * after validation it should be removed.
      * @return task interface
      */
     TaskInterface computeUnitTestBasedInterfaceVersion2(){
-        println "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
+        log.info "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
         TaskInterface taskInterface = new TaskInterface()
 
         /* identifies changed unit test files */
@@ -95,14 +97,14 @@ class DoneTask extends Task {
 
     @Override
     TaskInterface computeTestBasedInterface(){
-        println "TASK ID: $id"
+        log.info "TASK ID: $id"
         def interfaces = []
 
         /* identifies changed gherkin files and scenario definitions */
         List<Commit> commitsChangedGherkinFile = commits.findAll{ !it.gherkinChanges.isEmpty() }
 
         commitsChangedGherkinFile?.each{ commit ->
-            println "\nCommit: ${commit.hash}"
+            log.info "\nCommit: ${commit.hash}"
 
             /* resets repository to the state of the commit to extract changes */
             gitRepository.reset(commit.hash)
@@ -117,12 +119,13 @@ class DoneTask extends Task {
                 interfaces += testCodeParser.computeInterfaceForDoneTask(changes)
             }
             else{
-                println "No changes in acceptance tests!"
+                log.info "No changes in acceptance tests!"
             }
 
-            /* resets repository to last version */
-            gitRepository.reset()
         }
+
+        /* resets repository to last version */
+        gitRepository.reset()
 
         /* collapses step code interfaces to define the interface for the whole task */
         TaskInterface.colapseInterfaces(interfaces)

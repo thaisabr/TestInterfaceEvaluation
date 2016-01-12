@@ -17,13 +17,19 @@ class DoneTask extends Task {
     List<GherkinFile> changedGherkinFiles
     List<UnitFile> changedUnitFiles
 
+    DoneTask(String repositoryUrl, String id, List<String> shas){
+        super(repositoryUrl, true, id)
+        this.changedGherkinFiles = []
+        this.changedUnitFiles = []
+        /* retrieves commits code */
+        this.commits = gitRepository.searchBySha(*shas)
+    }
+
     DoneTask(String repositoryIndex, String repositoryUrl, String id, List<Commit> commits) {
         super(repositoryUrl, true, id)
-
         this.repositoryIndex = repositoryIndex
         this.changedGherkinFiles = []
         this.changedUnitFiles = []
-
         /* retrieves commits code */
         this.commits = gitRepository.searchBySha(*(commits*.hash))
     }

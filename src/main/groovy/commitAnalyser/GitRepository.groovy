@@ -2,6 +2,7 @@ package commitAnalyser
 
 import gherkin.Parser
 import gherkin.ast.Feature
+import groovy.util.logging.Slf4j
 import org.eclipse.jgit.api.ListBranchCommand
 import taskAnalyser.GherkinFile
 import org.eclipse.jgit.api.BlameCommand
@@ -28,6 +29,7 @@ import java.util.regex.Matcher
 /***
  * Represents a git repository to be downloaded for analysis purpose.
  */
+@Slf4j
 class GitRepository {
 
     String url
@@ -50,12 +52,12 @@ class GitRepository {
         File dir = new File(localPath)
         File[] files = dir.listFiles()
         if(files){
-            System.out.println("Already cloned from " + url + " to " + localPath)
+            log.info "Already cloned from " + url + " to " + localPath
         }
         else{
             def result = Git.cloneRepository().setURI(url).setDirectory(dir).call()
             result.close()
-            System.out.println("Cloned from " + url + " to " + localPath)
+            log.info "Cloned from " + url + " to " + localPath
         }
     }
 
@@ -132,7 +134,7 @@ class GitRepository {
                             codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: lines)
                             break
                         case DiffEntry.ChangeType.RENAME:
-                            println "<RENAME> old:${entry.oldPath}; new:${entry.newPath}"
+                            log.info "<RENAME> old:${entry.oldPath}; new:${entry.newPath}"
                         case DiffEntry.ChangeType.COPY:
                             codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [])
                     }
@@ -182,7 +184,7 @@ class GitRepository {
         }
         catch(MissingObjectException exception){
             if(objectId.equals(ObjectId.zeroId()))
-                println "There is no ObjectID for the commit tree. Verify the file separator used in the filename."
+                log.error "There is no ObjectID for the commit tree. Verify the file separator used in the filename."
         }
 
         git.close()
@@ -223,7 +225,7 @@ class GitRepository {
             List<CodeChange> gherkinChanges = testFiles.findAll{ it.filename.endsWith(Util.FEATURE_FILENAME_EXTENSION) }
 
             /* identifies changed rspec files */
-            List<CodeChange> unitChanges = testFiles.findAll{ it.filename.contains(Util.UNIT_TEST_FILES_RELATIVE_PATH) }
+            List<CodeChange> unitChanges = testFiles.findAll{ it.filename.contains(Util.UNIT_TEST_FILES_RELATIVE_PATH+File.separator) }
 
             commits += new Commit(hash:c.name, message:c.fullMessage.replaceAll(Util.NEW_LINE_REGEX," "),
                     author:c.authorIdent.name, date:c.commitTime, productionChanges: prodFiles,
@@ -254,6 +256,13 @@ class GitRepository {
         /* if the result is empty, it means changes were removed lines only; the blame command can not deal with
         * this type of change; a new strategy should be defined!!!! */
         return changedLines
+    }
+
+    String findLastCommitSHA(){
+        def git = Git.open(new File(localPath))
+        Iterable<RevCommit> logs = git.log().call()
+        git.close()
+        logs.sort{it.commitTime}.last()?.name
     }
 
     /***
@@ -306,9 +315,9 @@ class GitRepository {
                 }
 
             } catch(FileNotFoundException ex){
-                println "Problem to parse Gherkin file: ${ex.message}. Reason: The commit deleted it."
+                log.warn "Problem to parse Gherkin file: ${ex.message}. Reason: The commit deleted it."
             } catch(Exception ex){
-                println "Problem to parse Gherkin file: ${ex.message}.\n Please, check the file language."
+                log.warn "Problem to parse Gherkin file: ${ex.message}.\n Please, check the file language."
             }
             finally {
                 reader?.close()
@@ -345,7 +354,7 @@ class GitRepository {
                     }
 
                 } catch(FileNotFoundException ex){
-                    println "Problem to parse Gherkin file: ${ex.message}"
+                    log.warn "Problem to parse Gherkin file: ${ex.message}"
                 }
                 finally {
                     reader?.close()
@@ -367,16 +376,16 @@ class GitRepository {
         def changedUnitFiles = []
         //println "All changed unit test files: ${commit.unitChanges*.filename}"
 
-        println "\nCommit: ${commit.hash}"
+        log.info "\nCommit: ${commit.hash}"
         commit.unitChanges.each{ change ->
             def path = localPath + File.separator + change.filename
-            println "\nChange path: $path"
+            log.info "\nChange path: $path"
             try{
                 def visitor = new RSpecTestDefinitionVisitor(localPath, path)
                 def node = RubyTestCodeParser.generateAst(path)
-                node.accept(visitor)
+                node?.accept(visitor)
                 if(visitor.tests.isEmpty()){
-                    println "The unit file does not contain any test definition!"
+                    log.info "The unit file does not contain any test definition!"
                 }
                 else{
                     def changedTests = visitor.tests.findAll{ it.lines.intersect(change.lines) }
@@ -388,11 +397,11 @@ class GitRepository {
                         changedUnitFiles += unitFile
                     }
                     else{
-                        println "No unit test was changed or the changed one was not found!"
+                        log.info "No unit test was changed or the changed one was not found!"
                     }
                 }
             } catch(FileNotFoundException ex){
-                println "Problem to parse unit test file: ${ex.message}. Reason: The commit deleted it."
+                log.warn "Problem to parse unit test file: ${ex.message}. Reason: The commit deleted it."
             }
         }
 
@@ -412,16 +421,16 @@ class GitRepository {
         //println "All changed unit test files: ${commit.unitChanges*.filename}"
 
         commits.each { commit ->
-            println "\nCommit: ${commit.hash}"
+            log.info "\nCommit: ${commit.hash}"
             commit.unitChanges.each { change ->
                 def path = localPath + File.separator + change.filename
-                println "\nChange path: $path"
+                log.info "\nChange path: $path"
                 try {
                     def visitor = new RSpecTestDefinitionVisitor(localPath, path)
                     def node = RubyTestCodeParser.generateAst(path)
-                    node.accept(visitor)
+                    node?.accept(visitor)
                     if (visitor.tests.isEmpty()) {
-                        println "The unit file does not contain any test definition!"
+                        log.info "The unit file does not contain any test definition!"
                     } else {
                         def changedTests = visitor.tests.findAll { it.lines.intersect(change.lines) }
                         if (changedTests) {
@@ -431,11 +440,11 @@ class GitRepository {
                             def unitFile = new UnitFile(commitHash: commit.hash, path: path, tests: changedTests, productionClass: visitor.productionClass)
                             changedUnitFiles += unitFile
                         } else {
-                            println "No unit test was changed or the changed one was not found!"
+                            log.info "No unit test was changed or the changed one was not found!"
                         }
                     }
                 } catch (FileNotFoundException ex) {
-                    println "Problem to parse unit test file: ${ex.message}. Reason: The commit deleted it."
+                    log.war "Problem to parse unit test file: ${ex.message}. Reason: The commit deleted it."
                 }
             }
         }
@@ -451,7 +460,7 @@ class GitRepository {
         def git = Git.open(new File(localPath))
         def branchName = "spgroup-tag" + counter++
         def branch = git.branchList().setListMode(ListBranchCommand.ListMode.ALL).call().find{ it.name.endsWith(branchName) }
-        if(branch) git.branchDelete().setBranchNames(branch.name).call()
+        if(branch) git.branchDelete().setForce(true).setBranchNames(branch.name).call()
         git.checkout().setForce(true).setCreateBranch(true).setName(branchName).setStartPoint(sha).call()
         git.close()
     }
@@ -461,8 +470,10 @@ class GitRepository {
      */
     def reset(){
         def git = Git.open(new File(localPath))
-        git.checkout().setForce(true).setName("master").call()
+        Iterable<RevCommit> logs = git.log().call()
         git.close()
+        def sha = logs.sort{it.commitTime}.last()?.name
+        reset(sha)
     }
 
 }

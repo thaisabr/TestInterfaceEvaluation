@@ -61,7 +61,7 @@ class Util {
         UNIT_TEST_FILES_RELATIVE_PATH = (properties.'spgroup.rspec.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
         PRODUCTION_FILES_RELATIVE_PATH = (properties.'spgroup.production.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))+File.separator
+                Matcher.quoteReplacement(File.separator))
         VIEWS_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "views"
         TEST_CODE_LANGUAGE = (properties.'spgroup.language').trim().toUpperCase() as LanguageOption
     }
@@ -135,7 +135,7 @@ class Util {
      */
     static boolean isProductionCode(String path){
         if(path == null || path == "") false
-        else if( !(excludedPath).any{ path.contains(it)} && path.contains(PRODUCTION_FILES_RELATIVE_PATH) ) true
+        else if( !(excludedPath).any{ path.contains(it)} && path.contains(PRODUCTION_FILES_RELATIVE_PATH+File.separator) ) true
         else false
     }
 
@@ -147,7 +147,7 @@ class Util {
      */
     static List<String> findAllProductionFiles(List<String> files){
         files?.findAll{ file ->
-            !(excludedPath).any{ file.contains(it)} && file.contains(PRODUCTION_FILES_RELATIVE_PATH)
+            !(excludedPath).any{ file.contains(it)} && file.contains(PRODUCTION_FILES_RELATIVE_PATH+File.separator)
             //!(excludedPath).any{ file.contains(it)} && !isTestCode(file)
         }
     }
@@ -160,7 +160,7 @@ class Util {
      */
     static List<CodeChange> findAllProductionFilesFromCodeChanges(List<CodeChange> changes){
         changes?.findAll{ change ->
-            !(excludedPath).any{ change.filename.contains(it)} && change.filename.contains(PRODUCTION_FILES_RELATIVE_PATH)
+            !(excludedPath).any{ change.filename.contains(it)} && change.filename.contains(PRODUCTION_FILES_RELATIVE_PATH+File.separator)
             //!(excludedPath).any{ change.filename.contains(it)} && !isTestCode(change.filename)
         }
     }

@@ -25,10 +25,9 @@ class Main {
             }
         }
 
-        log.info "\nnumber of tasks that changed Gherkin files: $gherkinCounter"
-        log.info "number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
-
-        exportResult(Util.DEFAULT_EVALUATION_FILE, nonEmptyInterfaces, gherkinCounter, nonEmptyInterfaces.size())
+        log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
+        log.info "Number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
+        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), gherkinCounter, nonEmptyInterfaces)
     }
 
     static analyseTasks(String filename){
@@ -48,41 +47,35 @@ class Main {
             }
         }
 
-        log.info "\nnumber of tasks that changed Gherkin files: $gherkinCounter"
-        log.info "number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
+        log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
+        log.info "Number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
 
         File file = new File(filename)
         def outputFile = Util.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
-        exportResult(outputFile, nonEmptyInterfaces, gherkinCounter, nonEmptyInterfaces.size())
+        exportResult(outputFile, tasks.size(), gherkinCounter, nonEmptyInterfaces)
     }
 
-    static exportResult(def taskInterfaces, def tasksCounter, def noEmptyInterfacesCounter){
-        exportResult(Util.DEFAULT_EVALUATION_FILE, taskInterfaces, tasksCounter, noEmptyInterfacesCounter)
+    static exportResult(def allTasksCounter, def tasksCounter,  def taskInterfaces){
+        exportResult(Util.DEFAULT_EVALUATION_FILE, allTasksCounter, tasksCounter, taskInterfaces)
     }
 
-    static exportResult(def filename, def taskInterfaces, def tasksCounter, def noEmptyInterfacesCounter){
+    static exportResult(def filename, def allTasksCounter, def tasksCounter, def taskInterfaces){
         CSVWriter writer = new CSVWriter(new FileWriter(filename))
-        writer.writeNext("number of tasks that changed Gherkin files: $tasksCounter")
-        writer.writeNext("number of non empty task interfaces: $noEmptyInterfacesCounter")
-        String[] header = ["Task","Date","ITest","IReal","Precision","Recall"]
+        writer.writeNext("Number of tasks: $allTasksCounter")
+        writer.writeNext("Number of tasks that changed Gherkin files: $tasksCounter")
+        writer.writeNext("Number of non empty task interfaces: ${taskInterfaces?.size()}")
+        String[] header = ["Task","Date","Commit_Message","ITest","IReal","Precision","Recall"]
         writer.writeNext(header)
 
-        taskInterfaces.each{ entry ->
+        taskInterfaces?.each{ entry ->
             def precision = TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)
             def recall = TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)
             def dates =  entry?.task?.commits*.date?.flatten()?.sort()
-            if(dates) dates = dates.collect{ new Date(it*1000) }
+            if(dates) dates = dates.collect{ new Date(it*1000).format('dd-MM-yyyy') }.unique()
             else dates = []
-            String[] line = [entry.task.id, dates, entry.itest, entry.ireal, precision, recall]
+            def msgs = entry?.task?.commits*.message?.flatten()
+            String[] line = [entry.task.id, dates, msgs, entry.itest, entry.ireal, precision, recall]
             writer.writeNext(line)
-
-            log.info "\nTask id: ${entry.task.id}"
-            log.info "ITEST:"
-            log.info "${entry.itest}\n"
-            log.info "IREAL:"
-            log.info "${entry.ireal}\n"
-            log.info "Files precision: $precision"
-            log.info "Files recall: $recall"
 
             /*println "changed test files: "
             println entry.task.commits.collect{ commit -> commit.testChanges*.filename }?.flatten()?.unique()
@@ -91,6 +84,7 @@ class Main {
         }
 
         writer.close()
+        log.info "The results were saved!"
     }
 
     public static void main(String[] args){

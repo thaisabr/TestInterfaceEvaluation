@@ -18,7 +18,7 @@ class TaskSearchManager {
         } catch (Exception ex){
             log.error ex.message
         }
-        return entries
+        return entries.unique{ it[2] } //bug: input csv can contain duplicated values; task id is used to identify them.
     }
 
     static List<String[]> readCSV(){

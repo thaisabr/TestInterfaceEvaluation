@@ -2,15 +2,22 @@ package taskAnalyser
 
 import au.com.bytecode.opencsv.CSVReader
 import commitAnalyser.Commit
+import groovy.util.logging.Slf4j
 import util.Util
 
+@Slf4j
 class TaskSearchManager {
 
     static List<String[]> readCSV(String filename){
-        CSVReader reader = new CSVReader(new FileReader(filename))
-        List<String[]> entries = reader.readAll()
-        reader.close()
-        entries.remove(0) //ignore header
+        List<String[]> entries = []
+        try{
+            CSVReader reader = new CSVReader(new FileReader(filename))
+            entries = reader.readAll()
+            reader.close()
+            entries.remove(0) //ignore header
+        } catch (Exception ex){
+            log.error ex.message
+        }
         return entries
     }
 

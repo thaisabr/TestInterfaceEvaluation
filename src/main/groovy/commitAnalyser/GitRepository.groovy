@@ -322,11 +322,10 @@ class GitRepository {
                     changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
                             feature:feature, changedScenarioDefinitions:changedScenarioDefinitions)
                 }
-
             } catch(FileNotFoundException ex){
-                log.warn "Problem to parse Gherkin file: ${ex.message}. Reason: The commit deleted it."
+                log.warn "Problem to parse Gherkin file '${change.filename}': ${ex.message}. Reason: The commit deleted it."
             } catch(Exception ex){
-                log.warn "Problem to parse Gherkin file: ${ex.message}.\n Please, check the file language."
+                log.warn "Problem to parse Gherkin file '${change.filename}': ${ex.message}."
             }
             finally {
                 reader?.close()

@@ -3,13 +3,17 @@ package testCodeAnalyser.ruby
 import groovy.util.logging.Slf4j
 import org.jrubyparser.ast.ArrayNode
 import org.jrubyparser.ast.CallNode
+import org.jrubyparser.ast.CaseNode
 import org.jrubyparser.ast.Colon2ConstNode
+import org.jrubyparser.ast.Colon2Node
 import org.jrubyparser.ast.Colon3Node
 import org.jrubyparser.ast.ConstNode
+import org.jrubyparser.ast.DStrNode
 import org.jrubyparser.ast.DVarNode
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.ast.FixnumNode
 import org.jrubyparser.ast.GlobalVarNode
+import org.jrubyparser.ast.IfNode
 import org.jrubyparser.ast.InstVarNode
 import org.jrubyparser.ast.LocalVarNode
 import org.jrubyparser.ast.NewlineNode
@@ -60,19 +64,22 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
                     taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
                     break
-                case Colon3Node: //superclass method
+                case Colon2Node: //Represents a '::' constant access or method call (Java::JavaClass)
                 case Colon2ConstNode: //call example: "ActionMailer::Base.deliveries"
                     def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
                     taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
                     path = Util.getClassPathForRuby(iVisited.receiver.leftNode.name, projectFiles)
                     taskInterface.classes += [name: iVisited.receiver.leftNode.name, file: path]
                     break
+                case Colon3Node: //Global scope node (::FooBar).  This is used to gain access to the global scope (that of the Object class) when referring to a constant or method.
+                    def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
+                    taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
+                    break
                 case SelfNode: //Represents 'self' keyword
                     log.info "SELF_NODE: ${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine})"
-                    //taskInterface.methods += [name: iVisited.name, type: "self", file: lastVisitedFile]
+                    taskInterface.methods += [name: iVisited.name, type: "self", file: lastVisitedFile]
                     break
                 case LocalVarNode: //Access a local variable
-                    log.info "LOCAL_VAR_NODE: ${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine})"
                 case InstVarNode: //instance variable, example: @user.should_not be_nil
                     def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
                     if (path) {
@@ -116,11 +123,32 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                 case NewlineNode: //A new (logical) source code line
                     // the found situation does not make sense: (DB.tables - [:schema_migrations]).each { |table| DB[table].truncate }
                 case StrNode: //Representing a simple String literal
+                case DStrNode: //A string which contains some dynamic elements which needs to be evaluated (introduced by #)
                 case FixnumNode: //Represents an integer literal
                 case OrNode: //represents '||' (or) statements
+                case IfNode: //example: if @current_inventory_pool
+                case CaseNode: // A Case statement.  Represents a complete case statement, including the body with its when statements.
+                    /* Example:
+                       Url: https://github.com/leihs/leihs/blob/6dbcbfa63af065d6554889d015b08c9e2a7efce3
+                       File: features/step_definitions/borrow/rueckgaben_abholungen_steps.rb (line 4)
+
+                    find("a[href*='borrow/#{case visit_type
+                                                  when "Rückgaben"
+                                                    "returns"
+                                                  when "Abholungen"
+                                                    "to_pick_up"
+                                                  end}'] > span", text: case visit_type
+                                                                        when "Rückgaben"
+                                                                          @current_user.visits.take_back
+                                                                        when "Abholungen"
+                                                                          @current_user.visits.hand_over
+                                                                        end.count.to_s)
+                    */
                     break
                 default:
-                    log.warn "RECEIVER DEFAULT! Receiver type: ${iVisited.receiver.class}"
+                    log.warn "RECEIVER DEFAULT! called: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine}); " +
+                            "Receiver type: ${iVisited.receiver.class}"
+                    //log.warn "RECEIVER DEFAULT! Receiver type: ${iVisited.receiver.class}"
             }
         }
         iVisited
@@ -150,8 +178,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     taskInterface.calledPageMethods += [name: iVisited.name, arg:m.name, file:m.path]
                 }
             }
-
-        } else if(!(iVisited.name in Util.STEP_KEYWORDS)){
+        } else if(!(iVisited.name in Util.STEP_KEYWORDS) && !(iVisited.name in  Util.STEP_KEYWORDS_PT) ){
             taskInterface.methods += [name: iVisited.name, type: "self", file: lastVisitedFile]
         }
         iVisited

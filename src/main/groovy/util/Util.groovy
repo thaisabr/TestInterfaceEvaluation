@@ -34,6 +34,9 @@ class Util {
     static final String VIEWS_FILES_RELATIVE_PATH
 
     static final List<String> STEP_KEYWORDS = new GherkinDialectProvider().defaultDialect.stepKeywords.unique()*.trim()
+    static final List<String> STEP_KEYWORDS_PT = new GherkinDialectProvider().getDialect("pt",null).stepKeywords.unique()*.trim()
+
+    //usado apenas em groovy
     static final List<String> PAGE_METHODS = ["to", "at"]
 
     static final LanguageOption CODE_LANGUAGE

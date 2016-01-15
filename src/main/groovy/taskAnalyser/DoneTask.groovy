@@ -141,10 +141,14 @@ class DoneTask extends Task {
      */
     @Override
     TaskInterface computeTestBasedInterface(){
+        if(!commits || commits.empty) {
+            log.warn "TASK ID: $id; NO COMMITS!"
+            return new TaskInterface()
+        }
         log.info "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
         def interfaces = []
 
-        List<Commit> commitsChangedGherkinFile = commits.findAll{ !it.gherkinChanges.isEmpty() }
+        List<Commit> commitsChangedGherkinFile = commits?.findAll{ !it.gherkinChanges.isEmpty() }
 
         // identifies changed gherkin files and scenario definitions
         List<GherkinFile> gherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
@@ -173,7 +177,7 @@ class DoneTask extends Task {
 
     TaskInterface computeRealInterface(){
         def taskInterface = new TaskInterface()
-        if(commits){
+        if(commits && !commits.empty){
             def files = commits.collect{ commit -> commit.codeChanges*.filename }?.flatten()?.unique()
             def productionFiles = Util.findAllProductionFiles(files)
             productionFiles.each{ file ->

@@ -119,20 +119,15 @@ class DoneTask extends Task {
             // resets repository to the state of the commit to extract changes
             gitRepository.reset(commit.hash)
 
-            // translates changed lines in Gherkin files to changed acceptance tests
-            List<GherkinFile> changes = commit.gherkinChanges*.gherkinFile
-            //List<GherkinFile> changes = gitRepository.identifyChangedGherkinContent(commit)
+            changedGherkinFiles += commit.gherkinChanges
 
-            if(!changes.isEmpty()){
-                changedGherkinFiles += changes
+            // computes task interface based on the production code exercised by tests
+            interfaces += testCodeParser.computeInterfaceForDoneTask(commit.gherkinChanges)
+        }
 
-                // computes task interface based on the production code exercised by tests
-                interfaces += testCodeParser.computeInterfaceForDoneTask(changes)
-            }
-            else{
-                log.info "No changes in acceptance tests!"
-            }
-
+        List<Commit> commitsNoGhangedGherkinFile = commits - commitsChangedGherkinFile
+        commitsNoGhangedGherkinFile?.each{
+            log.info "Commit '${it.hash}' did not change acceptance tests!"
         }
 
         // resets repository to last version

@@ -5,7 +5,6 @@ import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
 import org.eclipse.jgit.api.ListBranchCommand
-import org.eclipse.jgit.errors.IncorrectObjectTypeException
 import org.eclipse.jgit.treewalk.AbstractTreeIterator
 import org.eclipse.jgit.treewalk.CanonicalTreeParser
 import taskAnalyser.GherkinFile
@@ -67,9 +66,9 @@ class GitRepository {
     }
 
     /***
-     * Computes the difference between two versions of a file or files tree.
+     * Computes the difference between two versions of a file or all files from two commits using DiffFormatter.
      *
-     * @param filename file to evaluate. If the filename is empty, it is computed all differences between file trees.
+     * @param filename file to evaluate. If it is empty, all differences between commits are computed.
      * @param newTree the tree that contains a new version of the file.
      * @param oldTree the tree that contains an older version of the file.
      * @return a list of DiffEntry objects that represents the difference between two versions of a file.
@@ -93,19 +92,18 @@ class GitRepository {
             result += it
         }
 
-        /*include only source code files (groovy, java or ruby) and gherkin files.*/
-        /*return result.findAll{ file -> file.newPath.endsWith(Util.CODE_LANGUAGE.extension) ||
-                file.newPath.endsWith(Util.FEATURE_FILENAME_EXTENSION) ||
-                file.oldPath.endsWith(Util.CODE_LANGUAGE.extension) ||
-                file.oldPath.endsWith(Util.FEATURE_FILENAME_EXTENSION)}*/
-
-        /* exclude invalid files*/
-        /*return result.findAll{ file -> !(Util.excludedExtensions).any{ file.newPath.endsWith(it)} &&
-                !(Util.excludedExtensions).any{ file.oldPath.endsWith(it)} }*/
-
         return result.findAll{ file -> Util.isValidCode(file.newPath) && Util.isValidCode(file.oldPath) }
     }
 
+    /***
+     * Computes the difference between two versions of a file or all files from two commits.
+     * The result is the same of the previous method.
+     *
+     * @param filename file to evaluate. If it is empty, all differences between commits are computed.
+     * @param newCommit the commit that contains a new version of the file.
+     * @param oldCommit the commit that contains an older version of the file.
+     * @return a list of DiffEntry objects that represents the difference between two versions of a file.
+     */
     private List<DiffEntry> extractDiff(String filename, RevCommit newCommit, RevCommit oldCommit){
         def git = Git.open(new File(localPath))
         def oldTree = prepareTreeParser(git, oldCommit.name)
@@ -136,30 +134,31 @@ class GitRepository {
         DiffFormatter formatter = new DiffFormatter(stream)
         formatter.setRepository(git.repository)
         formatter.setDetectRenames(true)
-        formatter.setContext(1000)
+        formatter.setContext(1000) //to show all lines
         formatter.format(entry)
-
-        //println stream.toString()
-
         def lines = stream.toString().readLines()
         def result = lines.getAt(5..lines.size()-1)
         result.eachWithIndex{ val, index ->
             println "($index) $val"
         }
-
         git.close()
         stream.reset()
         formatter.release()
     }
 
-    private static Feature parseGherkinFile(List<String> lines){
+    private static Feature parseGherkinFile(List<String> lines, String filename){
         Feature feature = null
-        try{
-            Parser<Feature> featureParser = new Parser<>()
-            def content = lines.join("\n")
-            feature = featureParser.parse(content)
-        } catch(Exception ex){
-            log.warn "Problem to parse Gherkin file."
+        if(!lines || lines.isEmpty()){
+            log.warn "Problem to parse Gherkin file '$filename'. Reason: The commit deleted it."
+        }
+        else{
+            try{
+                Parser<Feature> featureParser = new Parser<>()
+                def content = lines.join("\n")
+                feature = featureParser.parse(content)
+            } catch(Exception ex){
+                log.warn "Problem to parse Gherkin file '$filename': ${ex.message}."
+            }
         }
         feature
     }
@@ -178,34 +177,38 @@ class GitRepository {
         result
     }
 
+    /***
+     * Identifies changed scenarios definitions at gherkin files (features).
+     * It is used only when dealing with done tasks.
+     */
     private CodeChange extractGherkinChanges(RevCommit commit, RevCommit parent, DiffEntry entry){
         CodeChange codeChange = null
 
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newFeature = parseGherkinFile(newVersion)
+        def newFeature = parseGherkinFile(newVersion, entry.newPath)
         def newScenarioDefinitions = newFeature?.scenarioDefinitions
 
         def oldVersion = extractFileContent(parent, entry.oldPath)
-        def oldFeature = parseGherkinFile(oldVersion)
+        def oldFeature = parseGherkinFile(oldVersion, entry.oldPath)
         def oldScenarioDefinitions = oldFeature?.scenarioDefinitions
 
-        //procura por cenarios alterados ou removidos
+        //searches for changed or removed scenario definitions
         List<ScenarioDefinition> changedScenarioDefinitions = []
-        oldScenarioDefinitions.each{ oldScenDef ->
-            def foundScenDef = newScenarioDefinitions.find{ it.name == oldScenDef.name }
+        oldScenarioDefinitions?.each{ oldScenDef ->
+            def foundScenDef = newScenarioDefinitions?.find{ it.name == oldScenDef.name }
             if(foundScenDef && foundScenDef.name && foundScenDef.name != ""){
-                if (oldScenDef.steps.size() == foundScenDef.steps.size()){ //pode ter sido alterado
+                if (oldScenDef.steps.size() == foundScenDef.steps.size()){ //scenario definition might be changed
                     def scenDefEquals = scenarioDefinitionsEquals(foundScenDef, oldScenDef)
                     if(!scenDefEquals) changedScenarioDefinitions += foundScenDef
-                } else {//scenario teve linhas adicionadas ou removidas
+                } else {//scenario definition was changed
                     changedScenarioDefinitions += foundScenDef
                 }
-            } //se o cenario nao foi achado eh pq foi totalmente removido, logo nao interessa para a tarefa
+            } //if a scenario definition was removed, it was not relevant for the task
         }
 
-        //procura por cenarios adicionados
-        newScenarioDefinitions.each{ newScenDef ->
-            def foundScenDef = oldScenarioDefinitions.find{ it.name == newScenDef.name }
+        //searches for added scenario definitions
+        newScenarioDefinitions?.each{ newScenDef ->
+            def foundScenDef = oldScenarioDefinitions?.find{ it.name == newScenDef.name }
             if(!foundScenDef || !foundScenDef.name || foundScenDef.name == ""){//nao foi achado porque foi adicionado
                 changedScenarioDefinitions += newScenDef
             }
@@ -221,25 +224,33 @@ class GitRepository {
         codeChange
     }
 
-    private GherkinFile extractGherkinAdds(RevCommit commit, List<String> content){
+    /***
+     * Identifies scenarios definitions at added gherkin files (features) by the first commit of the repository.
+     * It is used only when dealing with done tasks.
+     */
+    private static GherkinFile extractGherkinAdds(RevCommit commit, List<String> content, String path){
         GherkinFile changedGherkinFile = null
-        def newFeature = parseGherkinFile(content)
+        def newFeature = parseGherkinFile(content, path)
         def newScenarioDefinitions = newFeature?.scenarioDefinitions
 
-        if(!newScenarioDefinitions.isEmpty()){
-            changedGherkinFile = new GherkinFile(commitHash:commit.name, path:entry.newPath,
+        if(newScenarioDefinitions && !newScenarioDefinitions.isEmpty()){
+            changedGherkinFile = new GherkinFile(commitHash:commit.name, path:path,
                     feature:newFeature, changedScenarioDefinitions:newScenarioDefinitions)
         }
         changedGherkinFile
     }
 
+    /***
+     * Identifies scenarios definitions at added gherkin files (features).
+     * It is used only when dealing with done tasks.
+     */
     private CodeChange extractGherkinAdds(RevCommit commit, DiffEntry entry){
         CodeChange codeChange = null
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newFeature = parseGherkinFile(newVersion)
+        def newFeature = parseGherkinFile(newVersion, entry.newPath)
         def newScenarioDefinitions = newFeature?.scenarioDefinitions
 
-        if(!newScenarioDefinitions.isEmpty()){
+        if(newScenarioDefinitions && !newScenarioDefinitions.isEmpty()){
             GherkinFile changedGherkinFile = new GherkinFile(commitHash:commit.name, path:entry.newPath,
                     feature:newFeature, changedScenarioDefinitions:newScenarioDefinitions)
             codeChange = new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [],
@@ -263,9 +274,7 @@ class GitRepository {
                             def result = extractFileContent(commit, entry.newPath)
                             if(entry.newPath.endsWith(Util.FEATURE_FILENAME_EXTENSION) ){
                                 def change = extractGherkinAdds(commit, entry)
-                                if(change != null) {
-                                    codeChanges += change
-                                }
+                                if(change != null) { codeChanges += change }
                             }
                             else{
                                 codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: 0..<result.size())
@@ -278,9 +287,7 @@ class GitRepository {
                         case DiffEntry.ChangeType.MODIFY:
                             if(entry.newPath.endsWith(Util.FEATURE_FILENAME_EXTENSION) ){
                                 def change = extractGherkinChanges(commit, parent, entry)
-                                if(change != null) {
-                                    codeChanges += change
-                                }
+                                if(change != null) { codeChanges += change }
                             }
                             else{
                                 def lines = computeChanges(commit, entry.newPath)
@@ -346,8 +353,7 @@ class GitRepository {
         return result
     }
 
-    private static AbstractTreeIterator prepareTreeParser(Git git, String objectId) throws IOException,
-            MissingObjectException, IncorrectObjectTypeException {
+    private static AbstractTreeIterator prepareTreeParser(Git git, String objectId)  {
         RevWalk walk = null
         RevCommit commit
         RevTree tree
@@ -377,7 +383,7 @@ class GitRepository {
             if(diff.newPath == "\\dev\\null") diff.oldPath + " (DELETED)"
             else diff.newPath
         }
-        files.sort().each{ log.info it }
+        files?.sort()?.each{ log.info it }
     }
 
     private List<CodeChange> extractAllCodeChangesFromCommit(RevCommit commit){
@@ -394,7 +400,7 @@ class GitRepository {
                     if(Util.isValidCode(tw.pathString)) {
                         List<String> result = extractFileContent(commit, tw.pathString)
                         if( tw.pathString.endsWith(Util.FEATURE_FILENAME_EXTENSION) ){
-                            def change = extractGherkinAdds(commit, result)
+                            def change = extractGherkinAdds(commit, result, tw.pathString)
                             if(change != null) {
                                 codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: [],
                                         gherkinFile: change)
@@ -409,9 +415,7 @@ class GitRepository {
                 git.close()
                 break
             case 1:
-                def diffs = extractDiff(null, commit, commit.parents.first()) //new
-                //def diffs = extractDiff(null, commit.tree, commit.parents.first().tree) //old
-                //listChangedFiles(diffs, commit)
+                def diffs = extractDiff(null, commit, commit.parents.first())
                 codeChanges = extractAllCodeChangeFromDiffs(commit, commit.parents.first(), diffs)
                 break
             default: //merge commit
@@ -426,13 +430,13 @@ class GitRepository {
 
     private List<Commit> extractCommitsFromLogs(Iterable<RevCommit> logs){
         def commits = []
-        logs.each{ c ->
+        logs?.each{ c ->
             List<CodeChange> codeChanges = extractAllCodeChangesFromCommit(c)
             List<CodeChange> prodFiles = Util.findAllProductionFilesFromCodeChanges(codeChanges)
             List<CodeChange> testFiles = Util.findAllTestFilesFromCodeChanges(codeChanges)
 
             /* identifies changed gherkin files and scenario definitions */
-            List<CodeChange> gherkinChanges = testFiles.findAll{ it.filename.endsWith(Util.FEATURE_FILENAME_EXTENSION) }
+            List<GherkinFile> gherkinChanges = testFiles?.findAll{ it.gherkinFile }*.gherkinFile
 
             /* identifies changed rspec files */
             List<CodeChange> unitChanges = testFiles.findAll{ it.filename.contains(Util.UNIT_TEST_FILES_RELATIVE_PATH+File.separator) }
@@ -472,7 +476,7 @@ class GitRepository {
         def git = Git.open(new File(localPath))
         Iterable<RevCommit> logs = git.log().call()
         git.close()
-        logs.sort{it.commitTime}.last()?.name
+        logs?.sort{it.commitTime}?.last()?.name
     }
 
     /***
@@ -484,7 +488,7 @@ class GitRepository {
         def git = Git.open(new File(localPath))
         Iterable<RevCommit> logs = git.log().call()
         git.close()
-        return extractCommitsFromLogs(logs).sort{ it.date }
+        return extractCommitsFromLogs(logs)?.sort{ it.date }
     }
 
     /***
@@ -495,51 +499,9 @@ class GitRepository {
      */
     List<Commit> searchBySha(String... hash) {
         def git = Git.open(new File(localPath))
-        def logs = git.log().call().findAll{ it.name in hash }
+        def logs = git.log().call()?.findAll{ it.name in hash }
         git.close()
-        return extractCommitsFromLogs(logs).sort{ it.date }
-    }
-
-    /***
-     * Interprets changed lines by a commits as changed scenarios definitions at gherkin files (features).
-     * It is used only when dealing with done tasks.
-     *
-     * @param commit commit that caused changes in gherkin files
-     * @return changed gherkin content
-     */
-    List<GherkinFile> identifyChangedGherkinContent(Commit commit) {
-        Parser<Feature> featureParser = new Parser<>()
-        List<GherkinFile> changedGherkinFiles = []
-
-        commit.gherkinChanges.each { change ->
-            if(change.lines.isEmpty() && change.gherkinFile!=null){
-                changedGherkinFiles += change.gherkinFile
-            }
-            else{
-                def path = localPath+File.separator+change.filename
-                def reader = null
-                try{
-                    reader = new FileReader(path)
-                    Feature feature = featureParser.parse(reader)
-                    reader.close()
-                    def changedScenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line-1 in change.lines }
-                    if(changedScenarioDefinitions){
-                        changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
-                                feature:feature, changedScenarioDefinitions:changedScenarioDefinitions)
-                    }
-
-                } catch(FileNotFoundException ex){
-                    log.warn "Problem to parse Gherkin file '${change.filename}': ${ex.message}. Reason: The commit deleted it."
-                } catch(Exception ex){
-                    log.warn "Problem to parse Gherkin file '${change.filename}': ${ex.message}."
-                }
-                finally {
-                    reader?.close()
-                }
-            }
-        }
-
-        return changedGherkinFiles
+        return extractCommitsFromLogs(logs)?.sort{ it.date }
     }
 
     /***
@@ -550,7 +512,7 @@ class GitRepository {
      *
      * @param commits commits that caused changes in gherkin files
      * @return changed gherkin content
-     */
+     *
     List<GherkinFile> identifyChangedGherkinContent(List<Commit> commits) {
         Parser<Feature> featureParser = new Parser<>()
         List<GherkinFile> changedGherkinFiles = []
@@ -578,7 +540,7 @@ class GitRepository {
         }
 
         return changedGherkinFiles
-    }
+    }*/
 
     /***
      * Interprets changed lines in unit test files.

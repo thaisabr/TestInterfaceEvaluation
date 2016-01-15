@@ -45,14 +45,14 @@ abstract class TestCodeAbstractParser {
         List<AcceptanceTest> acceptanceTests = []
         gherkinFiles?.each { gherkinFile ->
             /* finds step code for changed scenario definitions from a Gherkin file */
-            gherkinFile.changedScenarioDefinitions?.each { definition ->
+            gherkinFile?.changedScenarioDefinitions?.each { definition ->
                 def test = findStepCode(definition, gherkinFile.path)
                 if(test) acceptanceTests += test
             }
         }
         acceptanceTests?.each { log.info it.toString() }
 
-        return acceptanceTests*.stepCodes.flatten().unique()
+        return acceptanceTests*.stepCodes?.flatten()?.unique()
     }
 
     def configureProperties(){

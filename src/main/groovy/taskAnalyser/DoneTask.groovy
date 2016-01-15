@@ -39,6 +39,7 @@ class DoneTask extends Task {
      * It can be seen as a future refinement for task interface.
      * @return task interface
      */
+    @Deprecated
     TaskInterface computeUnitTestBasedInterface(){
         log.info "TASK ID: $id"
         def interfaces = []
@@ -79,6 +80,7 @@ class DoneTask extends Task {
      * after validation it should be removed.
      * @return task interface
      */
+    @Deprecated
     TaskInterface computeUnitTestBasedInterfaceVersion2(){
         log.info "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
         TaskInterface taskInterface = new TaskInterface()
@@ -101,28 +103,60 @@ class DoneTask extends Task {
         taskInterface
     }
 
+    private static identifyChangedGherkinContent(List<Commit> commitsChangedGherkinFile){
+        List<GherkinFile> gherkinFiles = []
+        commitsChangedGherkinFile?.each{ commit -> //commits sorted by date
+            commit.gherkinChanges?.each{ file ->
+                if(!file.changedScenarioDefinitions.isEmpty()){
+                    def index = gherkinFiles.findIndexOf{ it.path == file.path }
+                    GherkinFile foundFile
+                    if(index >= 0) foundFile = gherkinFiles.get(index)
+
+                    //another previous commit changed the same gherkin file
+                    if(foundFile){
+                        def previousCommit = commitsChangedGherkinFile.find{ it.hash == foundFile.commitHash }
+                        def equalDefs = foundFile.changedScenarioDefinitions.findAll{ it.name in file.changedScenarioDefinitions*.name }
+                        def oldDefs = foundFile.changedScenarioDefinitions - equalDefs
+
+                        //previous commit changed the same scenario definitions
+                        if(!equalDefs.isEmpty() && previousCommit && commit.date>previousCommit.date){
+                            //previous commit changed other(s) scenario definition(s)
+                            if(!oldDefs.isEmpty()) {
+                                file.changedScenarioDefinitions += oldDefs
+                            }
+                            gherkinFiles.set(index, file)
+                        }
+                    } else{
+                        gherkinFiles += file
+                    }
+                }
+            }
+        }
+        gherkinFiles
+    }
+
     /***
      * Computes task interface based in acceptance test code.
      * @return task interface
      */
     @Override
     TaskInterface computeTestBasedInterface(){
-        log.info "TASK ID: $id"
+        log.info "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
         def interfaces = []
 
-        // identifies changed gherkin files and scenario definitions
         List<Commit> commitsChangedGherkinFile = commits.findAll{ !it.gherkinChanges.isEmpty() }
 
-        commitsChangedGherkinFile?.each{ commit ->
-            log.info "Commit: ${commit.hash}"
+        // identifies changed gherkin files and scenario definitions
+        List<GherkinFile> gherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
 
-            // resets repository to the state of the commit to extract changes
-            gitRepository.reset(commit.hash)
+        if(!gherkinFiles.isEmpty()) {
+            // resets repository to the state of the last commit to extract changes
+            gitRepository.reset(commits?.last()?.hash)
 
-            changedGherkinFiles += commit.gherkinChanges
-
+            changedGherkinFiles += gherkinFiles
             // computes task interface based on the production code exercised by tests
-            interfaces += testCodeParser.computeInterfaceForDoneTask(commit.gherkinChanges)
+            interfaces += testCodeParser.computeInterfaceForDoneTask(gherkinFiles)
+
         }
 
         List<Commit> commitsNoGhangedGherkinFile = commits - commitsChangedGherkinFile
@@ -136,41 +170,6 @@ class DoneTask extends Task {
         // collapses step code interfaces to define the interface for the whole task
         TaskInterface.colapseInterfaces(interfaces)
     }
-
-    /***
-     * Computes task interface based in acceptance test code.
-     * Changes interpretation are based in the checkout of the last commit of the task.
-     * @return task interface
-     *
-    @Override
-    TaskInterface computeTestBasedInterface(){
-        log.info "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
-        TaskInterface taskInterface = new TaskInterface()
-
-        // identifies changed gherkin files and scenario definitions
-        List<Commit> commitsChangedGherkinFile = commits.findAll{ !it.gherkinChanges.isEmpty() }
-
-        if(!commitsChangedGherkinFile.isEmpty()){
-            // resets repository to the state of the last commit to extract changes
-            gitRepository.reset(commits?.last()?.hash)
-
-            // translates changed lines in Gherkin files to changed acceptance tests
-            changedGherkinFiles = gitRepository.identifyChangedGherkinContent(commitsChangedGherkinFile)
-
-            if(changedGherkinFiles.isEmpty()){
-                log.info "No changes in acceptance tests!"
-            }
-            else{
-                // computes task interface based on the production code exercised by tests
-                taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles)
-            }
-
-            // resets repository to last version
-            gitRepository.reset()
-        }
-
-        taskInterface
-    }*/
 
     TaskInterface computeRealInterface(){
         def taskInterface = new TaskInterface()

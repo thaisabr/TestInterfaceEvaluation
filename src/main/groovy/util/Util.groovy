@@ -94,8 +94,7 @@ class Util {
 
     private static configureExcludedPath(){
         excludedPath = (properties.'spgroup.task.interface.path.toignore').split(",")*.replaceAll(" ", "")
-        return excludedPath*.replaceAll(FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator)+Matcher.quoteReplacement(File.separator))
+        return excludedPath*.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
     }
 
     private static configureTestCodeRegex(){
@@ -203,9 +202,9 @@ class Util {
     }
 
     static boolean isValidCode(String path){
-        if(path == null || path == "" || (excludedFolders).any{ path?.contains(it) } ||
-                (excludedExtensions).any{ path?.endsWith(it) } ) false
-        else true
+        if(path != null && path != "" && !(excludedFolders).any{ path?.contains(it) } &&
+                !(excludedExtensions).any{ path?.endsWith(it) } ) true
+        else false
     }
 
     /**

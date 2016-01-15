@@ -101,27 +101,32 @@ class DoneTask extends Task {
         taskInterface
     }
 
+    /***
+     * Computes task interface based in acceptance test code.
+     * @return task interface
+     */
     @Override
     TaskInterface computeTestBasedInterface(){
         log.info "TASK ID: $id"
         def interfaces = []
 
-        /* identifies changed gherkin files and scenario definitions */
+        // identifies changed gherkin files and scenario definitions
         List<Commit> commitsChangedGherkinFile = commits.findAll{ !it.gherkinChanges.isEmpty() }
 
         commitsChangedGherkinFile?.each{ commit ->
-            log.info "\nCommit: ${commit.hash}"
+            log.info "Commit: ${commit.hash}"
 
-            /* resets repository to the state of the commit to extract changes */
+            // resets repository to the state of the commit to extract changes
             gitRepository.reset(commit.hash)
 
-            /* translates changed lines in Gherkin files to changed acceptance tests */
-            List<GherkinFile> changes = gitRepository.identifyChangedGherkinContent(commit)
+            // translates changed lines in Gherkin files to changed acceptance tests
+            List<GherkinFile> changes = commit.gherkinChanges*.gherkinFile
+            //List<GherkinFile> changes = gitRepository.identifyChangedGherkinContent(commit)
 
             if(!changes.isEmpty()){
                 changedGherkinFiles += changes
 
-                /* computes task interface based on the production code exercised by tests */
+                // computes task interface based on the production code exercised by tests
                 interfaces += testCodeParser.computeInterfaceForDoneTask(changes)
             }
             else{
@@ -130,12 +135,47 @@ class DoneTask extends Task {
 
         }
 
-        /* resets repository to last version */
+        // resets repository to last version
         gitRepository.reset()
 
-        /* collapses step code interfaces to define the interface for the whole task */
+        // collapses step code interfaces to define the interface for the whole task
         TaskInterface.colapseInterfaces(interfaces)
     }
+
+    /***
+     * Computes task interface based in acceptance test code.
+     * Changes interpretation are based in the checkout of the last commit of the task.
+     * @return task interface
+     *
+    @Override
+    TaskInterface computeTestBasedInterface(){
+        log.info "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
+        TaskInterface taskInterface = new TaskInterface()
+
+        // identifies changed gherkin files and scenario definitions
+        List<Commit> commitsChangedGherkinFile = commits.findAll{ !it.gherkinChanges.isEmpty() }
+
+        if(!commitsChangedGherkinFile.isEmpty()){
+            // resets repository to the state of the last commit to extract changes
+            gitRepository.reset(commits?.last()?.hash)
+
+            // translates changed lines in Gherkin files to changed acceptance tests
+            changedGherkinFiles = gitRepository.identifyChangedGherkinContent(commitsChangedGherkinFile)
+
+            if(changedGherkinFiles.isEmpty()){
+                log.info "No changes in acceptance tests!"
+            }
+            else{
+                // computes task interface based on the production code exercised by tests
+                taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles)
+            }
+
+            // resets repository to last version
+            gitRepository.reset()
+        }
+
+        taskInterface
+    }*/
 
     TaskInterface computeRealInterface(){
         def taskInterface = new TaskInterface()

@@ -148,7 +148,7 @@ class DoneTask extends Task {
         log.info "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
         def interfaces = []
 
-        List<Commit> commitsChangedGherkinFile = commits?.findAll{ !it.gherkinChanges.isEmpty() }
+        List<Commit> commitsChangedGherkinFile = commits?.findAll{ it.gherkinChanges && !it.gherkinChanges.isEmpty() }
 
         // identifies changed gherkin files and scenario definitions
         List<GherkinFile> gherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)

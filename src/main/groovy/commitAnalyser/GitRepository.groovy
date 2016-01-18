@@ -474,13 +474,6 @@ class GitRepository {
         return changedLines
     }
 
-    String findLastCommitSHA(){
-        def git = Git.open(new File(localPath))
-        Iterable<RevCommit> logs = git.log().call()
-        git.close()
-        logs?.sort{it.commitTime}?.last()?.name
-    }
-
     private Iterable<RevCommit> searchAllRevCommits(){
         def git = Git.open(new File(localPath))
         Iterable<RevCommit> logs = git?.log()?.call()?.sort{ it.commitTime }
@@ -561,6 +554,7 @@ class GitRepository {
      * @param commit commit that caused changes in unit test files
      * @return list of changed unit test files
      */
+    @Deprecated
     List<UnitFile> identifyChangedUnitTestContent(Commit commit){
         def changedUnitFiles = []
         //println "All changed unit test files: ${commit.unitChanges*.filename}"
@@ -605,6 +599,7 @@ class GitRepository {
      * @param commits commits that caused changes in unit test files
      * @return list of changed unit test files
      */
+    @Deprecated
     List<UnitFile> identifyChangedUnitTestContent(List<Commit> commits){
         def changedUnitFiles = []
         //println "All changed unit test files: ${commit.unitChanges*.filename}"

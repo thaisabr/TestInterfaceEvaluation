@@ -163,7 +163,7 @@ class GitRepository {
         feature
     }
 
-    private static boolean scenarioDefinitionsEquals(ScenarioDefinition sd1, ScenarioDefinition sd2){
+    private static boolean equals(ScenarioDefinition sd1, ScenarioDefinition sd2){
         def result = true
         for (int i = 0; i < sd1.steps.size(); i++) {
             def step1 = sd1.steps.get(i)
@@ -186,10 +186,12 @@ class GitRepository {
 
         def newVersion = extractFileContent(commit, entry.newPath)
         def newFeature = parseGherkinFile(newVersion, entry.newPath)
-        def newScenarioDefinitions = newFeature?.scenarioDefinitions
-
         def oldVersion = extractFileContent(parent, entry.oldPath)
         def oldFeature = parseGherkinFile(oldVersion, entry.oldPath)
+
+        if(!newFeature || !oldFeature) return codeChange
+
+        def newScenarioDefinitions = newFeature?.scenarioDefinitions
         def oldScenarioDefinitions = oldFeature?.scenarioDefinitions
 
         //searches for changed or removed scenario definitions
@@ -198,7 +200,7 @@ class GitRepository {
             def foundScenDef = newScenarioDefinitions?.find{ it.name == oldScenDef.name }
             if(foundScenDef && foundScenDef.name && foundScenDef.name != ""){
                 if (oldScenDef.steps.size() == foundScenDef.steps.size()){ //scenario definition might be changed
-                    def scenDefEquals = scenarioDefinitionsEquals(foundScenDef, oldScenDef)
+                    def scenDefEquals = equals(foundScenDef, oldScenDef)
                     if(!scenDefEquals) changedScenarioDefinitions += foundScenDef
                 } else {//scenario definition was changed
                     changedScenarioDefinitions += foundScenDef
@@ -439,7 +441,7 @@ class GitRepository {
             List<GherkinFile> gherkinChanges = testFiles?.findAll{ it.gherkinFile }*.gherkinFile
 
             /* identifies changed rspec files */
-            List<CodeChange> unitChanges = testFiles.findAll{ it.filename.contains(Util.UNIT_TEST_FILES_RELATIVE_PATH+File.separator) }
+            List<CodeChange> unitChanges = []//testFiles.findAll{ it.filename.contains(Util.UNIT_TEST_FILES_RELATIVE_PATH+File.separator) }
 
             commits += new Commit(hash:c.name, message:c.fullMessage.replaceAll(Util.NEW_LINE_REGEX," "),
                     author:c.authorIdent.name, date:c.commitTime, productionChanges: prodFiles,

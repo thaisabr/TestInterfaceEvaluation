@@ -388,6 +388,11 @@ class GitRepository {
         files?.sort()?.each{ log.info it }
     }
 
+    private List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent){
+        def diffs = extractDiff(null, commit, parent)
+        extractAllCodeChangeFromDiffs(commit, parent, diffs)
+    }
+
     private List<CodeChange> extractAllCodeChangesFromCommit(RevCommit commit){
         List<CodeChange> codeChanges = []
 
@@ -417,13 +422,11 @@ class GitRepository {
                 git.close()
                 break
             case 1:
-                def diffs = extractDiff(null, commit, commit.parents.first())
-                codeChanges = extractAllCodeChangeFromDiffs(commit, commit.parents.first(), diffs)
+                codeChanges = extractCodeChanges(commit, commit.parents.first())
                 break
             default: //merge commit
                 commit.parents.each{ parent ->
-                    def diffs = extractDiff(null, commit, parent)
-                    codeChanges += extractAllCodeChangeFromDiffs(commit, parent, diffs)
+                    codeChanges += extractCodeChanges(commit, parent)
                 }
         }
 

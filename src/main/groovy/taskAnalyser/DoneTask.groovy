@@ -161,15 +161,14 @@ class DoneTask extends Task {
             // computes task interface based on the production code exercised by tests
             interfaces += testCodeParser.computeInterfaceForDoneTask(gherkinFiles)
 
+            // resets repository to last version
+            gitRepository.reset()
         }
 
         List<Commit> commitsNoGhangedGherkinFile = commits - commitsChangedGherkinFile
         commitsNoGhangedGherkinFile?.each{
             log.info "Commit '${it.hash}' did not change acceptance tests!"
         }
-
-        // resets repository to last version
-        gitRepository.reset()
 
         // collapses step code interfaces to define the interface for the whole task
         TaskInterface.colapseInterfaces(interfaces)

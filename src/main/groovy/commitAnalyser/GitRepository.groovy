@@ -481,16 +481,28 @@ class GitRepository {
         logs?.sort{it.commitTime}?.last()?.name
     }
 
+    private Iterable<RevCommit> searchAllRevCommits(){
+        def git = Git.open(new File(localPath))
+        Iterable<RevCommit> logs = git?.log()?.call()?.sort{ it.commitTime }
+        git.close()
+        logs
+    }
+
+    private Iterable<RevCommit> searchAllRevCommitsBySha(String... hash){
+        def git = Git.open(new File(localPath))
+        def logs = git?.log()?.call()?.findAll{ it.name in hash }?.sort{ it.commitTime }
+        git.close()
+        logs
+    }
+
     /***
      * Searches all commits from a Git repository.
      *
      * @return a list of commits.
      */
     List<Commit> searchAllCommits(){
-        def git = Git.open(new File(localPath))
-        Iterable<RevCommit> logs = git.log().call()
-        git.close()
-        return extractCommitsFromLogs(logs)?.sort{ it.date }
+        def logs = searchAllRevCommits()
+        extractCommitsFromLogs(logs)
     }
 
     /***
@@ -499,11 +511,9 @@ class GitRepository {
      * @param hash a set of hash value
      * @return a list of commits that satisfy the search criteria.
      */
-    List<Commit> searchBySha(String... hash) {
-        def git = Git.open(new File(localPath))
-        def logs = git.log().call()?.findAll{ it.name in hash }
-        git.close()
-        return extractCommitsFromLogs(logs)?.sort{ it.date }
+    List<Commit> searchCommitsBySha(String... hash) {
+        def logs = searchAllRevCommitsBySha(hash)
+        extractCommitsFromLogs(logs)
     }
 
     /***

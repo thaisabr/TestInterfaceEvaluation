@@ -22,7 +22,7 @@ class DoneTask extends Task {
         this.changedGherkinFiles = []
         this.changedUnitFiles = []
         /* retrieves commits code */
-        this.commits = gitRepository.searchBySha(*shas)
+        this.commits = gitRepository.searchCommitsBySha(*shas)
     }
 
     DoneTask(String repositoryIndex, String repositoryUrl, String id, List<Commit> commits) {
@@ -31,7 +31,7 @@ class DoneTask extends Task {
         this.changedGherkinFiles = []
         this.changedUnitFiles = []
         /* retrieves commits code */
-        this.commits = gitRepository.searchBySha(*(commits*.hash))
+        this.commits = gitRepository.searchCommitsBySha(*(commits*.hash))
     }
 
     /***
@@ -157,7 +157,7 @@ class DoneTask extends Task {
             // resets repository to the state of the last commit to extract changes
             gitRepository.reset(commits?.last()?.hash)
 
-            changedGherkinFiles += gherkinFiles
+            changedGherkinFiles = gherkinFiles
             // computes task interface based on the production code exercised by tests
             interfaces += testCodeParser.computeInterfaceForDoneTask(gherkinFiles)
 

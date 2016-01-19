@@ -1,6 +1,7 @@
 package commitAnalyser
 
 import gherkin.Parser
+import gherkin.ParserException
 import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
@@ -14,7 +15,6 @@ import org.eclipse.jgit.blame.BlameResult
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffFormatter
 import org.eclipse.jgit.diff.RawTextComparator
-import org.eclipse.jgit.errors.MissingObjectException
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.ObjectLoader
 import org.eclipse.jgit.lib.ObjectReader
@@ -146,18 +146,18 @@ class GitRepository {
         formatter.release()
     }
 
-    private static Feature parseGherkinFile(List<String> lines, String filename){
+    private static Feature parseGherkinFile(String content, String filename, String sha){
         Feature feature = null
-        if(!lines || lines.isEmpty()){
+        if(!content || content==""){
             log.warn "Problem to parse Gherkin file '$filename'. Reason: The commit deleted it."
         }
         else{
             try{
-                Parser<Feature> featureParser = new Parser<>()
-                def content = lines.join("\n")
-                feature = featureParser.parse(content)
-            } catch(Exception ex){
-                log.warn "Problem to parse Gherkin file '$filename': ${ex.message}."
+                Parser<Feature> parser = new Parser<>()
+                feature = parser.parse(content)
+            } catch(ParserException ex){
+                log.warn "Problem to parse Gherkin file '$filename' (commit $sha). ${ex.class}: ${ex.message}."
+                log.warn content
             }
         }
         feature
@@ -185,9 +185,9 @@ class GitRepository {
         CodeChange codeChange = null
 
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newFeature = parseGherkinFile(newVersion, entry.newPath)
+        def newFeature = parseGherkinFile(newVersion, entry.newPath, commit.name)
         def oldVersion = extractFileContent(parent, entry.oldPath)
-        def oldFeature = parseGherkinFile(oldVersion, entry.oldPath)
+        def oldFeature = parseGherkinFile(oldVersion, entry.oldPath, parent.name)
 
         if(!newFeature || !oldFeature) return codeChange
 
@@ -230,9 +230,9 @@ class GitRepository {
      * Identifies scenarios definitions at added gherkin files (features) by the first commit of the repository.
      * It is used only when dealing with done tasks.
      */
-    private static GherkinFile extractGherkinAdds(RevCommit commit, List<String> content, String path){
+    private static GherkinFile extractGherkinAdds(RevCommit commit, String content, String path){
         GherkinFile changedGherkinFile = null
-        def newFeature = parseGherkinFile(content, path)
+        def newFeature = parseGherkinFile(content, path, commit.name)
         def newScenarioDefinitions = newFeature?.scenarioDefinitions
 
         if(newScenarioDefinitions && !newScenarioDefinitions.isEmpty()){
@@ -249,7 +249,7 @@ class GitRepository {
     private CodeChange extractGherkinAdds(RevCommit commit, DiffEntry entry){
         CodeChange codeChange = null
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newFeature = parseGherkinFile(newVersion, entry.newPath)
+        def newFeature = parseGherkinFile(newVersion, entry.newPath, commit.name)
         def newScenarioDefinitions = newFeature?.scenarioDefinitions
 
         if(newScenarioDefinitions && !newScenarioDefinitions.isEmpty()){
@@ -279,12 +279,12 @@ class GitRepository {
                                 if(change != null) { codeChanges += change }
                             }
                             else{
-                                codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: 0..<result.size())
+                                codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: 0..<result.readLines().size())
                             }
                             break
                         case DiffEntry.ChangeType.DELETE: //the file size is already known
                             def result = extractFileContent(parent, entry.oldPath)
-                            codeChanges += new CodeChange(filename: entry.oldPath, type: entry.changeType, lines: 0..<result.size())
+                            codeChanges += new CodeChange(filename: entry.oldPath, type: entry.changeType, lines: 0..<result.readLines().size())
                             break
                         case DiffEntry.ChangeType.MODIFY:
                             if(entry.newPath.endsWith(Util.FEATURE_FILENAME_EXTENSION) ){
@@ -330,8 +330,8 @@ class GitRepository {
         return treeWalk
     }
 
-    private List<String> extractFileContent(RevCommit commit, String filename) {
-        def result = []
+    private String extractFileContent(RevCommit commit, String filename) {
+        def result = ""
         def git = Git.open(new File(localPath))
         filename = filename.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
         RevWalk revWalk = new RevWalk(git.repository)
@@ -342,7 +342,7 @@ class GitRepository {
             ByteArrayOutputStream stream = new ByteArrayOutputStream()
             loader.copyTo(stream)
             revWalk.dispose()
-            result = stream.toString().readLines()
+            result = stream.toString("utf-8")//.readLines()
             stream.reset()
         }
         catch(ignored){
@@ -437,9 +437,9 @@ class GitRepository {
         blamer.setFilePath(filename.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/")))
         BlameResult blameResult = blamer.call()
 
-        List<String> fileContent = extractFileContent(commit, filename)
+        List<String> fileContent = extractFileContent(commit, filename)?.readLines()
         //println "commit: ${commit.name}; filename: $filename; file size: ${fileContent.size()}"
-        fileContent.eachWithIndex { line, i ->
+        fileContent?.eachWithIndex { line, i ->
             RevCommit c = blameResult?.getSourceCommit(i)
             if(c?.name?.equals(commit.name)) changedLines += i
         }
@@ -465,7 +465,7 @@ class GitRepository {
         tw.addTree(commit.tree)
         while(tw.next()){
             if(Util.isValidCode(tw.pathString)) {
-                List<String> result = extractFileContent(commit, tw.pathString)
+                def result = extractFileContent(commit, tw.pathString)
                 if( tw.pathString.endsWith(Util.FEATURE_FILENAME_EXTENSION) ){
                     def change = extractGherkinAdds(commit, result, tw.pathString)
                     if(change != null) {
@@ -474,7 +474,7 @@ class GitRepository {
                     }
                 }
                 else{
-                    codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: 0..<result.size())
+                    codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: 0..<result?.readLines()?.size())
                 }
             }
         }

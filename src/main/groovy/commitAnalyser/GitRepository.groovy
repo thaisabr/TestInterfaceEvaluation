@@ -211,7 +211,7 @@ class GitRepository {
         //searches for added scenario definitions
         newScenarioDefinitions?.each{ newScenDef ->
             def foundScenDef = oldScenarioDefinitions?.find{ it.name == newScenDef.name }
-            if(!foundScenDef || !foundScenDef.name || foundScenDef.name == ""){//nao foi achado porque foi adicionado
+            if(!foundScenDef || !foundScenDef.name || foundScenDef.name == ""){//it was not found because it is new
                 changedScenarioDefinitions += newScenDef
             }
         }
@@ -316,7 +316,7 @@ class GitRepository {
         def git = Git.open(new File(localPath))
         def result = git.log().call().find{ it.name == sha }
         git.close()
-        return result
+        result
     }
 
     private TreeWalk generateTreeWalk(RevTree tree, String filename){
@@ -345,7 +345,7 @@ class GitRepository {
             result = stream.toString().readLines()
             stream.reset()
         }
-        catch(MissingObjectException exception){
+        catch(ignored){
             if(objectId.equals(ObjectId.zeroId()))
                 log.error "There is no ObjectID for the commit tree. Verify the file separator used in the filename '$filename'."
         }
@@ -388,38 +388,12 @@ class GitRepository {
         files?.sort()?.each{ log.info it }
     }
 
-    private List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent){
-        def diffs = extractDiff(null, commit, parent)
-        extractAllCodeChangeFromDiffs(commit, parent, diffs)
-    }
-
     private List<CodeChange> extractAllCodeChangesFromCommit(RevCommit commit){
         List<CodeChange> codeChanges = []
 
         switch(commit.parentCount){
             case 0: //first commit
-                def git = Git.open(new File(localPath))
-                TreeWalk tw = new TreeWalk(git.repository)
-                tw.reset()
-                tw.setRecursive(true)
-                tw.addTree(commit.tree)
-                while(tw.next()){
-                    if(Util.isValidCode(tw.pathString)) {
-                        List<String> result = extractFileContent(commit, tw.pathString)
-                        if( tw.pathString.endsWith(Util.FEATURE_FILENAME_EXTENSION) ){
-                            def change = extractGherkinAdds(commit, result, tw.pathString)
-                            if(change != null) {
-                                codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: [],
-                                        gherkinFile: change)
-                            }
-                        }
-                        else{
-                            codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: 0..<result.size())
-                        }
-                    }
-                }
-                tw.release()
-                git.close()
+                codeChanges = extractCodeChangesByFirstCommit(commit)
                 break
             case 1:
                 codeChanges = extractCodeChanges(commit, commit.parents.first())
@@ -477,14 +451,46 @@ class GitRepository {
         return changedLines
     }
 
-    private Iterable<RevCommit> searchAllRevCommits(){
+    List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent){
+        def diffs = extractDiff(null, commit, parent)
+        extractAllCodeChangeFromDiffs(commit, parent, diffs)
+    }
+
+    List<CodeChange> extractCodeChangesByFirstCommit(RevCommit commit){
+        List<CodeChange> codeChanges = []
+        def git = Git.open(new File(localPath))
+        TreeWalk tw = new TreeWalk(git.repository)
+        tw.reset()
+        tw.setRecursive(true)
+        tw.addTree(commit.tree)
+        while(tw.next()){
+            if(Util.isValidCode(tw.pathString)) {
+                List<String> result = extractFileContent(commit, tw.pathString)
+                if( tw.pathString.endsWith(Util.FEATURE_FILENAME_EXTENSION) ){
+                    def change = extractGherkinAdds(commit, result, tw.pathString)
+                    if(change != null) {
+                        codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: [],
+                                gherkinFile: change)
+                    }
+                }
+                else{
+                    codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: 0..<result.size())
+                }
+            }
+        }
+        tw.release()
+        git.close()
+        codeChanges
+    }
+
+    Iterable<RevCommit> searchAllRevCommits(){
         def git = Git.open(new File(localPath))
         Iterable<RevCommit> logs = git?.log()?.call()?.sort{ it.commitTime }
         git.close()
         logs
     }
 
-    private Iterable<RevCommit> searchAllRevCommitsBySha(String... hash){
+    Iterable<RevCommit> searchAllRevCommitsBySha(String... hash){
         def git = Git.open(new File(localPath))
         def logs = git?.log()?.call()?.findAll{ it.name in hash }?.sort{ it.commitTime }
         git.close()
@@ -511,44 +517,6 @@ class GitRepository {
         def logs = searchAllRevCommitsBySha(hash)
         extractCommitsFromLogs(logs)
     }
-
-    /***
-     * (TO VALIDATE)
-     * Interprets changed lines by a group of commits as changed scenarios definitions at gherkin files (features).
-     * It is used only when dealing with done tasks.
-     * It could introduce error and after validation it should be removed.
-     *
-     * @param commits commits that caused changes in gherkin files
-     * @return changed gherkin content
-     *
-    List<GherkinFile> identifyChangedGherkinContent(List<Commit> commits) {
-        Parser<Feature> featureParser = new Parser<>()
-        List<GherkinFile> changedGherkinFiles = []
-
-        commits.each { commit ->
-            commit.gherkinChanges.each { change ->
-                def path = localPath+File.separator+change.filename
-                def reader = null
-                try{
-                    reader = new FileReader(path)
-                    Feature feature = featureParser.parse(reader)
-                    def changedScenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line-1 in change.lines }
-                    if(changedScenarioDefinitions){
-                        changedGherkinFiles += new GherkinFile(commitHash:commit.hash, path:path,
-                                feature:feature, changedScenarioDefinitions:changedScenarioDefinitions)
-                    }
-
-                } catch(FileNotFoundException ex){
-                    log.warn "Problem to parse Gherkin file: ${ex.message}"
-                }
-                finally {
-                    reader?.close()
-                }
-            }
-        }
-
-        return changedGherkinFiles
-    }*/
 
     /***
      * Interprets changed lines in unit test files.

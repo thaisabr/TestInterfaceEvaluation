@@ -19,19 +19,62 @@ class DoneTask extends Task {
 
     DoneTask(String repositoryUrl, String id, List<String> shas){
         super(repositoryUrl, true, id)
-        this.changedGherkinFiles = []
-        this.changedUnitFiles = []
+        changedGherkinFiles = []
+        changedUnitFiles = []
+
         /* retrieves commits code */
-        this.commits = gitRepository.searchCommitsBySha(*shas)
+        commits = gitRepository.searchCommitsBySha(*shas)
+
+        // identifies changed gherkin files and scenario definitions
+        List<Commit> commitsChangedGherkinFile = commits?.findAll{ it.gherkinChanges && !it.gherkinChanges.isEmpty() }
+        changedGherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
+
     }
 
     DoneTask(String repositoryIndex, String repositoryUrl, String id, List<Commit> commits) {
         super(repositoryUrl, true, id)
         this.repositoryIndex = repositoryIndex
-        this.changedGherkinFiles = []
-        this.changedUnitFiles = []
+        changedGherkinFiles = []
+        changedUnitFiles = []
+
         /* retrieves commits code */
         this.commits = gitRepository.searchCommitsBySha(*(commits*.hash))
+
+        // identifies changed gherkin files and scenario definitions
+        List<Commit> commitsChangedGherkinFile = this.commits?.findAll{ it.gherkinChanges && !it.gherkinChanges.isEmpty() }
+        changedGherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
+    }
+
+    private static List<GherkinFile> identifyChangedGherkinContent(List<Commit> commitsChangedGherkinFile){
+        List<GherkinFile> gherkinFiles = []
+        commitsChangedGherkinFile?.each{ commit -> //commits sorted by date
+            commit.gherkinChanges?.each{ file ->
+                if(!file.changedScenarioDefinitions.isEmpty()){
+                    def index = gherkinFiles.findIndexOf{ it.path == file.path }
+                    GherkinFile foundFile
+                    if(index >= 0) foundFile = gherkinFiles.get(index)
+
+                    //another previous commit changed the same gherkin file
+                    if(foundFile){
+                        def previousCommit = commitsChangedGherkinFile.find{ it.hash == foundFile.commitHash }
+                        def equalDefs = foundFile.changedScenarioDefinitions.findAll{ it.name in file.changedScenarioDefinitions*.name }
+                        def oldDefs = foundFile.changedScenarioDefinitions - equalDefs
+
+                        //previous commit changed the same scenario definitions
+                        if(!equalDefs.isEmpty() && previousCommit && commit.date>previousCommit.date){
+                            //previous commit changed other(s) scenario definition(s)
+                            if(!oldDefs.isEmpty()) {
+                                file.changedScenarioDefinitions += oldDefs
+                            }
+                            gherkinFiles.set(index, file)
+                        }
+                    } else{
+                        gherkinFiles += file
+                    }
+                }
+            }
+        }
+        gherkinFiles
     }
 
     /***
@@ -103,75 +146,34 @@ class DoneTask extends Task {
         taskInterface
     }
 
-    private static identifyChangedGherkinContent(List<Commit> commitsChangedGherkinFile){
-        List<GherkinFile> gherkinFiles = []
-        commitsChangedGherkinFile?.each{ commit -> //commits sorted by date
-            commit.gherkinChanges?.each{ file ->
-                if(!file.changedScenarioDefinitions.isEmpty()){
-                    def index = gherkinFiles.findIndexOf{ it.path == file.path }
-                    GherkinFile foundFile
-                    if(index >= 0) foundFile = gherkinFiles.get(index)
-
-                    //another previous commit changed the same gherkin file
-                    if(foundFile){
-                        def previousCommit = commitsChangedGherkinFile.find{ it.hash == foundFile.commitHash }
-                        def equalDefs = foundFile.changedScenarioDefinitions.findAll{ it.name in file.changedScenarioDefinitions*.name }
-                        def oldDefs = foundFile.changedScenarioDefinitions - equalDefs
-
-                        //previous commit changed the same scenario definitions
-                        if(!equalDefs.isEmpty() && previousCommit && commit.date>previousCommit.date){
-                            //previous commit changed other(s) scenario definition(s)
-                            if(!oldDefs.isEmpty()) {
-                                file.changedScenarioDefinitions += oldDefs
-                            }
-                            gherkinFiles.set(index, file)
-                        }
-                    } else{
-                        gherkinFiles += file
-                    }
-                }
-            }
-        }
-        gherkinFiles
-    }
-
     /***
      * Computes task interface based in acceptance test code.
      * @return task interface
      */
     @Override
     TaskInterface computeTestBasedInterface(){
+        def taskInterface = new TaskInterface()
         if(!commits || commits.empty) {
             log.warn "TASK ID: $id; NO COMMITS!"
-            return new TaskInterface()
+            return taskInterface
         }
-        log.info "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
-        def interfaces = []
 
-        List<Commit> commitsChangedGherkinFile = commits?.findAll{ it.gherkinChanges && !it.gherkinChanges.isEmpty() }
+        log.info "TASK ID: $id"
+        log.info "COMMITS: ${commits*.hash}"
+        log.info "COMMITS CHANGED GHERKIN: ${ commits?.findAll{ it.gherkinChanges && !it.gherkinChanges.isEmpty()}*.hash }"
 
-        // identifies changed gherkin files and scenario definitions
-        List<GherkinFile> gherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
-
-        if(!gherkinFiles.isEmpty()) {
+        if(!changedGherkinFiles.isEmpty()) {
             // resets repository to the state of the last commit to extract changes
             gitRepository.reset(commits?.last()?.hash)
 
-            changedGherkinFiles = gherkinFiles
             // computes task interface based on the production code exercised by tests
-            interfaces += testCodeParser.computeInterfaceForDoneTask(gherkinFiles)
+            taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles)
 
             // resets repository to last version
             gitRepository.reset()
         }
 
-        List<Commit> commitsNoGhangedGherkinFile = commits - commitsChangedGherkinFile
-        commitsNoGhangedGherkinFile?.each{
-            log.info "Commit '${it.hash}' did not change acceptance tests!"
-        }
-
-        // collapses step code interfaces to define the interface for the whole task
-        TaskInterface.colapseInterfaces(interfaces)
+        taskInterface
     }
 
     TaskInterface computeRealInterface(){

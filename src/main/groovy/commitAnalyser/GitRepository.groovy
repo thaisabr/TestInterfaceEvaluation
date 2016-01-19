@@ -342,7 +342,7 @@ class GitRepository {
             ByteArrayOutputStream stream = new ByteArrayOutputStream()
             loader.copyTo(stream)
             revWalk.dispose()
-            result = stream.toString("utf-8")//.readLines()
+            result = stream.toString()
             stream.reset()
         }
         catch(ignored){

@@ -414,16 +414,20 @@ class GitRepository {
             List<CodeChange> prodFiles = Util.findAllProductionFilesFromCodeChanges(codeChanges)
             List<CodeChange> testFiles = Util.findAllTestFilesFromCodeChanges(codeChanges)
 
-            /* identifies changed gherkin files and scenario definitions */
+            // identifies changed gherkin files and scenario definitions
             List<GherkinFile> gherkinChanges = testFiles?.findAll{ it.gherkinFile }*.gherkinFile
 
-            /* identifies changed rspec files */
-            List<CodeChange> unitChanges = []//testFiles.findAll{ it.filename.contains(Util.UNIT_TEST_FILES_RELATIVE_PATH+File.separator) }
+            // identifies changed rspec files
+            List<CodeChange> unitChanges = testFiles?.findAll{ it.filename.contains(Util.UNIT_TEST_FILES_RELATIVE_PATH+File.separator) }
+
+            //identifies changed step files
+            List<CodeChange> stepChanges = testFiles?.findAll{ it.filename.contains(Util.STEPS_FILES_RELATIVE_PATH+File.separator) &&
+                    it.filename.endsWith(Util.stepFileExtension()) }
 
             commits += new Commit(hash:c.name, message:c.fullMessage.replaceAll(Util.NEW_LINE_REGEX," "),
                     author:c.authorIdent.name, date:c.commitTime, productionChanges: prodFiles,
                     testChanges: testFiles, codeChanges: (prodFiles+testFiles).unique(),
-                    gherkinChanges:gherkinChanges, unitChanges:unitChanges)
+                    gherkinChanges:gherkinChanges, unitChanges:unitChanges, stepChanges:stepChanges)
         }
         return commits
     }

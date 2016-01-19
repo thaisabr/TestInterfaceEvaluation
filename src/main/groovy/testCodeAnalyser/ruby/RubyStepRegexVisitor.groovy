@@ -18,7 +18,7 @@ class RubyStepRegexVisitor extends NoopVisitor {
     @Override
     Object visitRegexpNode(RegexpNode iVisited) {
         super.visitRegexpNode(iVisited)
-        regexs += new StepRegex(path: path, value:iVisited.value, line: iVisited.position.startLine)
+        regexs += new StepRegex(path: path, value:iVisited.value, line: iVisited.position.startLine, end:iVisited.position.endLine)
     }
 
 }

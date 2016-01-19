@@ -12,4 +12,9 @@ class CodeChange {
     List<Integer> lines //if null, it was not computed yet
     GherkinFile gherkinFile //redefinir isso no futuro
 
+    @Override
+    public String toString(){
+        "name: $filename; change: $type; lines: $lines"
+    }
+
 }

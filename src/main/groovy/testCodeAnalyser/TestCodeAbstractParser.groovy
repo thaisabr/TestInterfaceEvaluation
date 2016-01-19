@@ -31,7 +31,7 @@ abstract class TestCodeAbstractParser {
      */
     TestCodeAbstractParser(String repositoryPath){
         this.repositoryPath = repositoryPath
-        stepsFilePath = repositoryPath + Util.STEPS_FILES_RELATIVE_PATH
+        stepsFilePath = repositoryPath + File.separator + Util.STEPS_FILES_RELATIVE_PATH
         regexList = []
         methods = [] as Set
         projectFiles = []

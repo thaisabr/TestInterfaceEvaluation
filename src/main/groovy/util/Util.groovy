@@ -58,9 +58,9 @@ class Util {
         excludedFolders = excludedPath - excludedExtensions
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
         TASKS_FILE = configureTasksFilePath()
-        GHERKIN_FILES_RELATIVE_PATH = File.separator+(properties.'spgroup.gherkin.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+        GHERKIN_FILES_RELATIVE_PATH = (properties.'spgroup.gherkin.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        STEPS_FILES_RELATIVE_PATH = File.separator+(properties.'spgroup.steps.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+        STEPS_FILES_RELATIVE_PATH = (properties.'spgroup.steps.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
         UNIT_TEST_FILES_RELATIVE_PATH = (properties.'spgroup.rspec.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
@@ -238,6 +238,21 @@ class Util {
             default: throw new InvalidLanguageException()
         }
         return files
+    }
+
+    static String stepFileExtension(){
+        switch (CODE_LANGUAGE){
+            case LanguageOption.JAVA:
+                return JAVA_EXTENSION
+                break
+            case LanguageOption.GROOVY:
+                return GROOVY_EXTENSION
+                break
+            case LanguageOption.RUBY:
+                return RUBY_EXTENSION
+                break
+            default: throw new InvalidLanguageException()
+        }
     }
 
     static List<String> findFilesFromDirectory(String directory){

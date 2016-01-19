@@ -14,6 +14,7 @@ class Commit {
     List<CodeChange> testChanges //code changes in test code only
     List<GherkinFile> gherkinChanges //code changes in feature files only
     List<CodeChange> unitChanges //code changes in unit test files only
+    List<CodeChange> stepChanges //code changes in step definition files only
     String author
     long date
 

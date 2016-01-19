@@ -37,7 +37,7 @@ class TodoTask extends Task {
 
         scenarios.each{ scenario ->
             try{
-                def path = rootDirectory+Util.GHERKIN_FILES_RELATIVE_PATH+File.separator+scenario.path
+                def path = rootDirectory+File.separator+Util.GHERKIN_FILES_RELATIVE_PATH+File.separator+scenario.path
                 def reader = new FileReader(path)
                 Feature feature = featureParser.parse(reader)
                 reader.close()

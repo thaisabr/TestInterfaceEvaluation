@@ -16,10 +16,10 @@ class RubyStepsFileVisitor extends NoopVisitor {
         this.methodCallVisitor = methodCallVisitor
     }
 
-    @Override
     /**
      * FCallNode represents a method call with self as an implicit receiver. Step code are identified here.
      */
+    @Override
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
         if( iVisited.position.startLine in lines) {

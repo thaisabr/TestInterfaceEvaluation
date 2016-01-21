@@ -17,16 +17,15 @@ class Main {
         def nonEmptyInterfaces = []
         tasks.each{ task ->
             def taskInterface = task.computeTestBasedInterface()
-            if(!task.changedGherkinFiles.isEmpty()){
-                gherkinCounter++
-                if(taskInterface.toString() != ""){
-                    nonEmptyInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface()]
-                }
+            if(taskInterface.toString() != ""){
+                nonEmptyInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface()]
             }
+            if(!task.changedGherkinFiles.empty){ gherkinCounter++ }
         }
 
-        log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
         log.info "Number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
+        log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
+
         exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), gherkinCounter, nonEmptyInterfaces)
     }
 

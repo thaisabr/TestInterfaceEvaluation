@@ -4,6 +4,7 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.Phases
 import org.codehaus.groovy.control.SourceUnit
+import taskAnalyser.StepDefinition
 import taskAnalyser.UnitFile
 import testCodeAnalyser.StepRegex
 import testCodeAnalyser.TestCodeAbstractParser
@@ -70,6 +71,11 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
         ClassNode classNode = node.scriptClassDummy
         classNode.visitContents(visitor)
         visitor.regexs
+    }
+
+    @Override
+    List<StepDefinition> doExtractStepDefinitions(String path, String content) {
+        return null
     }
 
     @Override

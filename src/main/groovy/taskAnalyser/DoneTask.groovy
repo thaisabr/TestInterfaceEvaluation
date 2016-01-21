@@ -16,19 +16,24 @@ class DoneTask extends Task {
     List<Commit> commits
     List<GherkinFile> changedGherkinFiles
     List<UnitFile> changedUnitFiles
+    List<StepDefinitionFile> changedStepDefinitions
 
     DoneTask(String repositoryUrl, String id, List<String> shas){
         super(repositoryUrl, true, id)
         changedGherkinFiles = []
         changedUnitFiles = []
+        changedStepDefinitions = []
 
-        /* retrieves commits code */
-        commits = gitRepository.searchCommitsBySha(*shas)
+        // retrieves commits code
+        commits = gitRepository.searchCommitsBySha(testCodeParser, *shas)
 
         // identifies changed gherkin files and scenario definitions
         List<Commit> commitsChangedGherkinFile = commits?.findAll{ it.gherkinChanges && !it.gherkinChanges.isEmpty() }
         changedGherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
 
+        // identifies changed step definitions
+        List<Commit> commitsStepsChange = this.commits?.findAll{ it.stepChanges && !it.stepChanges.isEmpty()}
+        changedStepDefinitions = identifyChangedStepContent(commitsStepsChange)
     }
 
     DoneTask(String repositoryIndex, String repositoryUrl, String id, List<Commit> commits) {
@@ -36,13 +41,18 @@ class DoneTask extends Task {
         this.repositoryIndex = repositoryIndex
         changedGherkinFiles = []
         changedUnitFiles = []
+        changedStepDefinitions = []
 
-        /* retrieves commits code */
-        this.commits = gitRepository.searchCommitsBySha(*(commits*.hash))
+        // retrieves commits code
+        this.commits = gitRepository.searchCommitsBySha(testCodeParser, *(commits*.hash))
 
         // identifies changed gherkin files and scenario definitions
         List<Commit> commitsChangedGherkinFile = this.commits?.findAll{ it.gherkinChanges && !it.gherkinChanges.isEmpty() }
         changedGherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
+
+        // identifies changed step definitions
+        List<Commit> commitsChangedStepFile = this.commits?.findAll{ it.stepChanges && !it.stepChanges.isEmpty()}
+        changedStepDefinitions = identifyChangedStepContent(commitsChangedStepFile)
     }
 
     private static List<GherkinFile> identifyChangedGherkinContent(List<Commit> commitsChangedGherkinFile){
@@ -56,18 +66,14 @@ class DoneTask extends Task {
 
                     //another previous commit changed the same gherkin file
                     if(foundFile){
-                        def previousCommit = commitsChangedGherkinFile.find{ it.hash == foundFile.commitHash }
                         def equalDefs = foundFile.changedScenarioDefinitions.findAll{ it.name in file.changedScenarioDefinitions*.name }
                         def oldDefs = foundFile.changedScenarioDefinitions - equalDefs
 
-                        //previous commit changed the same scenario definitions
-                        if(!equalDefs.isEmpty() && previousCommit && commit.date>previousCommit.date){
-                            //previous commit changed other(s) scenario definition(s)
-                            if(!oldDefs.isEmpty()) {
-                                file.changedScenarioDefinitions += oldDefs
-                            }
-                            gherkinFiles.set(index, file)
+                        if(!oldDefs.isEmpty()) { //previous commit changed other(s) scenario definition(s)
+                            file.changedScenarioDefinitions += oldDefs
                         }
+                        gherkinFiles.set(index, file)
+
                     } else{
                         gherkinFiles += file
                     }
@@ -75,6 +81,33 @@ class DoneTask extends Task {
             }
         }
         gherkinFiles
+    }
+
+    private static List<StepDefinitionFile> identifyChangedStepContent(List<Commit> commitsChangedStepFile){
+        List<StepDefinitionFile> stepFiles = []
+        commitsChangedStepFile?.each{ commit -> //commits sorted by date
+            commit.stepChanges?.each{ file ->
+                if(!file.changedStepDefinitions.isEmpty()){
+                    def index = stepFiles.findIndexOf{ it.path == file.path }
+                    StepDefinitionFile foundFile
+                    if(index >= 0) foundFile = stepFiles.get(index)
+
+                    //another previous commit changed the same step definition file
+                    if(foundFile){
+                        def equalDefs = foundFile.changedStepDefinitions.findAll{ it.value in file.changedStepDefinitions*.value }
+                        def oldDefs = foundFile.changedStepDefinitions - equalDefs
+
+                        if(!oldDefs.isEmpty()) {  //previous commit changed other(s) step definition(s)
+                            file.changedStepDefinitions += oldDefs
+                        }
+                        stepFiles.set(index, file)
+                    } else{
+                        stepFiles += file
+                    }
+                }
+            }
+        }
+        stepFiles
     }
 
     /***
@@ -159,15 +192,16 @@ class DoneTask extends Task {
         }
 
         log.info "TASK ID: $id"
-        log.info "COMMITS: ${commits*.hash}"
-        log.info "COMMITS CHANGED GHERKIN: ${ commits?.findAll{ it.gherkinChanges && !it.gherkinChanges.isEmpty()}*.hash }"
+        log.info "COMMITS: ${this.commits*.hash}"
+        log.info "COMMITS CHANGED GERKIN FILE: ${this.commits?.findAll{it.gherkinChanges && !it.gherkinChanges.isEmpty()}*.hash}"
+        log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll{it.stepChanges && !it.stepChanges.isEmpty()}*.hash}"
 
-        if(!changedGherkinFiles.isEmpty()) {
+        if(!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
             // resets repository to the state of the last commit to extract changes
             gitRepository.reset(commits?.last()?.hash)
 
             // computes task interface based on the production code exercised by tests
-            taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles)
+            taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions)
 
             // resets repository to last version
             gitRepository.reset()

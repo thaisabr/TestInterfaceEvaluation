@@ -7,6 +7,7 @@ import org.jrubyparser.lexer.SyntaxException
 import org.jrubyparser.parser.ParserConfiguration
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import taskAnalyser.StepDefinition
 import taskAnalyser.UnitFile
 import testCodeAnalyser.StepRegex
 import testCodeAnalyser.TestCodeAbstractParser
@@ -30,7 +31,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     static Node generateAst(String path){
         FileReader reader = new FileReader(path)
         Parser rubyParser = new Parser()
-        CompatVersion version = CompatVersion.RUBY2_0 //CompatVersion.RUBY1_9 //CompatVersion.RUBY1_8
+        CompatVersion version = CompatVersion.RUBY2_0
         ParserConfiguration config = new ParserConfiguration(0, version)
         def result = null
 
@@ -43,21 +44,48 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             reader?.close()
         }
 
-        return result
+        result
     }
 
-    @Override
+    static Node generateAst(String path, String content){
+        StringReader reader = new StringReader(content)
+        Parser rubyParser = new Parser()
+        CompatVersion version = CompatVersion.RUBY2_0
+        ParserConfiguration config = new ParserConfiguration(0, version)
+        def result = null
+
+        try{
+            result = rubyParser.parse("<code>", reader, config)
+        } catch(SyntaxException ex){
+            log.error "Problem to visit file $path: ${ex.message}"
+        }
+        finally {
+            reader?.close()
+        }
+
+        result
+    }
+
     /***
      * Finds all regex expression in a source code file.
      *
      * @param path ruby file
      * @return map identifying the file and its regexs
      */
+    @Override
     List<StepRegex> doExtractStepsRegex(String path){
         def node = generateAst(path)
         def visitor = new RubyStepRegexVisitor(path)
         node?.accept(visitor)
         visitor.regexs
+    }
+
+    @Override
+    List<StepDefinition> doExtractStepDefinitions(String path, String content) {
+        def node = generateAst(path, content)
+        def visitor = new RubyStepDefinitionVisitor(path, content)
+        node?.accept(visitor)
+        visitor.stepDefinitions
     }
 
     @Override
@@ -84,13 +112,13 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         result
     }
 
-    @Override
     /***
      * Visits a step body and method calls inside it. The result is stored as a field of the returned visitor.
      *
      * @param file List of map objects that identifies files by 'path' and 'lines'.
      * @return visitor to visit method bodies
      */
+    @Override
     TestCodeVisitor parseStepBody(def file) {
         def node = generateAst(file.path)
         def visitor = new RubyTestCodeVisitor(projectFiles, file.path, methods)
@@ -100,7 +128,6 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         visitor
     }
 
-    @Override
     /***
      * Visits selected method bodies from a source code file searching for other method calls. The result is stored as a
      * field of the input visitor.
@@ -108,6 +135,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
      * @param file a map object that identifies a file by 'path' and 'methods'. A method is identified by its name.
      * @param visitor visitor to visit method bodies
      */
+    @Override
     def visitFile(def file, TestCodeVisitor visitor) {
         def node = generateAst(file.path)
         visitor.lastVisitedFile = file.path

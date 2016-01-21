@@ -4,6 +4,8 @@ package testCodeAnalyser
 import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
 import taskAnalyser.GherkinFile
+import taskAnalyser.StepDefinition
+import taskAnalyser.StepDefinitionFile
 import taskAnalyser.TaskInterface
 import taskAnalyser.UnitFile
 import util.Util
@@ -86,10 +88,14 @@ abstract class TestCodeAbstractParser {
         List<StepCode> codes = []
         scenarioDefinition?.steps?.each { step ->
             def stepCodeMatch = regexList?.findAll{ step.text ==~ it.value }
-            if(stepCodeMatch && stepCodeMatch.size()==1){ //step code was found
-                stepCodeMatch = stepCodeMatch.get(0)
-                StepCode stepCode = new StepCode(step:step, codePath:stepCodeMatch.path, line:stepCodeMatch.line)
-                codes += stepCode
+            if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
+                if(stepCodeMatch.size()==1) {
+                    stepCodeMatch = stepCodeMatch.get(0)
+                    StepCode stepCode = new StepCode(step: step, codePath: stepCodeMatch.path, line: stepCodeMatch.line)
+                    codes += stepCode
+                } else {
+                    log.warn "There are many implementations for step code: ${step.text}; $scenarioDefinitionPath (${step.location.line})"
+                }
             } else {
                 log.warn "Step code was not found: ${step.text}; $scenarioDefinitionPath (${step.location.line})"
             }
@@ -112,13 +118,48 @@ abstract class TestCodeAbstractParser {
     static identifyMethodsPerFileToVisit(List<StepCode> stepCodes){
         def result = []
         def files = (stepCodes*.codePath)?.flatten()?.unique()
-        files.each{ file ->
+        files?.each{ file ->
             def codes = stepCodes.findAll{ it.codePath == file }
             if(codes){
                 result += [path: file, lines: (codes*.line)?.flatten()?.unique()?.sort()]
             }
         }
-        return result
+        result
+    }
+
+    def formatFilesToVisit(List<StepDefinitionFile> stepFiles){
+        def result = []
+        stepFiles?.each{ file ->
+            def partialResult = []
+            file.changedStepDefinitions?.each{ step ->
+                def stepCodeMatch = regexList?.findAll{ step.regex == it.value }
+                if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
+                    if(stepCodeMatch.size()==1) {
+                        stepCodeMatch = stepCodeMatch.get(0)
+                        partialResult += [path: stepCodeMatch.path, line: stepCodeMatch.line]
+                    } else {
+                        log.warn "There are many implementations for step code: ${step.value}; ${step.path} (${step.line})"
+                    }
+                } else {
+                    log.warn "Step code was not found: ${step.value}; ${step.path} (${step.line})"
+                }
+            }
+            if(!partialResult.empty){
+                result += [path: partialResult?.first()?.path, lines: partialResult*.line?.unique()?.sort()]
+            }
+        }
+        result
+    }
+
+    static collapseFilesToVisit(def map1, def map2){
+        def sum = map1+map2
+        def result = []
+        def files = (map1*.path + map2*.path)?.unique()
+        files?.each{ file ->
+            def entries = sum?.findAll{ it.path == file }
+            result += [path:file, lines:entries*.lines?.flatten()?.unique()?.sort()]
+        }
+        result
     }
 
     /***
@@ -213,9 +254,13 @@ abstract class TestCodeAbstractParser {
      * @param gherkinFiles list of changed gherkin files
      * @return task interface
      */
-    TaskInterface computeInterfaceForDoneTask(List<GherkinFile> gherkinFiles){
+    TaskInterface computeInterfaceForDoneTask(List<GherkinFile> gherkinFiles, List<StepDefinitionFile> stepFiles){
         configureProperties()
-        computeInterfaceForTodoTask(gherkinFiles)
+        List<StepCode> stepCodes1 = extractStepCode(gherkinFiles)
+        def files1 = identifyMethodsPerFileToVisit(stepCodes1)
+        def files2 = formatFilesToVisit(stepFiles)
+        def filesToParse = collapseFilesToVisit(files1, files2)
+        computeInterface(filesToParse)
     }
 
     /***
@@ -225,16 +270,19 @@ abstract class TestCodeAbstractParser {
      * @return task interface
      */
     TaskInterface computeInterfaceForTodoTask(List<GherkinFile> gherkinFiles){
-        def interfaces = []
         List<StepCode> stepCodes = extractStepCode(gherkinFiles)
 
-        /* Identifies files to parse. The files are identified by path and lines of interest. */
+        // Identifies files to parse. The files are identified by path and lines of interest.
         def filesToParse = identifyMethodsPerFileToVisit(stepCodes)
 
+        computeInterface(filesToParse)
+    }
+
+    private TaskInterface computeInterface(def filesToParse){
+        def interfaces = []
         /* parses step nodes and records method calls */
         /* visits each step body and each method called from there */
-        filesToParse.eachWithIndex{ stepCode, index ->
-
+        filesToParse?.eachWithIndex{ stepCode, index ->
             /* first level: To identify method calls from step body. */
             TestCodeVisitor testCodeVisitor = parseStepBody(stepCode)
 
@@ -277,9 +325,18 @@ abstract class TestCodeAbstractParser {
      * Finds all regex expression in a source code file.
      *
      * @param path file path
-     * @return map identifying the file and its regexs
+     * @return list of StepRegex objects identifying the file and its regexs
      */
     abstract List<StepRegex> doExtractStepsRegex(String path)
+
+    /***
+     * Finds all step definition in a source code file.
+     *
+     * @param path file path
+     * @param file content
+     * @return list of StepDefinition objects
+     */
+    abstract List<StepDefinition> doExtractStepDefinitions(String path, String content)
 
     /***
      * Finds all methods declaration in source code file.

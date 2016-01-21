@@ -23,7 +23,10 @@ import org.eclipse.jgit.revwalk.RevTree
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.PathFilter
+import taskAnalyser.StepDefinition
+import taskAnalyser.StepDefinitionFile
 import taskAnalyser.UnitFile
+import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
 import testCodeAnalyser.ruby.RubyTestCodeParser
 import util.Util
@@ -177,6 +180,112 @@ class GitRepository {
         result
     }
 
+    private static boolean equals(StepDefinition sd1, StepDefinition sd2){
+        def result = true
+        for (int i = 0; i < sd1.body.size(); i++) {
+            def step1 = sd1.body.get(i)
+            def step2 = sd2.body.get(i)
+            if(step1 != step2) {
+                result = false
+                break
+            }
+        }
+        result
+    }
+
+    private static List<StepDefinition> parseStepDefinitionFile(String filename, String content, String sha,
+                                                           TestCodeAbstractParser parser){
+        List<StepDefinition> stepDefinitions = null
+        if(!content || content==""){
+            log.warn "Problem to parse step definition file '$filename'. Reason: The commit deleted it."
+        }
+        else{
+            try{
+                stepDefinitions = parser.doExtractStepDefinitions(filename, content)
+            } catch(ParserException ex){
+                log.warn "Problem to parse step definition file '$filename' (commit $sha). ${ex.class}: ${ex.message}."
+                log.warn content
+            }
+        }
+        stepDefinitions
+    }
+
+    private CodeChange extractStepDefinitionChanges(RevCommit commit, RevCommit parent, DiffEntry entry,
+                                                    TestCodeAbstractParser parser){
+        CodeChange codeChange = null
+
+        def newVersion = extractFileContent(commit, entry.newPath)
+        def newStepDefinitions = parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
+        def oldVersion = extractFileContent(parent, entry.oldPath)
+        def oldStepDefinitions = parseStepDefinitionFile( entry.oldPath, oldVersion, parent.name, parser)
+
+        //searches for changed or removed step definitions
+        List<StepDefinition> changedStepDefinitions = []
+        oldStepDefinitions?.each{ stepDef ->
+            def foundStepDef = newStepDefinitions?.find{ it.value == stepDef.value }
+            if(foundStepDef && foundStepDef.value && foundStepDef.value != ""){
+                if (stepDef.size() == foundStepDef.size()){ //step definition might be changed
+                    def stepDefEquals = equals(foundStepDef, stepDef)
+                    if(!stepDefEquals) changedStepDefinitions += foundStepDef
+                } else {//step definition was changed
+                    changedStepDefinitions += foundStepDef
+                }
+            } //if a step definition was removed, it was not relevant for the task
+        }
+
+        //searches for added step definitions
+        newStepDefinitions?.each{ newStepDef ->
+            def foundStepDef = oldStepDefinitions?.find{ it.value == newStepDef.value }
+            if(!foundStepDef || !foundStepDef.value || foundStepDef.value == ""){//it was not found because it is new
+                changedStepDefinitions += newStepDef
+            }
+        }
+
+        if(!changedStepDefinitions.isEmpty()){
+            StepDefinitionFile changedStepFile = new StepDefinitionFile(commitHash:commit.name, path:entry.newPath,
+                    changedStepDefinitions:changedStepDefinitions)
+            codeChange = new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [],
+                    stepFile: changedStepFile)
+        }
+
+        codeChange
+    }
+
+    /***
+     * Identifies step definitions at added step definition files by the first commit of the repository.
+     * It is used only when dealing with done tasks.
+     */
+    private static StepDefinitionFile extractStepDefinitionAdds(RevCommit commit, String content, String path,
+                                                               TestCodeAbstractParser parser){
+        StepDefinitionFile changedStepDefFile = null
+        def newStepDefinitions = parseStepDefinitionFile(path, content, commit.name, parser)
+
+        if(newStepDefinitions && !newStepDefinitions.isEmpty()){
+            changedStepDefFile = new StepDefinitionFile(commitHash:commit.name, path:path,
+                    changedStepDefinitions:newStepDefinitions)
+        }
+        changedStepDefFile
+    }
+
+    /***
+     * Identifies step definitions at added step definition files.
+     * It is used only when dealing with done tasks.
+     */
+    private CodeChange extractStepDefinitionAdds(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser){
+        CodeChange codeChange = null
+        def newVersion = extractFileContent(commit, entry.newPath)
+        def newStepDefinitions = parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
+
+        if(newStepDefinitions && !newStepDefinitions.isEmpty()){
+            StepDefinitionFile changedStepFile = new StepDefinitionFile(commitHash:commit.name, path:entry.newPath,
+                    changedStepDefinitions:newStepDefinitions)
+            codeChange = new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [],
+                    stepFile: changedStepFile)
+        }
+
+        codeChange
+    }
+
     /***
      * Identifies changed scenarios definitions at gherkin files (features).
      * It is used only when dealing with done tasks.
@@ -267,15 +376,20 @@ class GitRepository {
      * Important: DiffEntry.ChangeType.RENAME and DiffEntry.ChangeType.COPY are ignored. As consequence, if a renamed
      * file also has code changes, such changes are also ignored.
      */
-    private List<CodeChange> extractAllCodeChangeFromDiffs(RevCommit commit, RevCommit parent, List<DiffEntry> diffs) {
+    private List<CodeChange> extractAllCodeChangeFromDiffs(RevCommit commit, RevCommit parent, List<DiffEntry> diffs,
+                                                           TestCodeAbstractParser parser) {
         List<CodeChange> codeChanges = []
             diffs?.each{ entry ->
                 if(Util.isValidCode(entry.newPath) && Util.isValidCode(entry.oldPath)) {
                     switch (entry.changeType) {
                         case DiffEntry.ChangeType.ADD: //it is necessary to know the file size because all lines were changed
                             def result = extractFileContent(commit, entry.newPath)
-                            if(entry.newPath.endsWith(Util.FEATURE_FILENAME_EXTENSION) ){
+                            if(Util.isGherkinCode(entry.newPath)){
                                 def change = extractGherkinAdds(commit, entry)
+                                if(change != null) { codeChanges += change }
+                            }
+                            else if(Util.isStepDefinitionCode(entry.newPath)){
+                                def change = extractStepDefinitionAdds(commit, entry, parser)
                                 if(change != null) { codeChanges += change }
                             }
                             else{
@@ -287,9 +401,13 @@ class GitRepository {
                             codeChanges += new CodeChange(filename: entry.oldPath, type: entry.changeType, lines: 0..<result.readLines().size())
                             break
                         case DiffEntry.ChangeType.MODIFY:
-                            if(entry.newPath.endsWith(Util.FEATURE_FILENAME_EXTENSION) ){
+                            if(Util.isGherkinCode(entry.newPath)) {
                                 def change = extractGherkinChanges(commit, parent, entry)
-                                if(change != null) { codeChanges += change }
+                                if (change != null) { codeChanges += change }
+                            }
+                            else if(Util.isStepDefinitionCode(entry.newPath)){
+                                def change = extractStepDefinitionChanges(commit, parent, entry, parser)
+                                if (change != null) { codeChanges += change }
                             }
                             else{
                                 def lines = computeChanges(commit, entry.newPath)
@@ -388,29 +506,29 @@ class GitRepository {
         files?.sort()?.each{ log.info it }
     }
 
-    private List<CodeChange> extractAllCodeChangesFromCommit(RevCommit commit){
+    private List<CodeChange> extractAllCodeChangesFromCommit(RevCommit commit, TestCodeAbstractParser parser){
         List<CodeChange> codeChanges = []
 
         switch(commit.parentCount){
             case 0: //first commit
-                codeChanges = extractCodeChangesByFirstCommit(commit)
+                codeChanges = extractCodeChangesByFirstCommit(commit, parser)
                 break
-            case 1:
-                codeChanges = extractCodeChanges(commit, commit.parents.first())
+            case 1: //commit with one parent
+                codeChanges = extractCodeChanges(commit, commit.parents.first(), parser)
                 break
-            default: //merge commit
+            default: //merge commit (commit with more than one parent)
                 commit.parents.each{ parent ->
-                    codeChanges += extractCodeChanges(commit, parent)
+                    codeChanges += extractCodeChanges(commit, parent, parser)
                 }
         }
 
         return codeChanges
     }
 
-    private List<Commit> extractCommitsFromLogs(Iterable<RevCommit> logs){
+    private List<Commit> extractCommitsFromLogs(Iterable<RevCommit> logs, TestCodeAbstractParser parser){
         def commits = []
         logs?.each{ c ->
-            List<CodeChange> codeChanges = extractAllCodeChangesFromCommit(c)
+            List<CodeChange> codeChanges = extractAllCodeChangesFromCommit(c, parser)
             List<CodeChange> prodFiles = Util.findAllProductionFilesFromCodeChanges(codeChanges)
             List<CodeChange> testFiles = Util.findAllTestFilesFromCodeChanges(codeChanges)
 
@@ -421,8 +539,7 @@ class GitRepository {
             List<CodeChange> unitChanges = testFiles?.findAll{ it.filename.contains(Util.UNIT_TEST_FILES_RELATIVE_PATH+File.separator) }
 
             //identifies changed step files
-            List<CodeChange> stepChanges = testFiles?.findAll{ it.filename.contains(Util.STEPS_FILES_RELATIVE_PATH+File.separator) &&
-                    it.filename.endsWith(Util.stepFileExtension()) }
+            List<StepDefinitionFile> stepChanges = testFiles?.findAll{ it.stepFile}*.stepFile
 
             commits += new Commit(hash:c.name, message:c.fullMessage.replaceAll(Util.NEW_LINE_REGEX," "),
                     author:c.authorIdent.name, date:c.commitTime, productionChanges: prodFiles,
@@ -455,12 +572,12 @@ class GitRepository {
         return changedLines
     }
 
-    List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent){
+    List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent, TestCodeAbstractParser parser){
         def diffs = extractDiff(null, commit, parent)
-        extractAllCodeChangeFromDiffs(commit, parent, diffs)
+        extractAllCodeChangeFromDiffs(commit, parent, diffs, parser)
     }
 
-    List<CodeChange> extractCodeChangesByFirstCommit(RevCommit commit){
+    List<CodeChange> extractCodeChangesByFirstCommit(RevCommit commit, TestCodeAbstractParser parser){
         List<CodeChange> codeChanges = []
         def git = Git.open(new File(localPath))
         TreeWalk tw = new TreeWalk(git.repository)
@@ -470,11 +587,17 @@ class GitRepository {
         while(tw.next()){
             if(Util.isValidCode(tw.pathString)) {
                 def result = extractFileContent(commit, tw.pathString)
-                if( tw.pathString.endsWith(Util.FEATURE_FILENAME_EXTENSION) ){
+                if( Util.isGherkinCode(tw.pathString) ){
                     def change = extractGherkinAdds(commit, result, tw.pathString)
                     if(change != null) {
                         codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: [],
                                 gherkinFile: change)
+                    }
+                } else if(Util.isStepDefinitionCode(tw.pathString)){
+                    def change = extractStepDefinitionAdds(commit, result, tw.pathString, parser)
+                    if(change != null) {
+                        codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: [],
+                                stepFile: change)
                     }
                 }
                 else{
@@ -506,9 +629,9 @@ class GitRepository {
      *
      * @return a list of commits.
      */
-    List<Commit> searchAllCommits(){
+    List<Commit> searchAllCommits(TestCodeAbstractParser parser){
         def logs = searchAllRevCommits()
-        extractCommitsFromLogs(logs)
+        extractCommitsFromLogs(logs, parser)
     }
 
     /***
@@ -517,9 +640,33 @@ class GitRepository {
      * @param hash a set of hash value
      * @return a list of commits that satisfy the search criteria.
      */
-    List<Commit> searchCommitsBySha(String... hash) {
+    List<Commit> searchCommitsBySha(TestCodeAbstractParser parser, String... hash) {
         def logs = searchAllRevCommitsBySha(hash)
-        extractCommitsFromLogs(logs)
+        extractCommitsFromLogs(logs, parser)
+    }
+
+    /***
+     * Checkouts a specific version of git repository.
+     * @param sha the commit's identification.
+     */
+    def reset(String sha){
+        def git = Git.open(new File(localPath))
+        def branchName = "spgroup-tag" + counter++
+        def branch = git.branchList().setListMode(ListBranchCommand.ListMode.ALL).call().find{ it.name.endsWith(branchName) }
+        if(branch) git.branchDelete().setForce(true).setBranchNames(branch.name).call()
+        git.checkout().setForce(true).setCreateBranch(true).setName(branchName).setStartPoint(sha).call()
+        git.close()
+    }
+
+    /***
+     * Checkouts the last version of git repository.
+     */
+    def reset(){
+        def git = Git.open(new File(localPath))
+        Iterable<RevCommit> logs = git.log().call()
+        git.close()
+        def sha = logs.sort{it.commitTime}.last()?.name
+        reset(sha)
     }
 
     /***
@@ -609,30 +756,6 @@ class GitRepository {
         }
 
         return changedUnitFiles
-    }
-
-    /***
-     * Checkouts a specific version of git repository.
-     * @param sha the commit's identification.
-     */
-    def reset(String sha){
-        def git = Git.open(new File(localPath))
-        def branchName = "spgroup-tag" + counter++
-        def branch = git.branchList().setListMode(ListBranchCommand.ListMode.ALL).call().find{ it.name.endsWith(branchName) }
-        if(branch) git.branchDelete().setForce(true).setBranchNames(branch.name).call()
-        git.checkout().setForce(true).setCreateBranch(true).setName(branchName).setStartPoint(sha).call()
-        git.close()
-    }
-
-    /***
-     * Checkouts the last version of git repository.
-     */
-    def reset(){
-        def git = Git.open(new File(localPath))
-        Iterable<RevCommit> logs = git.log().call()
-        git.close()
-        def sha = logs.sort{it.commitTime}.last()?.name
-        reset(sha)
     }
 
 }

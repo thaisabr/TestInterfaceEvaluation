@@ -207,6 +207,19 @@ class Util {
         else false
     }
 
+    static boolean isStepDefinitionCode(String path){
+        if(path == null || path == "") false
+        else if(path.contains(STEPS_FILES_RELATIVE_PATH+File.separator) &&
+                path.endsWith(stepFileExtension())) true
+        else false
+    }
+
+    static boolean isGherkinCode(String path){
+        if(path == null || path == "") false
+        else if(path.endsWith(FEATURE_FILENAME_EXTENSION)) true
+        else false
+    }
+
     /**
      * Empties a folder.
      *

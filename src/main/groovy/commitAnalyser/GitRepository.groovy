@@ -6,6 +6,7 @@ import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
 import org.eclipse.jgit.api.ListBranchCommand
+import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.treewalk.AbstractTreeIterator
 import org.eclipse.jgit.treewalk.CanonicalTreeParser
 import taskAnalyser.GherkinFile
@@ -42,6 +43,7 @@ class GitRepository {
     String url
     String name
     String localPath
+    String lastCommit //used only to reset the repository for the original state after checkout command
 
     static int counter = 0 //used to compute branch name
 
@@ -60,9 +62,11 @@ class GitRepository {
         File[] files = dir.listFiles()
         if(files){
             log.info "Already cloned from " + url + " to " + localPath
+            lastCommit = searchAllRevCommits()?.last()?.name
         }
         else{
             def result = Git.cloneRepository().setURI(url).setDirectory(dir).call()
+            lastCommit = result?.log()?.call()?.sort{ it.commitTime }?.last()?.name
             result.close()
             log.info "Cloned from " + url + " to " + localPath
         }
@@ -651,10 +655,7 @@ class GitRepository {
      */
     def reset(String sha){
         def git = Git.open(new File(localPath))
-        def branchName = "spgroup-tag" + counter++
-        def branch = git.branchList().setListMode(ListBranchCommand.ListMode.ALL).call().find{ it.name.endsWith(branchName) }
-        if(branch) git.branchDelete().setForce(true).setBranchNames(branch.name).call()
-        git.checkout().setForce(true).setCreateBranch(true).setName(branchName).setStartPoint(sha).call()
+        git.checkout().setName(sha).setStartPoint(sha).call()
         git.close()
     }
 
@@ -663,10 +664,8 @@ class GitRepository {
      */
     def reset(){
         def git = Git.open(new File(localPath))
-        Iterable<RevCommit> logs = git.log().call()
+        git.checkout().setName(lastCommit).setStartPoint(lastCommit).call()
         git.close()
-        def sha = logs.sort{it.commitTime}.last()?.name
-        reset(sha)
     }
 
     /***

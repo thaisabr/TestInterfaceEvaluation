@@ -15,9 +15,9 @@ class TaskAnalyser {
         /* RUBY: TEST INTERFACE BASED ON ACCEPTANCE TEST CODE */
         def gherkinCounter = 0
         def nonEmptyInterfaces = []
-        tasks.each{ task ->
+        tasks?.each{ task ->
             def taskInterface = task.computeTestBasedInterface()
-            if(taskInterface.toString() != ""){
+            if(!taskInterface.empty){
                 nonEmptyInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface()]
             }
             if(!task.changedGherkinFiles.empty){ gherkinCounter++ }
@@ -36,18 +36,16 @@ class TaskAnalyser {
         /* RUBY: TEST INTERFACE BASED ON ACCEPTANCE TEST CODE */
         def gherkinCounter = 0
         def nonEmptyInterfaces = []
-        tasks.each{ task ->
+        tasks?.each{ task ->
             def taskInterface = task.computeTestBasedInterface()
-            if(!task.changedGherkinFiles.isEmpty()){
-                gherkinCounter++
-                if(taskInterface.toString() != ""){
-                    nonEmptyInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface()]
-                }
+            if(!taskInterface.empty){
+                nonEmptyInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface()]
             }
+            if(!task.changedGherkinFiles.empty){ gherkinCounter++ }
         }
 
-        log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
         log.info "Number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
+        log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
 
         File file = new File(filename)
         def outputFile = Util.DEFAULT_EVALUATION_FOLDER+File.separator+file.name

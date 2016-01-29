@@ -31,7 +31,7 @@ class TaskInterface {
     @Override
     String toString() {
         def files = findAllFiles()
-        if(files.isEmpty()) return ""
+        if(files.empty) return ""
         else{
             def text = ""
             files.each{
@@ -43,6 +43,11 @@ class TaskInterface {
         }
     }
 
+    boolean isEmpty(){
+        def files = findAllFiles()
+        if(files.empty) true
+        else false
+    }
 
     /***
      * Lists all production files related to the task.
@@ -67,11 +72,10 @@ class TaskInterface {
 
         def files = ((classes+methodFiles+referencedPages) as Set)?.sort()
         def result = []
-        files.each{
+        files?.each{
             if(it) result += it - Util.getRepositoriesCanonicalPath()
         }
-
-        return result
+        result
     }
 
     def colapseInterfaces(TaskInterface task) {

@@ -69,25 +69,20 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     private registryMethodCallFromInstanceVariable(CallNode iVisited){
         def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
         if (path) {
-            /* verifica se o método realmente existe no arquivo. Tem método que é incluido dinamicamente por frameworks
-                * e podem não aparecer na fase em que a AST é gerada. Estou deixando essa verificação apenas para
-                * deixar documentado que isso pode acontecer. */
+            /* Checks if the method really exists. There are methods that are generated automatically by Rails.
+            * In any case, the call is registered.*/
             def matches = methods.findAll { it.name == iVisited.name && it.path == path }
             if (matches.empty) {
                 registryClassUsageUsingFilename(path)
                 if(iVisited.name!="should" && iVisited.name!="should_not") { //ignore test methods
                     log.warn "The method called by instance variable was not found: " +
                             "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
-                    /* de fato, quando cai aqui sao metodos para recuperar propriedades em sua maioria. Por exemplo:
-                    * @mobilization.hashtag, que na verdade eh getHashTag e eh gerado pelo rails;
-                    * mobilization.save!, save eh provido pelo rails tambem.*/
+                    /* Examples: @mobilization.hashtag; mobilization.save! */
                 }
             } else{
-                //log.info "The method called by instance variable was found: " +
-                //        "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
                 taskInterface.methods += [name: iVisited.name, type: Util.getClassName(path), file: path]
             }
-        } else { //nao caiu nenhuma vez aqui para o projeto meurio
+        } else { //it seems it never has happened
             //log.warn "The type of instance variable was not found: " +
             //        "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
             taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
@@ -105,6 +100,37 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             taskInterface.classes += [name:path.substring(index+1), file:path]
         } else {
             taskInterface.classes += [name:Util.getClassName(path), file:path]
+        }
+    }
+
+    private analyseVisitCall(FCallNode iVisited){
+        /* if the argument is a literal, the view was found */
+        if(iVisited.args.last.class == ConstNode){
+            def foundPages = Util.findViewPathForRailsProjects(iVisited.args.last.name, viewFiles)
+            if(foundPages && !foundPages.empty) {
+                taskInterface.referencedPages += foundPages
+                log.info "View(s) found: $foundPages"
+            }
+            else log.info "View(s) not found: ${iVisited.args.last.name}"
+        }
+        /* If the argument is a method call that returns a literal, we understand the view was found.
+           Otherwise, it is not possible to extract it and find the view. */
+        else if(iVisited.args.last.class == VCallNode || iVisited.args.last.class == CallNode ||
+                iVisited.args.last.class == FCallNode){ //caso da chamada visit to_url(arg1)
+            def methodsToVisit = methods.findAll{ it.name == iVisited.args.last.name }
+            methodsToVisit?.each{ m ->
+                taskInterface.calledPageMethods += [name: iVisited.name, arg:m.name, file:m.path]
+            }
+        }
+    }
+
+    private analyseExpectCall(FCallNode iVisited){
+        def argClass = iVisited?.args?.last?.class
+        if(argClass && argClass==InstVarNode){
+            def name = iVisited.args.last.name
+            name = name.toUpperCase().getAt(0) + name.substring(1)
+            registryClassUsage(name)
+            log.info "expect parameter: $name - $lastVisitedFile (${iVisited.position.startLine+1})"
         }
     }
 
@@ -133,7 +159,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     registryClassUsage(iVisited.receiver.leftNode.name)
                     break
                 case SelfNode: //Represents 'self' keyword
-                    log.info "SELF_NODE: ${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine+1})"
                     registryMethodCallFromSelf(iVisited)
                     break
                 case LocalVarNode: //Access a local variable
@@ -192,34 +217,12 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     @Override
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
-
-        if(iVisited.name == "visit"){ //indicates de view
-            /* if the argument is a literal, the view was found */
-            if(iVisited.args.last.class == ConstNode){
-                def name = Util.findViewPathForRailsProjects(iVisited.args.last.name, viewFiles)
-                if(name) taskInterface.referencedPages += name
-            }
-            /* If the argument is a method call that returns a literal, we understand the view was found.
-               Otherwise, it is not possible to extract it and find the view. */
-            else if(iVisited.args.last.class == VCallNode || iVisited.args.last.class == CallNode ||
-                    iVisited.args.last.class == FCallNode){ //caso da chamada visit to_url(arg1)
-                def methodsToVisit = methods.findAll{ it.name == iVisited.args.last.name }
-                methodsToVisit?.each{ m ->
-                    taskInterface.calledPageMethods += [name: iVisited.name, arg:m.name, file:m.path]
-                }
-            }
-        } else if(iVisited.name == "expect"){ //alternative for should and should_not
-            def argClass = iVisited?.args?.last?.class
-            if(argClass && argClass==InstVarNode){
-                def name = iVisited.args.last.name
-                name = name.toUpperCase().getAt(0) + name.substring(1)
-                registryClassUsage(name)
-                log.info "expect parameter: $name - $lastVisitedFile (${iVisited.position.startLine+1})"
-            } else log.info "expect no parameter!!! Method call: ${iVisited.name} (${iVisited.position.startLine})"
-
-        } else if(!(iVisited.name in Util.STEP_KEYWORDS) && !(iVisited.name in  Util.STEP_KEYWORDS_PT) ){
-            //o metodo auxiliar cuja chamada pode ser usada como argumento para visit pode cair aqui... ou seja,
-            //ele é considerado como argumento e como chamada absoluta
+        //indicates de view
+        if(iVisited.name == "visit") analyseVisitCall(iVisited)
+        //alternative for should and should_not
+        else if(iVisited.name == "expect") analyseExpectCall(iVisited)
+        //helper method for visit and expect can match such a condition
+        else if(!(iVisited.name in Util.STEP_KEYWORDS) && !(iVisited.name in  Util.STEP_KEYWORDS_PT) ){
             registryMethodCallFromSelf(iVisited)
         }
         iVisited

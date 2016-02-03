@@ -288,20 +288,22 @@ class Util {
     }
 
     static String underscoreToCamelCase(String underscore){
-        if(!underscore || underscore.isAllWhitespace()) return ""
+        if(!underscore || underscore.empty || underscore.isAllWhitespace()) return ""
         def name = underscore[0].toUpperCase()+underscore.substring(1)
         name.replaceAll(/_\w/){ it[1].toUpperCase() }
     }
 
     static String camelCaseToUnderscore(String camelCase){
-        if(!camelCase || camelCase.isAllWhitespace()) return ""
+        if(!camelCase || camelCase.empty || camelCase.isAllWhitespace()) return ""
         camelCase.replaceAll(/(\B[A-Z])/,'_$1').toLowerCase()
     }
 
     static String getClassName(String path){
+        if(!path || path.empty || path.isAllWhitespace()) return ""
         def firstIndex = path.lastIndexOf(File.separator)
         def lastIndex = path.lastIndexOf(".")
-        def underscore = path.substring(firstIndex+1,lastIndex)
+        def underscore = ""
+        if(firstIndex>=0 && lastIndex>=0) underscore = path.substring(firstIndex+1,lastIndex)
         underscoreToCamelCase(underscore)
     }
 

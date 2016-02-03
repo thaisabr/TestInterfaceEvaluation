@@ -1,6 +1,7 @@
 package testCodeAnalyser.ruby
 
 import groovy.util.logging.Slf4j
+import  org.jrubyparser.ast.Node
 import org.jrubyparser.ast.ArrayNode
 import org.jrubyparser.ast.CallNode
 import org.jrubyparser.ast.CaseNode
@@ -37,12 +38,74 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
     def productionClass //keys: name, path; used when visiting RSpec files; try a better way to represent it!
 
-    public RubyTestCodeVisitor(List<String> projectFiles, String currentFile, Set methods){
+    RubyTestCodeVisitor(List<String> projectFiles, String currentFile, Set methods){
         this.projectFiles = projectFiles
         this.viewFiles = projectFiles.findAll{ it.contains(Util.VIEWS_FILES_RELATIVE_PATH+File.separator) }
         this.taskInterface = new TaskInterface()
         this.lastVisitedFile = currentFile
         this.methods = methods
+    }
+
+    private registryMethodCall(CallNode iVisited){
+        def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
+        if(path) taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
+    }
+
+    private registryMethodCallFromUnknownReceiver(Node iVisited){
+        def matches = methods.findAll { it.name == iVisited.name }
+        if(matches.empty) taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
+        else matches.each{  taskInterface.methods += [name: iVisited.name, type: Util.getClassName(it.path), file: it.path] }
+    }
+
+    private registryMethodCallFromSelf(Node iVisited){
+        if(lastVisitedFile.contains(Util.VIEWS_FILES_RELATIVE_PATH)){
+            def index = lastVisitedFile.lastIndexOf(File.separator)
+            taskInterface.methods += [name: iVisited.name, type:lastVisitedFile.substring(index+1), file:lastVisitedFile]
+        } else {
+            taskInterface.methods += [name: iVisited.name, type:Util.getClassName(lastVisitedFile), file:lastVisitedFile]
+        }
+    }
+
+    private registryMethodCallFromInstanceVariable(CallNode iVisited){
+        def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
+        if (path) {
+            /* verifica se o método realmente existe no arquivo. Tem método que é incluido dinamicamente por frameworks
+                * e podem não aparecer na fase em que a AST é gerada. Estou deixando essa verificação apenas para
+                * deixar documentado que isso pode acontecer. */
+            def matches = methods.findAll { it.name == iVisited.name && it.path == path }
+            if (matches.empty) {
+                registryClassUsageUsingFilename(path)
+                if(iVisited.name!="should" && iVisited.name!="should_not") { //ignore test methods
+                    log.warn "The method called by instance variable was not found: " +
+                            "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
+                    /* de fato, quando cai aqui sao metodos para recuperar propriedades em sua maioria. Por exemplo:
+                    * @mobilization.hashtag, que na verdade eh getHashTag e eh gerado pelo rails;
+                    * mobilization.save!, save eh provido pelo rails tambem.*/
+                }
+            } else{
+                //log.info "The method called by instance variable was found: " +
+                //        "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
+                taskInterface.methods += [name: iVisited.name, type: Util.getClassName(path), file: path]
+            }
+        } else { //nao caiu nenhuma vez aqui para o projeto meurio
+            //log.warn "The type of instance variable was not found: " +
+            //        "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
+            taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
+        }
+    }
+
+    private registryClassUsage(String name){
+        def path = Util.getClassPathForRuby(name, projectFiles)
+        if(path) taskInterface.classes += [name: name, file: path]
+    }
+
+    private registryClassUsageUsingFilename(String path){
+        if(path.contains(Util.VIEWS_FILES_RELATIVE_PATH)){
+            def index = path.lastIndexOf(File.separator)
+            taskInterface.classes += [name:path.substring(index+1), file:path]
+        } else {
+            taskInterface.classes += [name:Util.getClassName(path), file:path]
+        }
     }
 
     /**
@@ -60,90 +123,36 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         }
         else {
             switch (iVisited.receiver.class) {
+                case Colon3Node: //Global scope node (::FooBar).  This is used to gain access to the global scope (that of the Object class) when referring to a constant or method.
                 case ConstNode: //constant expression; static method call; example: User.find_by_email("trashmail@meurio.org.br")
-                    def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
-                    if(path) taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
+                    registryMethodCall(iVisited)
                     break
                 case Colon2Node: //Represents a '::' constant access or method call (Java::JavaClass)
                 case Colon2ConstNode: //call example: "ActionMailer::Base.deliveries"
-                    def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
-                    if(path) taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
-                    path = Util.getClassPathForRuby(iVisited.receiver.leftNode.name, projectFiles)
-                    if(path) taskInterface.classes += [name: iVisited.receiver.leftNode.name, file: path]
-                    break
-                case Colon3Node: //Global scope node (::FooBar).  This is used to gain access to the global scope (that of the Object class) when referring to a constant or method.
-                    def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
-                    if(path) taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
+                    registryMethodCall(iVisited)
+                    registryClassUsage(iVisited.receiver.leftNode.name)
                     break
                 case SelfNode: //Represents 'self' keyword
-                    log.info "SELF_NODE: ${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine})"
-                    if(lastVisitedFile.contains(Util.VIEWS_FILES_RELATIVE_PATH)){
-                        def index = lastVisitedFile.lastIndexOf(File.separator)
-                        taskInterface.methods += [name: iVisited.name, type:lastVisitedFile.substring(index+1), file:lastVisitedFile]
-                    } else {
-                        taskInterface.methods += [name: iVisited.name, type:Util.getClassName(lastVisitedFile), file:lastVisitedFile]
-                    }
+                    log.info "SELF_NODE: ${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine+1})"
+                    registryMethodCallFromSelf(iVisited)
                     break
                 case LocalVarNode: //Access a local variable
                 case InstVarNode: //instance variable, example: @user.should_not be_nil
                     //log.info "CHAMADA DE METODO COM INST_VAR_NODE"
-                    def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
-                    if (path) {
-                        /* verifica se o método realmente existe no arquivo. Tem método que é incluido dinamicamente por frameworks
-                            * e podem não aparecer na fase em que a AST é gerada. Estou deixando essa verificação apenas para
-                            * deixar documentado que isso pode acontecer. */
-                        def receiver = methods.findAll { it.name == iVisited.name && it.path == path }
-                        if (receiver.empty) {
-                            if(path.contains(Util.VIEWS_FILES_RELATIVE_PATH)){
-                                def index = path.lastIndexOf(File.separator)
-                                taskInterface.classes += [name:path.substring(index+1), file:path]
-                            } else {
-                                taskInterface.classes += [name:Util.getClassName(path), file:path]
-                            }
-                            if(iVisited.name!="should" && iVisited.name!="should_not") { //ignore test methods
-                                log.warn "The method called by instance variable was not found: " +
-                                        "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
-                                /* de fato, quando cai aqui sao metodos para recuperar propriedades em sua maioria. Por exemplo:
-                                * @mobilization.hashtag, que na verdade eh getHashTag e eh gerado pelo rails;
-                                * mobilization.save!, save eh provido pelo rails tambem.*/
-                            }
-                        } else{
-                            //log.info "The method called by instance variable was found: " +
-                            //        "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
-                            taskInterface.methods += [name: iVisited.name, type: Util.getClassName(path), file: path]
-                        }
-                    } else { //nao caiu nenhuma vez aqui para o projeto meurio
-                        //log.warn "The type of instance variable was not found: " +
-                        //        "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
-                        taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
-                    }
-                    break
-                case DVarNode: //dynamic variable (e.g. block scope local variable)
-                    def matches = methods.findAll { it.name == iVisited.name }
-                    if(matches.empty) taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
-                    else matches.each{  taskInterface.methods += [name: iVisited.name, type: Util.getClassName(it.path), file: it.path] }
+                    registryMethodCallFromInstanceVariable(iVisited)
                     break
                 case GlobalVarNode: //access to a global variable; usage of "?"
-                    if (!iVisited.receiver.name == "?") {
-                        log.info "CALL BY GLOBAL VARIABLE \nPROPERTIES:"
-                        iVisited.receiver.properties.each { k, v -> log.info "$k: $v" }
-                    }
+                    log.warn "CALL BY GLOBAL VARIABLE \nPROPERTIES:"
+                    iVisited.receiver.properties.each { k, v -> log.warn "$k: $v" }
+                    if (!iVisited.receiver.name == "?") log.warn "GLOBAL VARIABLE IS '?'"
                     break
+                case DVarNode: //dynamic variable (e.g. block scope local variable)
                 case FCallNode: //method call with self as an implicit receiver
                 case VCallNode: //method call without any arguments
                 case CallNode: //method call
-                    def receiver = methods.findAll { it.name == iVisited.name }
-                    if (receiver.empty) {
-                        taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
-                    } else {
-                        receiver.each {
-                            taskInterface.methods += [name: iVisited.name, type: Util.getClassName(it.path), file: it.path]
-                        }
-                    }
+                    registryMethodCallFromUnknownReceiver(iVisited)
                     break
                 case ArrayNode: //Represents an array. This could be an array literal, quoted words or some args stuff.
-                    taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
-                    break
                 case NewlineNode: //A new (logical) source code line
                     // the found situation does not make sense: (DB.tables - [:schema_migrations]).each { |table| DB[table].truncate }
                 case StrNode: //Representing a simple String literal
@@ -170,9 +179,8 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     */
                     break
                 default:
-                    log.warn "RECEIVER DEFAULT! called: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine}); " +
+                    log.warn "RECEIVER DEFAULT! called: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine+1}); " +
                             "Receiver type: ${iVisited.receiver.class}"
-            //log.warn "RECEIVER DEFAULT! Receiver type: ${iVisited.receiver.class}"
             }
         }
         iVisited
@@ -200,26 +208,19 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     taskInterface.calledPageMethods += [name: iVisited.name, arg:m.name, file:m.path]
                 }
             }
-        } else if(iVisited.name == "expect"){
+        } else if(iVisited.name == "expect"){ //alternative for should and should_not
             def argClass = iVisited?.args?.last?.class
             if(argClass && argClass==InstVarNode){
-                log.info "expect parameter: ${iVisited.args.last.name} - $lastVisitedFile (${iVisited.position.startLine+1})"
-                def path = Util.getClassPathForRuby(iVisited.args.last.name, projectFiles)
-                if(path) taskInterface.classes += [name: name.toUpperCase().getAt(0)+name.substring(1), file: path]
-            }
-            else{
-                log.info "expect no parameter!!! Method call: ${iVisited.name} (${iVisited.position.startLine})"
-            }
+                def name = iVisited.args.last.name
+                name = name.toUpperCase().getAt(0) + name.substring(1)
+                registryClassUsage(name)
+                log.info "expect parameter: $name - $lastVisitedFile (${iVisited.position.startLine+1})"
+            } else log.info "expect no parameter!!! Method call: ${iVisited.name} (${iVisited.position.startLine})"
 
         } else if(!(iVisited.name in Util.STEP_KEYWORDS) && !(iVisited.name in  Util.STEP_KEYWORDS_PT) ){
             //o metodo auxiliar cuja chamada pode ser usada como argumento para visit pode cair aqui... ou seja,
             //ele é considerado como argumento e como chamada absoluta
-            if(lastVisitedFile.contains(Util.VIEWS_FILES_RELATIVE_PATH)){
-                def index = lastVisitedFile.lastIndexOf(File.separator)
-                taskInterface.methods += [name: iVisited.name, type:lastVisitedFile.substring(index+1), file:lastVisitedFile]
-            } else {
-                taskInterface.methods += [name: iVisited.name, type:Util.getClassName(lastVisitedFile), file:lastVisitedFile]
-            }
+            registryMethodCallFromSelf(iVisited)
         }
         iVisited
     }
@@ -230,11 +231,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     @Override
     Object visitVCallNode(VCallNode iVisited) {
         super.visitVCallNode(iVisited)
-        def receiverName = methods.findAll{ it.name == iVisited.name }
-        if(!receiverName) taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
-        receiverName.each{
-            taskInterface.methods += [name: iVisited.name, type: Util.getClassName(it.path), file: it.path]
-        }
+        registryMethodCallFromUnknownReceiver(iVisited)
         iVisited
     }
 

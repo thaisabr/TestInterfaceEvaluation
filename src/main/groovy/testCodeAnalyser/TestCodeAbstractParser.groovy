@@ -72,7 +72,9 @@ abstract class TestCodeAbstractParser {
 
     private configureMethodsList(){
         methods = []
-        def filesForSearchMethods = Util.findFilesFromDirectoryByLanguage(repositoryPath) //it is needed to consider all files instead of production files only
+        def filesForSearchMethods = Util.findFilesFromDirectoryByLanguage(repositoryPath+File.separator+Util.PRODUCTION_FILES_RELATIVE_PATH)
+        filesForSearchMethods += Util.findFilesFromDirectoryByLanguage(repositoryPath+File.separator+Util.GHERKIN_FILES_RELATIVE_PATH)
+        filesForSearchMethods += Util.findFilesFromDirectoryByLanguage(repositoryPath+File.separator+Util.UNIT_TEST_FILES_RELATIVE_PATH)
         filesForSearchMethods.each{ methods += doExtractMethodDefinitions(it) }
     }
 

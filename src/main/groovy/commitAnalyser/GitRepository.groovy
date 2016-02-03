@@ -501,15 +501,6 @@ class GitRepository {
         return oldTreeParser
     }
 
-    private static listChangedFiles(def diffs, def commit){
-        log.info "FILES FROM COMMIT '${commit.name}':"
-        def files = diffs?.collect{ diff->
-            if(diff.newPath == "\\dev\\null") diff.oldPath + " (DELETED)"
-            else diff.newPath
-        }
-        files?.sort()?.each{ log.info it }
-    }
-
     private List<CodeChange> extractAllCodeChangesFromCommit(RevCommit commit, TestCodeAbstractParser parser){
         List<CodeChange> codeChanges = []
 
@@ -547,8 +538,8 @@ class GitRepository {
 
             commits += new Commit(hash:c.name, message:c.fullMessage.replaceAll(Util.NEW_LINE_REGEX," "),
                     author:c.authorIdent.name, date:c.commitTime, productionChanges: prodFiles,
-                    testChanges: testFiles, codeChanges: (prodFiles+testFiles).unique(),
-                    gherkinChanges:gherkinChanges, unitChanges:unitChanges, stepChanges:stepChanges)
+                    testChanges: testFiles, codeChanges: codeChanges, gherkinChanges:gherkinChanges,
+                    unitChanges:unitChanges, stepChanges:stepChanges)
         }
         return commits
     }

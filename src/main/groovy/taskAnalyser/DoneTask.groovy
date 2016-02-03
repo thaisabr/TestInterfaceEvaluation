@@ -216,7 +216,13 @@ class DoneTask extends Task {
             def files = commits.collect{ commit -> commit.codeChanges*.filename }?.flatten()?.unique()
             def productionFiles = Util.findAllProductionFiles(files)
             productionFiles.each{ file ->
-                taskInterface.classes += [name:"", file:gitRepository.name+File.separator+file]
+                def path = gitRepository.name+File.separator+file
+                if(path.contains(Util.VIEWS_FILES_RELATIVE_PATH)){
+                    def index = path.lastIndexOf(File.separator)
+                    taskInterface.classes += [name:path.substring(index+1), file:path]
+                } else {
+                    taskInterface.classes += [name:Util.getClassName(path), file:path]
+                }
             }
         }
         return taskInterface

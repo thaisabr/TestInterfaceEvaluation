@@ -287,6 +287,24 @@ class Util {
         files
     }
 
+    static String underscoreToCamelCase(String underscore){
+        if(!underscore || underscore.isAllWhitespace()) return ""
+        def name = underscore[0].toUpperCase()+underscore.substring(1)
+        name.replaceAll(/_\w/){ it[1].toUpperCase() }
+    }
+
+    static String camelCaseToUnderscore(String camelCase){
+        if(!camelCase || camelCase.isAllWhitespace()) return ""
+        camelCase.replaceAll(/(\B[A-Z])/,'_$1').toLowerCase()
+    }
+
+    static String getClassName(String path){
+        def firstIndex = path.lastIndexOf(File.separator)
+        def lastIndex = path.lastIndexOf(".")
+        def underscore = path.substring(firstIndex+1,lastIndex)
+        underscoreToCamelCase(underscore)
+    }
+
     /********** A PARTIR DAQUI, TUDO FOI INCLUÍDO APÓS INTEGRAÇÃO COM ANALISADOR DE CÓDIGO GROOVY. *******************/
 
     static findJarFilesFromDirectory(String directory){
@@ -349,7 +367,8 @@ class Util {
      * @return the file name that matches to the class or module name
      */
     static String getClassPathForRuby(String className, Collection<String> projectFiles){
-        def name = (className.toLowerCase()+RUBY_EXTENSION).replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def underscore = camelCaseToUnderscore(className)
+        def name = (underscore+RUBY_EXTENSION).replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         def regex_expression = ".*${Matcher.quoteReplacement(File.separator)}$name"
         projectFiles?.find{ it ==~ /$regex_expression/ }
     }

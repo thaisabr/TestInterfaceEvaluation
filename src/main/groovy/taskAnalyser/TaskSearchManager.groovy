@@ -38,10 +38,12 @@ class TaskSearchManager {
 
         List<DoneTask> tasks = []
         relevantEntries.each { entry ->
-            List<Commit> commits = []
-            def hashes = entry[3].tokenize(',[]')*.trim()
-            hashes.each { commits += new Commit(hash: it) }
-            tasks += new DoneTask(entry[0], entry[1], entry[2], commits)
+            if(entry[2].size()>4){
+                List<Commit> commits = []
+                def hashes = entry[3].tokenize(',[]')*.trim()
+                hashes.each { commits += new Commit(hash: it) }
+                tasks += new DoneTask(entry[0], entry[1], entry[2], commits)
+            }
         }
         return tasks
     }

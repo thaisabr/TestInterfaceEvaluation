@@ -175,8 +175,7 @@ class GitRepository {
         for (int i = 0; i < sd1.steps.size(); i++) {
             def step1 = sd1.steps.get(i)
             def step2 = sd2.steps.get(i)
-            if(step1.text != step2.text || step1.keyword != step2.keyword
-                    || step1.argument != step2.argument) {
+            if(step1.text != step2.text || step1.keyword != step2.keyword) {
                 result = false
                 break
             }

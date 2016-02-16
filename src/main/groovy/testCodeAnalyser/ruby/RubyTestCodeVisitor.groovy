@@ -1,6 +1,7 @@
 package testCodeAnalyser.ruby
 
 import groovy.util.logging.Slf4j
+import org.jrubyparser.ast.HashNode
 import  org.jrubyparser.ast.Node
 import org.jrubyparser.ast.ArrayNode
 import org.jrubyparser.ast.CallNode
@@ -21,6 +22,7 @@ import org.jrubyparser.ast.NewlineNode
 import org.jrubyparser.ast.OrNode
 import org.jrubyparser.ast.SelfNode
 import org.jrubyparser.ast.StrNode
+import org.jrubyparser.ast.SymbolNode
 import org.jrubyparser.ast.VCallNode
 import org.jrubyparser.util.NoopVisitor
 import taskAnalyser.TaskInterface
@@ -35,8 +37,14 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     List<String> viewFiles
     String lastVisitedFile
     Set methods //keys: name, args, path; all methods from project
-
     def productionClass //keys: name, path; used when visiting RSpec files; try a better way to represent it!
+
+    RubyTestCodeVisitor(String currentFile){ //test purpose only
+        this.taskInterface = new TaskInterface()
+        projectFiles = []
+        viewFiles = []
+        lastVisitedFile = currentFile
+    }
 
     RubyTestCodeVisitor(List<String> projectFiles, String currentFile, Set methods){
         this.projectFiles = projectFiles
@@ -51,10 +59,38 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         if(path) taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
     }
 
-    private registryMethodCallFromUnknownReceiver(Node iVisited){
-        def matches = methods.findAll { it.name == iVisited.name }
+    private int countArgsMethodCall(CallNode iVisited){
+        def counter = 0
+        iVisited?.args?.childNodes()?.each{ child ->
+            if(child instanceof HashNode && child?.listNode?.size()>0){
+                counter += child.listNode.childNodes().findAll{ it instanceof SymbolNode}?.size()
+            } else counter++
+        }
+        counter
+    }
+
+    private searchForMethodMatch(Node iVisited){
+        def matches = []
+        def argsCounter = countArgsMethodCall((CallNode)iVisited)
+        matches = methods.findAll {
+            it.name == iVisited.name && argsCounter <= it.args && argsCounter >= it.args-it.optionalArgs
+        }
+        matches
+    }
+
+    private registryMethodCallFromUnknownReceiver(Node iVisited, boolean hasArgs){
+        def operators = ["[]","*","/","+","-","==","!=",">","<",">=","<=","<=>","===",".eql?","equal?","defined?"]
+        if(iVisited.name in operators) return //example: hash['activity'];
+
+        def matches = []
+        if(hasArgs) matches = searchForMethodMatch(iVisited)
+        else  matches = methods.findAll { it.name==iVisited.name && (it.args-it.optionalArgs)==0 }
+
         if(matches.empty) taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
-        else matches.each{  taskInterface.methods += [name: iVisited.name, type: Util.getClassName(it.path), file: it.path] }
+        else matches.each{
+            log.info "match: ${it.name}; ${it.path}; ${it.args}; ${it.optionalArgs}"
+            taskInterface.methods += [name: iVisited.name, type: Util.getClassName(it.path), file: it.path]
+        }
     }
 
     private registryMethodCallFromSelf(Node iVisited){
@@ -71,7 +107,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         if (path) {
             /* Checks if the method really exists. There are methods that are generated automatically by Rails.
             * In any case, the call is registered.*/
-            def matches = methods.findAll { it.name == iVisited.name && it.path == path }
+            def matches = searchForMethodMatch(iVisited)
             if (matches.empty) {
                 registryClassUsageUsingFilename(path)
                 if(iVisited.name!="should" && iVisited.name!="should_not") { //ignore test methods
@@ -83,8 +119,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                 taskInterface.methods += [name: iVisited.name, type: Util.getClassName(path), file: path]
             }
         } else { //it seems it never has happened
-            //log.warn "The type of instance variable was not found: " +
-            //        "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
             taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
         }
     }
@@ -109,9 +143,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             def foundPages = Util.findViewPathForRailsProjects(iVisited.args.last.name, viewFiles)
             if(foundPages && !foundPages.empty) {
                 taskInterface.referencedPages += foundPages
-                log.info "View(s) found: $foundPages"
             }
-            else log.info "View(s) not found: ${iVisited.args.last.name}"
         }
         /* If the argument is a method call that returns a literal, we understand the view was found.
            Otherwise, it is not possible to extract it and find the view. */
@@ -130,7 +162,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             def name = iVisited.args.last.name
             name = name.toUpperCase().getAt(0) + name.substring(1)
             registryClassUsage(name)
-            log.info "expect parameter: $name - $lastVisitedFile (${iVisited.position.startLine+1})"
         }
     }
 
@@ -140,7 +171,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     @Override
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
-
         //println "Method call: ${iVisited.name} (${iVisited.position.startLine});   Receptor: ${iVisited.receiver.name}"
 
         /* unit test file */
@@ -163,7 +193,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     break
                 case LocalVarNode: //Access a local variable
                 case InstVarNode: //instance variable, example: @user.should_not be_nil
-                    //log.info "CHAMADA DE METODO COM INST_VAR_NODE"
                     registryMethodCallFromInstanceVariable(iVisited)
                     break
                 case GlobalVarNode: //access to a global variable; usage of "?"
@@ -175,7 +204,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                 case FCallNode: //method call with self as an implicit receiver
                 case VCallNode: //method call without any arguments
                 case CallNode: //method call
-                    registryMethodCallFromUnknownReceiver(iVisited)
+                    registryMethodCallFromUnknownReceiver(iVisited, true)
                     break
                 case ArrayNode: //Represents an array. This could be an array literal, quoted words or some args stuff.
                 case NewlineNode: //A new (logical) source code line
@@ -217,13 +246,25 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     @Override
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
-        //indicates de view
-        if(iVisited.name == "visit") analyseVisitCall(iVisited)
-        //alternative for should and should_not
-        else if(iVisited.name == "expect") analyseExpectCall(iVisited)
-        //helper method for visit and expect can match such a condition
-        else if(!(iVisited.name in Util.STEP_KEYWORDS) && !(iVisited.name in  Util.STEP_KEYWORDS_PT) ){
-            registryMethodCallFromSelf(iVisited)
+        //log.info "Method call: ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1})"
+        switch (iVisited.name){
+            case "visit": //indicates the view
+                log.info "VISIT CALL: $lastVisitedFile (${iVisited.position.startLine+1})"
+                analyseVisitCall(iVisited)
+                break
+            case "expect": //alternative for should and should_not
+                analyseExpectCall(iVisited)
+                break
+            case "steps": //when a step calls another step; until the moment, nothing is done about it.
+            case "step":
+                break
+            case "puts": //methods to use console; to ignore
+            case "print":
+                break
+            default: //helper method for visit and expect can match such a condition
+                if(!(iVisited.name in Util.STEP_KEYWORDS) && !(iVisited.name in  Util.STEP_KEYWORDS_PT) ){
+                    registryMethodCallFromSelf(iVisited)
+                }
         }
         iVisited
     }
@@ -234,7 +275,8 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     @Override
     Object visitVCallNode(VCallNode iVisited) {
         super.visitVCallNode(iVisited)
-        registryMethodCallFromUnknownReceiver(iVisited)
+        //log.info "Method call: ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1}); no args!"
+        registryMethodCallFromUnknownReceiver(iVisited, false)
         iVisited
     }
 

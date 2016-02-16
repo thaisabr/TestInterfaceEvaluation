@@ -15,14 +15,16 @@ class RubyMethodDefinitionVisitor extends NoopVisitor {
     @Override
     Object visitDefnNode(DefnNode iVisited) {
         super.visitDefnNode(iVisited)
-        methods += [name: iVisited.name, args:iVisited.args.getNormativeParameterNameList(false).size(), path:path]
+        methods += [name: iVisited.name, args:iVisited.args.getMaxArgumentsCount(),
+                    optionalArgs:iVisited.args.getOptionalCount(), path:path]
         iVisited
     }
 
     @Override
     Object visitDefsNode(DefsNode iVisited) {
         super.visitDefsNode(iVisited)
-        methods += [name: iVisited.name, args:iVisited.args.getNormativeParameterNameList(false).size(), path:path]
+        methods += [name: iVisited.name, args:iVisited.args.getMaxArgumentsCount(),
+                    optionalArgs:iVisited.args.getOptionalCount(), path:path]
         iVisited
     }
 }

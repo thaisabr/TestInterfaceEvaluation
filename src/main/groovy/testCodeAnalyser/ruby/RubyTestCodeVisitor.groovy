@@ -59,7 +59,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         if(path) taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
     }
 
-    private int countArgsMethodCall(CallNode iVisited){
+    private static int countArgsMethodCall(CallNode iVisited){
         def counter = 0
         iVisited?.args?.childNodes()?.each{ child ->
             if(child instanceof HashNode && child?.listNode?.size()>0){
@@ -79,9 +79,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     private registryMethodCallFromUnknownReceiver(Node iVisited, boolean hasArgs){
-        def operators = ["[]","*","/","+","-","==","!=",">","<",">=","<=","<=>","===",".eql?","equal?","defined?"]
-        if(iVisited.name in operators) return //example: hash['activity'];
-
         def matches = []
         if(hasArgs) matches = searchForMethodMatch(iVisited)
         else  matches = methods.findAll { it.name==iVisited.name && (it.args-it.optionalArgs)==0 }
@@ -110,11 +107,9 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             def matches = searchForMethodMatch(iVisited)
             if (matches.empty) {
                 registryClassUsageUsingFilename(path)
-                if(iVisited.name!="should" && iVisited.name!="should_not") { //ignore test methods
-                    log.warn "The method called by instance variable was not found: " +
-                            "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
-                    /* Examples: @mobilization.hashtag; mobilization.save! */
-                }
+                log.warn "The method called by instance variable was not found: " +
+                        "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
+                /* Examples: @mobilization.hashtag; mobilization.save! */
             } else{
                 taskInterface.methods += [name: iVisited.name, type: Util.getClassName(path), file: path]
             }
@@ -172,6 +167,11 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
         //println "Method call: ${iVisited.name} (${iVisited.position.startLine});   Receptor: ${iVisited.receiver.name}"
+
+        def operators = ["[]","*","/","+","-","==","!=",">","<",">=","<=","<=>","===",".eql?","equal?","defined?","%",
+                         "<<",">>","=~","&","|","^","~","!","**"]
+        def excludedMethods = ["should", "should_not"] + operators
+        if(iVisited.name in excludedMethods ) return iVisited
 
         /* unit test file */
         if(productionClass && iVisited.receiver.properties.containsKey("name") && iVisited.receiver.name == "subject") {
@@ -247,6 +247,10 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
         //log.info "Method call: ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1})"
+
+        def excludedMethods = ["puts", "print"]
+        if(iVisited.name in excludedMethods) return iVisited
+
         switch (iVisited.name){
             case "visit": //indicates the view
                 log.info "VISIT CALL: $lastVisitedFile (${iVisited.position.startLine+1})"
@@ -257,9 +261,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                 break
             case "steps": //when a step calls another step; until the moment, nothing is done about it.
             case "step":
-                break
-            case "puts": //methods to use console; to ignore
-            case "print":
+                taskInterface.methods += [name: iVisited.name, type: "StepCall", file: null]
                 break
             default: //helper method for visit and expect can match such a condition
                 if(!(iVisited.name in Util.STEP_KEYWORDS) && !(iVisited.name in  Util.STEP_KEYWORDS_PT) ){

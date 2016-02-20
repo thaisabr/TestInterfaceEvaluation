@@ -262,8 +262,8 @@ abstract class TestCodeAbstractParser {
         List<StepCode> stepCodes1 = extractStepCode(gherkinFiles)
         def files1 = identifyMethodsPerFileToVisit(stepCodes1)
         def files2 = formatFilesToVisit(stepFiles)
-        def filesToParse = collapseFilesToVisit(files1, files2)
-        computeInterface(filesToParse)
+        def filesToAnalyse = collapseFilesToVisit(files1, files2)
+        computeInterface(filesToAnalyse)
     }
 
     /***
@@ -276,16 +276,16 @@ abstract class TestCodeAbstractParser {
         List<StepCode> stepCodes = extractStepCode(gherkinFiles)
 
         // Identifies files to parse. The files are identified by path and lines of interest.
-        def filesToParse = identifyMethodsPerFileToVisit(stepCodes)
+        def filesToAnalyse = identifyMethodsPerFileToVisit(stepCodes)
 
-        computeInterface(filesToParse)
+        computeInterface(filesToAnalyse)
     }
 
-    private TaskInterface computeInterface(def filesToParse){
+    private TaskInterface computeInterface(def filesToAnalyse){
         def interfaces = []
         /* parses step nodes and records method calls */
         /* visits each step body and each method called from there */
-        filesToParse?.eachWithIndex{ stepCode, index ->
+        filesToAnalyse?.eachWithIndex{ stepCode, index ->
             /* first level: To identify method calls from step body. */
             TestCodeVisitor testCodeVisitor = parseStepBody(stepCode)
 

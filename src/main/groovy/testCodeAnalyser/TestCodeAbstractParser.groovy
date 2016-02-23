@@ -164,11 +164,13 @@ abstract class TestCodeAbstractParser {
             if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
                 if(stepCodeMatch.size()==1) {
                     stepCodeMatch = stepCodeMatch.get(0)
-                    StepCode stepCode = new StepCode(step: step, codePath: stepCodeMatch.path, line: stepCodeMatch.line)
-                    codes += stepCode
+                    codes += new StepCode(step: step, codePath: stepCodeMatch.path, line: stepCodeMatch.line)
                 } else {
                     log.warn "There are many implementations for step code: ${step.text}; $scenarioDefinitionPath (${step.location.line})"
-                    stepCodeMatch?.each{ log.warn it.toString() }
+                    stepCodeMatch?.each{
+                        log.warn it.toString()
+                        if(it.value!=".*" && it.value!=".+") codes += new StepCode(step: step, codePath: it.path, line: it.line)
+                    }
                 }
             } else {
                 log.warn "Step code was not found: ${step.text}; $scenarioDefinitionPath (${step.location.line})"
@@ -212,10 +214,14 @@ abstract class TestCodeAbstractParser {
                         stepCodeMatch = stepCodeMatch.get(0)
                         partialResult += [path: stepCodeMatch.path, line: stepCodeMatch.line]
                     } else {
-                        log.warn "There are many implementations for step code (formatFilesToVisit): ${step.value}; ${step.path} (${step.line})"
+                        log.warn "There are many implementations for step code: ${step.value}; ${step.path} (${step.line})"
+                        stepCodeMatch?.each{
+                            log.warn it.toString()
+                            if(it.value!=".*" && it.value!=".+") partialResult += [path: it.path, line: it.line]
+                        }
                     }
                 } else {
-                    log.warn "Step code was not found (formatFilesToVisit): ${step.value}; ${step.path} (${step.line})"
+                    log.warn "Step code was not found: ${step.value}; ${step.path} (${step.line})"
                 }
             }
             if(!partialResult.empty){

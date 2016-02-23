@@ -13,22 +13,21 @@ class TaskAnalyser {
         log.info "Number of tasks: ${tasks.size()}"
 
         def gherkinCounter = 0
-        def nonEmptyInterfaces = []
-        tasks?.each{ task ->
+        def testBasedInterfaces = []
+        def relevantTasks = tasks.findAll{ !it.changedGherkinFiles.empty || !it.changedStepDefinitions.empty }
+        relevantTasks?.each{ task ->
             def taskInterface = task.computeTestBasedInterface()
-            if(!taskInterface.empty){
-                def stepCalls = taskInterface.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
-                def methods = taskInterface.methods?.findAll{ it.type == "Object"}?.unique()
-                if(!methods.empty) nonEmptyInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:methods*.name, stepCalls:stepCalls]
-                else nonEmptyInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:"", stepCalls:stepCalls]
-            }
+            def stepCalls = taskInterface.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
+            def methods = taskInterface.methods?.findAll{ it.type == "Object"}?.unique()
+            if(!methods.empty) testBasedInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:methods*.name, stepCalls:stepCalls]
+            else testBasedInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:"", stepCalls:stepCalls]
             if(!task.changedGherkinFiles.empty){ gherkinCounter++ }
         }
 
-        log.info "Number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
+        log.info "Number of tasks that contains acceptance tests: ${testBasedInterfaces.size()}"
         log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
 
-        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), gherkinCounter, nonEmptyInterfaces)
+        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), gherkinCounter, testBasedInterfaces)
     }
 
     static analyse(String filename){
@@ -36,24 +35,23 @@ class TaskAnalyser {
         log.info "Number of tasks: ${tasks.size()}"
 
         def gherkinCounter = 0
-        def nonEmptyInterfaces = []
-        tasks?.each{ task ->
+        def testBasedInterfaces = []
+        def relevantTasks = tasks.findAll{ !it.changedGherkinFiles.empty || !it.changedStepDefinitions.empty }
+        relevantTasks?.each{ task ->
             def taskInterface = task.computeTestBasedInterface()
-            if(!taskInterface.empty){
-                def stepCalls = taskInterface.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
-                def methods = taskInterface.methods?.findAll{ it.type == "Object"}?.unique()
-                if(!methods.empty) nonEmptyInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:methods*.name,  stepCalls:stepCalls]
-                else nonEmptyInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:"",  stepCalls:stepCalls]
-            }
+            def stepCalls = taskInterface.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
+            def methods = taskInterface.methods?.findAll{ it.type == "Object"}?.unique()
+            if(!methods.empty) testBasedInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:methods*.name,  stepCalls:stepCalls]
+            else testBasedInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:"",  stepCalls:stepCalls]
             if(!task.changedGherkinFiles.empty){ gherkinCounter++ }
         }
 
-        log.info "Number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
+        log.info "Number of tasks that contains acceptance tests: ${testBasedInterfaces.size()}"
         log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
 
         File file = new File(filename)
         def outputFile = Util.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
-        exportResult(outputFile, tasks.size(), gherkinCounter, nonEmptyInterfaces)
+        exportResult(outputFile, tasks.size(), gherkinCounter, testBasedInterfaces)
     }
 
     static exportResult(def allTasksCounter, def tasksCounter,  def taskInterfaces){
@@ -64,7 +62,7 @@ class TaskAnalyser {
         CSVWriter writer = new CSVWriter(new FileWriter(filename))
         writer.writeNext("Number of tasks: $allTasksCounter")
         writer.writeNext("Number of tasks that changed Gherkin files: $tasksCounter")
-        writer.writeNext("Number of non empty task interfaces: ${taskInterfaces?.size()}")
+        writer.writeNext("Number of tasks that contains acceptance tests: ${taskInterfaces?.size()}")
         String[] header = ["Task","Date","#Devs","Commit_Message","ITest","IReal","Precision","Recall", "Methods_Unknown_Type", "#Step_Call"]
         writer.writeNext(header)
 

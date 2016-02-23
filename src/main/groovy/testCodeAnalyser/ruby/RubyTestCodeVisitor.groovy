@@ -38,12 +38,14 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     String lastVisitedFile
     Set methods //keys: name, args, path; all methods from project
     def productionClass //keys: name, path; used when visiting RSpec files; try a better way to represent it!
+    def calledSteps //keys:text, path, line
 
     RubyTestCodeVisitor(String currentFile){ //test purpose only
         this.taskInterface = new TaskInterface()
         projectFiles = []
         viewFiles = []
         lastVisitedFile = currentFile
+        calledSteps = []
     }
 
     RubyTestCodeVisitor(List<String> projectFiles, String currentFile, Set methods){
@@ -52,6 +54,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         this.taskInterface = new TaskInterface()
         this.lastVisitedFile = currentFile
         this.methods = methods
+        calledSteps = []
     }
 
     private registryMethodCall(CallNode iVisited){
@@ -160,6 +163,22 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         }
     }
 
+    private registryStepCall(FCallNode iVisited){
+        //registries frequency of step calls
+        taskInterface.methods += [name: iVisited.name, type: "StepCall", file: null]
+
+        def argValue = ""
+        iVisited?.args?.childNodes()?.each{ child ->
+            if(child instanceof DStrNode){
+                child.childNodes().each{ c-> if(c instanceof StrNode) argValue += c.value.trim() }
+            } else if(child instanceof StrNode) argValue += child.value.trim()
+        }
+
+        argValue?.readLines()?.each{
+            if(!it.startsWith("|")) calledSteps += [text:it.trim(), path:lastVisitedFile, line:iVisited.position.startLine]
+        }
+    }
+
     /**
      * A method or operator call.
      */
@@ -259,9 +278,9 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             case "expect": //alternative for should and should_not
                 analyseExpectCall(iVisited)
                 break
-            case "steps": //when a step calls another step; until the moment, nothing is done about it.
+            case "steps": //when a step calls another step
             case "step":
-                taskInterface.methods += [name: iVisited.name, type: "StepCall", file: null]
+                registryStepCall(iVisited)
                 break
             default: //helper method for visit and expect can match such a condition
                 if(!(iVisited.name in Util.STEP_KEYWORDS) && !(iVisited.name in  Util.STEP_KEYWORDS_PT) ){

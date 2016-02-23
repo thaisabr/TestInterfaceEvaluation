@@ -16,6 +16,7 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     TaskInterface taskInterface
     List<String> projectFiles //valid files
     String lastVisitedFile
+    def calledSteps //it is used when a step definition calls another one. until the moment, it is not used in groovy code yet.
 
     public GroovyTestCodeVisitor(String repositoryPath, String currentFile){
         this.source = null

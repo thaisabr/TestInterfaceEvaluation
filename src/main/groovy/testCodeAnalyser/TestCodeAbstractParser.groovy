@@ -112,6 +112,86 @@ abstract class TestCodeAbstractParser {
         result
     }
 
+    /***
+     * Organizes StepCode objects by codeParse attribute.
+     *
+     * @param stepCodes list of related stepCodes
+     * @return a list of path (step code path) and lines (start line of step codes) pairs
+     */
+    static identifyMethodsPerFileToVisit(List<StepCode> stepCodes){
+        def result = []
+        def files = (stepCodes*.codePath)?.flatten()?.unique()
+        files?.each{ file ->
+            def codes = stepCodes.findAll{ it.codePath == file }
+            if(codes){
+                result += [path: file, lines: (codes*.line)?.flatten()?.unique()?.sort()]
+            }
+        }
+        result
+    }
+
+    static collapseFilesToVisit(def map1, def map2){
+        def sum = map1+map2
+        def result = []
+        def files = (map1*.path + map2*.path)?.unique()
+        files?.each{ file ->
+            def entries = sum?.findAll{ it.path == file }
+            result += [path:file, lines:entries*.lines?.flatten()?.unique()?.sort()]
+        }
+        result
+    }
+
+    /***
+     * Identifies methods to visit from a list of method calls, considering the visit history.
+     * The methods of interest are defined by test code.
+     *
+     * @param lastCalledMethods list of map objects identifying called methods by 'name', 'type' and 'file'.
+     * @param allVisitedFiles A collection all visited files identified by 'path' and visited 'methods'.
+     * @return a list of methods grouped by path.
+     */
+    static listFilesToVisit(def lastCalledMethods, def allVisitedFiles){
+        def methods = listTestMethodsToVisit(lastCalledMethods)
+
+        def filesToVisit = []
+        methods.each{ file ->
+            def match = allVisitedFiles?.find{ it.path == file.path }
+            if(match != null) {
+                filesToVisit += [path:file.path, methods:file.methods-match.methods]
+            }
+            else {
+                filesToVisit += [path:file.path, methods:file.methods]
+            }
+        }
+        return filesToVisit
+    }
+
+    /***
+     * Identifies methods to visit from a list of method calls. The methods of interest are defined by test code.
+     *
+     * @param lastCalledMethods list of map objects identifying called methods by 'name', 'type' and 'file'.
+     * @return a list of methods grouped by path.
+     */
+    static listTestMethodsToVisit(def lastCalledMethods){
+        def testFiles = []
+        def calledTestMethods = lastCalledMethods?.findAll{ it.file!=null && Util.isTestCode(it.file) }?.unique()
+        calledTestMethods*.file.unique().each{ path ->
+            def methods = calledTestMethods.findAll{ it.file == path }*.name
+            testFiles += [path:path, methods:methods]
+        }
+        return testFiles
+    }
+
+    static updateVisitedFiles(List allVisitedFiles, List filesToVisit){
+        def allFiles = allVisitedFiles + filesToVisit
+        def paths = (allFiles*.path)?.unique()
+        def result = []
+        paths?.each{ path ->
+            def methods = (allFiles?.findAll{ it.path == path}*.methods)?.flatten()?.unique()
+            if(methods!=null && !methods.isEmpty()) result += [path:path, methods:methods]
+        }
+        return result
+    }
+
     def findStepCode(String stepText, String path, int line) {
         def calledSteps = [] //keywords path, line
         def stepsCode = [] //keywords path, lines
@@ -185,24 +265,6 @@ abstract class TestCodeAbstractParser {
         }
     }
 
-    /***
-     * Organizes StepCode objects by codeParse attribute.
-     *
-     * @param stepCodes list of related stepCodes
-     * @return a list of path (step code path) and lines (start line of step codes) pairs
-     */
-    static identifyMethodsPerFileToVisit(List<StepCode> stepCodes){
-        def result = []
-        def files = (stepCodes*.codePath)?.flatten()?.unique()
-        files?.each{ file ->
-            def codes = stepCodes.findAll{ it.codePath == file }
-            if(codes){
-                result += [path: file, lines: (codes*.line)?.flatten()?.unique()?.sort()]
-            }
-        }
-        result
-    }
-
     def formatFilesToVisit(List<StepDefinitionFile> stepFiles){
         def result = []
         stepFiles?.each{ file ->
@@ -229,68 +291,6 @@ abstract class TestCodeAbstractParser {
             }
         }
         result
-    }
-
-    static collapseFilesToVisit(def map1, def map2){
-        def sum = map1+map2
-        def result = []
-        def files = (map1*.path + map2*.path)?.unique()
-        files?.each{ file ->
-            def entries = sum?.findAll{ it.path == file }
-            result += [path:file, lines:entries*.lines?.flatten()?.unique()?.sort()]
-        }
-        result
-    }
-
-    /***
-     * Identifies methods to visit from a list of method calls, considering the visit history.
-     * The methods of interest are defined by test code.
-     *
-     * @param lastCalledMethods list of map objects identifying called methods by 'name', 'type' and 'file'.
-     * @param allVisitedFiles A collection all visited files identified by 'path' and visited 'methods'.
-     * @return a list of methods grouped by path.
-     */
-    static listFilesToVisit(def lastCalledMethods, def allVisitedFiles){
-        def methods = listTestMethodsToVisit(lastCalledMethods)
-
-        def filesToVisit = []
-        methods.each{ file ->
-            def match = allVisitedFiles?.find{ it.path == file.path }
-            if(match != null) {
-                filesToVisit += [path:file.path, methods:file.methods-match.methods]
-            }
-            else {
-                filesToVisit += [path:file.path, methods:file.methods]
-            }
-        }
-        return filesToVisit
-    }
-
-    /***
-     * Identifies methods to visit from a list of method calls. The methods of interest are defined by test code.
-     *
-     * @param lastCalledMethods list of map objects identifying called methods by 'name', 'type' and 'file'.
-     * @return a list of methods grouped by path.
-     */
-    static listTestMethodsToVisit(def lastCalledMethods){
-        def testFiles = []
-        def calledTestMethods = lastCalledMethods?.findAll{ it.file!=null && Util.isTestCode(it.file) }?.unique()
-        calledTestMethods*.file.unique().each{ path ->
-            def methods = calledTestMethods.findAll{ it.file == path }*.name
-            testFiles += [path:path, methods:methods]
-        }
-        return testFiles
-    }
-
-    static updateVisitedFiles(List allVisitedFiles, List filesToVisit){
-        def allFiles = allVisitedFiles + filesToVisit
-        def paths = (allFiles*.path)?.unique()
-        def result = []
-        paths?.each{ path ->
-            def methods = (allFiles?.findAll{ it.path == path}*.methods)?.flatten()?.unique()
-            if(methods!=null && !methods.isEmpty()) result += [path:path, methods:methods]
-        }
-        return result
     }
 
     TaskInterface computeInterfaceForDoneTaskByUnitTest(List<UnitFile> unitFiles){

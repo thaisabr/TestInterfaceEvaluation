@@ -5,15 +5,13 @@ import util.Util
 
 class TaskInterface {
 
-    /******************************************* ORGANIZAR ************************************/
     Set classes //instantiated classes; keys:[name, file]
     Set methods //static and non-static called methods; keys:[name, type, file]
     Set staticFields //declared static fields; [name, type, value, file]
     Set fields //declared fields; [name, type, value, file]
     Set accessedProperties //accessed fields and constants, for example: "foo.bar"
-    /******************************************************************************************/
 
-    /************** Specific to web-based tests. When we have a GSP parser such code should be removed! ***************/
+    /******************************************** used by web-based tests *********************************************/
     Set calledPageMethods //help to identify referenced pages (GSP files); methods "to" and "at"; keys:[name, arg, file]
     Set<String> referencedPages
     /******************************************************************************************************************/
@@ -58,24 +56,13 @@ class TaskInterface {
     Set<String> findAllFiles(){
         //production classes
         def classes =  (classes?.findAll{ it.file && !Util.isTestCode(it.file) })*.file
-        /*println "CLASSES"
-        this.classes.each{ c ->
-            println c
-        }*/
 
         //production methods
         def methodFiles = methods?.findAll{ it.type && !Util.isTestCode(it.file) }*.file
-        /*println "METODOS CHAMADOS"
-        this.methods.each{ m ->
-            println m
-        }*/
 
+        //production files
         def files = ((classes+methodFiles+referencedPages) as Set)?.sort()
-        def result = []
-        files?.each{
-            if(it) result += it - Util.getRepositoriesCanonicalPath()
-        }
-        result
+        files?.findResults{ i-> i? i-Util.getRepositoriesCanonicalPath() : null } as Set
     }
 
     def colapseInterfaces(TaskInterface task) {

@@ -24,7 +24,7 @@ class TaskAnalyser {
             if(!task.changedGherkinFiles.empty){ gherkinCounter++ }
         }
 
-        log.info "Number of tasks that contains acceptance tests: ${testBasedInterfaces.size()}"
+        log.info "Number of tasks that contains acceptance tests: ${relevantTasks.size()}"
         log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
 
         exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), gherkinCounter, testBasedInterfaces)
@@ -46,7 +46,7 @@ class TaskAnalyser {
             if(!task.changedGherkinFiles.empty){ gherkinCounter++ }
         }
 
-        log.info "Number of tasks that contains acceptance tests: ${testBasedInterfaces.size()}"
+        log.info "Number of tasks that contains acceptance tests: ${relevantTasks.size()}"
         log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
 
         File file = new File(filename)

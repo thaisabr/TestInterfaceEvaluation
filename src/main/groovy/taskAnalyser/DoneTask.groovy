@@ -110,6 +110,23 @@ class DoneTask extends Task {
         stepFiles
     }
 
+    private identifyAllRelevantChanges(){
+        gitRepository.reset(commits?.last()?.hash)
+        def allFiles = Util.findFilesFromDirectory(gitRepository.localPath).collect{
+            it - (Util.getRepositoriesCanonicalPath()+gitRepository.name+File.separator)
+        }
+        gitRepository.reset()
+
+        def allChanges = commits?.sort{it.date}*.codeChanges?.flatten()
+        def files = [] as Set
+        def filenames = allChanges*.filename?.unique()
+        filenames.each{ file ->
+            def changes = allChanges.findAll{ it.filename == file }
+            if(changes?.last()?.filename in allFiles) files += file
+        }
+        files
+    }
+
     /***
      * Computes task interface based in unit test code.
      * It can be seen as a future refinement for task interface.
@@ -213,7 +230,7 @@ class DoneTask extends Task {
     TaskInterface computeRealInterface(){
         def taskInterface = new TaskInterface()
         if(commits && !commits.empty){
-            def files = commits.collect{ commit -> commit.codeChanges*.filename }?.flatten()?.unique()
+            def files = identifyAllRelevantChanges()
             def productionFiles = Util.findAllProductionFiles(files)
             productionFiles.each{ file ->
                 def path = gitRepository.name+File.separator+file

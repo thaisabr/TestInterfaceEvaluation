@@ -28,7 +28,7 @@ class OutputManager {
         List<String[]> entries = readOutputCSV(filename)
         if(entries.size() <= 4) return
 
-        CSVWriter writer = new CSVWriter(new FileWriter("output${File.separator}evaluation_result_organized.csv"))
+        CSVWriter writer = new CSVWriter(new FileWriter(filename-".csv"+"-organized.csv"))
 
         def previousAnalysisData = entries.subList(0,3)
         previousAnalysisData.each{ data ->
@@ -36,7 +36,8 @@ class OutputManager {
             writer.writeNext(value)
         }
 
-        String[] resultHeader = entries.get(3).findAll{!it.allWhitespace} + ["Empty_ITest", "Empty_IReal"]
+        String[] resultHeader = entries.get(3).findAll{!it.allWhitespace} +
+                ["Empty_ITest", "Empty_IReal", "Valid_IReal", "Excluded_IReal", "New_Precision", "New_Recall"]
         entries = entries.subList(4,entries.size())
 
         def emptyITest = entries.findAll{ it[4].empty }
@@ -69,6 +70,36 @@ class OutputManager {
 
             String[] headers = entry + [itest, ireal]
             writer.writeNext(headers)
+        }
+    }
+
+    static List<String> identifyUnknownMethods(){
+        List<String[]> entries = readOutputCSV(Util.DEFAULT_EVALUATION_FILE)
+        def data = entries.subList(4,entries.size())
+        data = data.findAll{ !it[8].empty }
+        data = data.collect{ it[8]?.substring(1,it[8]?.length()-1)?.split(",") }?.flatten()
+        data = data*.trim()?.unique()?.sort()
+        println "Number of methods: ${data.size()}"
+        data.each{ println it.toString() }
+        data
+    }
+
+    static identifyValidIRealFiles(String filename){
+        if(!filename || filename.empty) return
+        List<String[]> entries = readOutputCSV(filename)
+        if(entries.size() <= 4) return
+
+        CSVWriter writer = new CSVWriter(new FileWriter("output${File.separator}IReal.csv"))
+        String[] resultHeader = ["Task", "IReal", "Valid files", "Invalid files"]
+        writer.writeNext(resultHeader)
+
+        entries = entries?.subList(8,entries.size())?.findAll{ !it[5].empty }
+        entries.each{ entry ->
+            def files = entry[5].split(",")*.trim()?.unique()?.sort()
+            def valid = Util.findAllProductionFiles(files)
+            def invalid = files - valid
+            String[] content = [entry[0],files, valid, invalid]
+            writer.writeNext(content)
         }
     }
 

@@ -310,7 +310,7 @@ class GitRepository {
         List<ScenarioDefinition> changedScenarioDefinitions = []
         oldScenarioDefinitions?.each{ oldScenDef ->
             def foundScenDef = newScenarioDefinitions?.find{ it.name == oldScenDef.name }
-            if(foundScenDef && foundScenDef.name && foundScenDef.name != ""){
+            if(foundScenDef){
                 if (oldScenDef.steps.size() == foundScenDef.steps.size()){ //scenario definition might be changed
                     def scenDefEquals = equals(foundScenDef, oldScenDef)
                     if(!scenDefEquals) changedScenarioDefinitions += foundScenDef
@@ -323,7 +323,7 @@ class GitRepository {
         //searches for added scenario definitions
         newScenarioDefinitions?.each{ newScenDef ->
             def foundScenDef = oldScenarioDefinitions?.find{ it.name == newScenDef.name }
-            if(!foundScenDef || !foundScenDef.name || foundScenDef.name == ""){//it was not found because it is new
+            if(!foundScenDef){//it was not found because it is new
                 changedScenarioDefinitions += newScenDef
             }
         }

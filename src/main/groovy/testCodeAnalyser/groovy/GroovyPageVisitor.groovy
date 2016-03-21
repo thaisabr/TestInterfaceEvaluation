@@ -4,7 +4,7 @@ import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.control.SourceUnit
 
-import util.Util
+import util.groovy.GroovyUtil
 
 class GroovyPageVisitor extends ClassCodeVisitorSupport {
     SourceUnit source
@@ -27,7 +27,7 @@ class GroovyPageVisitor extends ClassCodeVisitorSupport {
     public void visitField(FieldNode node){
         super.visitField(node)
         if(node.name==PAGE_FIELD && node.initialValueExpression.value != ""){
-            def name = Util.findViewPathForGrailsProjects(node.initialValueExpression.value, viewFiles)
+            def name = GroovyUtil.findViewPathForGrailsProjects(node.initialValueExpression.value, viewFiles)
             if(!name.isEmpty()) pages += name
         }
     }

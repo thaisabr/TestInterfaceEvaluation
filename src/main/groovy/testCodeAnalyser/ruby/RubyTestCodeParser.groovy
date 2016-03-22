@@ -1,26 +1,28 @@
 package testCodeAnalyser.ruby
 
+import groovy.util.logging.Slf4j
 import org.jrubyparser.CompatVersion
 import org.jrubyparser.Parser
 import org.jrubyparser.ast.Node
 import org.jrubyparser.lexer.SyntaxException
 import org.jrubyparser.parser.ParserConfiguration
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import taskAnalyser.StepDefinition
 import taskAnalyser.UnitFile
 import testCodeAnalyser.StepRegex
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.TestCodeVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecFileVisitor
+import util.ruby.RubyUtil
 
-
+@Slf4j
 class RubyTestCodeParser extends TestCodeAbstractParser {
 
-    static final Logger log = LoggerFactory.getLogger(RubyTestCodeParser.class)
+    String routesFile
+    def routes //name, file, value
 
     RubyTestCodeParser(String repositoryPath){
         super(repositoryPath)
+        routesFile = repositoryPath+RubyUtil.ROUTES_FILE
     }
 
     /***
@@ -145,15 +147,73 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     @Override
     void findAllPages(TestCodeVisitor visitor) {
-        def pageVisitor = new RubyPageVisitor(viewFiles)
         def filesToVisit = visitor?.taskInterface?.calledPageMethods
+        log.info "filesToVisit: $filesToVisit"
+        if(!routes) routes = findAllRoutes()
+        log.info "all routes: $routes"
+
+        def result = [] as Set
+        filesToVisit = filesToVisit.findAll{ it!= null } //it could be null if the test code references a class or file that does not exist
         filesToVisit?.each{ f ->
-            if(f != null){ //f could be null if the test code references a class or file that does not exist
-                pageVisitor.methodName = f.arg
-                generateAst(f.file)?.accept(pageVisitor)
+            log.info "FIND_ALL_PAGES; visiting file '${f.file}' and method '${f.name}'"
+            if(f.file == RubyUtil.ROUTES_ID) { //search for route
+                def route = routes?.find{ it.name == f.name }
+                if(route) {
+                    log.info "founded route: $route"
+                    result += route.arg
+                } else {
+                    log.info "failed to found route: ${f.name}"
+                    result += f.name //if the route was not found, searches for path directly
+                }
+            }
+            else { //it was used an auxiliary method; the view path must be extracted
+                def pageVisitor = new RubyPageVisitor(viewFiles, f.name)
+                generateAst(f.file)?.accept(pageVisitor) //extrai caminho do método
+                if(!pageVisitor.pages.empty) {
+                    log.info "pageVisitor.pages: ${pageVisitor.pages}"
+                    pageVisitor.pages.each { page ->
+                        def route = routes?.find{ it.name == page || it.value == page}
+                        if(route) {
+                            log.info "founded route: $route"
+                            result += route.arg
+                        } else {
+                            log.info "failed to found route: $page"
+                            result += page //if the route was not found, searches for path directly
+                        }
+                    }
+                } else log.info "no founded route inside method: ${f.name}"
             }
         }
-        visitor?.taskInterface?.referencedPages = pageVisitor.pages
+
+        log.info "All pages to identify: ${result}"
+        result?.each{ page ->
+            def foundPages = RubyUtil.findViewPathForRailsProjects(page, viewFiles)
+            if(foundPages && !foundPages.empty) {
+                visitor?.taskInterface?.referencedPages += foundPages
+                log.info "View(s) found: $foundPages"
+            }
+            else log.info "View(s) not found: $page"
+        }
+    }
+
+    def findAllRoutes(){
+        FileReader reader = null
+        ConfigRoutesVisitor visitor = null
+        try{
+            visitor = new ConfigRoutesVisitor(routesFile)
+            CompatVersion version = CompatVersion.RUBY2_0
+            reader = new FileReader(routesFile)
+            ParserConfiguration config = new ParserConfiguration(0, version)
+            Parser rubyParser = new Parser()
+            def node = rubyParser.parse("<code>", reader, config)
+            node?.accept(visitor)
+        } catch(SyntaxException ex){
+            log.info "Problem to visit file $routesFile: ${ex.message}"
+        }
+        finally {
+            reader?.close()
+        }
+        visitor?.routingMethods
     }
 
     @Override

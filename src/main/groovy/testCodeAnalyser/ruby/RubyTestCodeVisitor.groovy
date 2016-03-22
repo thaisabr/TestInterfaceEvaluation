@@ -2,6 +2,7 @@ package testCodeAnalyser.ruby
 
 import groovy.util.logging.Slf4j
 import org.jrubyparser.ast.HashNode
+import org.jrubyparser.ast.InstAsgnNode
 import  org.jrubyparser.ast.Node
 import org.jrubyparser.ast.ArrayNode
 import org.jrubyparser.ast.CallNode
@@ -28,6 +29,7 @@ import org.jrubyparser.util.NoopVisitor
 import taskAnalyser.TaskInterface
 import testCodeAnalyser.TestCodeVisitor
 import util.Util
+import util.ruby.RubyUtil
 
 @Slf4j
 class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
@@ -58,7 +60,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     private registryMethodCall(CallNode iVisited){
-        def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
+        def path = RubyUtil.getClassPathForRubyClass(iVisited.receiver.name, projectFiles)
         if(path) taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
     }
 
@@ -89,7 +91,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         if(matches.empty) taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
         else matches.each{
             log.info "match: ${it.name}; ${it.path}; ${it.args}; ${it.optionalArgs}"
-            taskInterface.methods += [name: iVisited.name, type: Util.getClassName(it.path), file: it.path]
+            taskInterface.methods += [name: iVisited.name, type: RubyUtil.getClassName(it.path), file: it.path]
         }
     }
 
@@ -98,12 +100,12 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             def index = lastVisitedFile.lastIndexOf(File.separator)
             taskInterface.methods += [name: iVisited.name, type:lastVisitedFile.substring(index+1), file:lastVisitedFile]
         } else {
-            taskInterface.methods += [name: iVisited.name, type:Util.getClassName(lastVisitedFile), file:lastVisitedFile]
+            taskInterface.methods += [name: iVisited.name, type:RubyUtil.getClassName(lastVisitedFile), file:lastVisitedFile]
         }
     }
 
     private registryMethodCallFromInstanceVariable(CallNode iVisited){
-        def path = Util.getClassPathForRuby(iVisited.receiver.name, projectFiles)
+        def path = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.receiver.name, projectFiles)
         if (path) {
             /* Checks if the method really exists. There are methods that are generated automatically by Rails.
             * In any case, the call is registered.*/
@@ -114,7 +116,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                         "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
                 /* Examples: @mobilization.hashtag; mobilization.save! */
             } else{
-                taskInterface.methods += [name: iVisited.name, type: Util.getClassName(path), file: path]
+                taskInterface.methods += [name: iVisited.name, type: RubyUtil.getClassName(path), file: path]
             }
         } else { //it seems it never has happened
             taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
@@ -122,7 +124,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     private registryClassUsage(String name){
-        def path = Util.getClassPathForRuby(name, projectFiles)
+        def path = RubyUtil.getClassPathForRubyClass(name, projectFiles)
         if(path) taskInterface.classes += [name: name, file: path]
     }
 
@@ -131,26 +133,125 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             def index = path.lastIndexOf(File.separator)
             taskInterface.classes += [name:path.substring(index+1), file:path]
         } else {
-            taskInterface.classes += [name:Util.getClassName(path), file:path]
+            taskInterface.classes += [name:RubyUtil.getClassName(path), file:path]
         }
     }
 
-    private analyseVisitCall(FCallNode iVisited){
-        /* if the argument is a literal, the view was found */
-        if(iVisited.args.last.class == ConstNode){
-            def foundPages = Util.findViewPathForRailsProjects(iVisited.args.last.name, viewFiles)
-            if(foundPages && !foundPages.empty) {
-                taskInterface.referencedPages += foundPages
+    private registryMethodCallVisitArg(FCallNode iVisited){
+        def methodsToIgnore = ["current_path"]
+        log.info "param is method call: ${iVisited.args.last.name}"
+
+        //it should consider all parameters to better identify the method
+        def methodsToVisit = methods.findAll { it.name == iVisited.args.last.name }
+
+        if (methodsToVisit.empty) {
+            if(!(iVisited.args.last.name in methodsToIgnore) && iVisited.args.last.name.endsWith(RubyUtil.ROUTE_SUFIX)){
+                taskInterface.calledPageMethods += [name: iVisited.args.last.name-RubyUtil.ROUTE_SUFIX, file:RubyUtil.ROUTES_ID]
+                log.info "param is (undefined) route method call: ${iVisited.args.last.name}"
+            }
+            else log.info "param is (undefined) method call: ${iVisited.args.last.name}"
+        } else{
+            log.info "param is (defined) method call: ${iVisited.args.last.name}"
+            methodsToVisit?.each { m -> taskInterface.calledPageMethods += [name: m.name, file: m.path] }
+        }
+    }
+
+    private static extractPath(def value){
+        if(value.startsWith("http://")) value = value - "http://"
+        else if(value.startsWith("https://")) value = value - "https://"
+        def i = value.indexOf("/")
+        if(i>0) value = value.substring(i+1)
+        value
+    }
+
+    private registryVisitStringArg(def value){
+        value = extractPath(value)
+        def index = value.indexOf("?")
+        if(index>0) value = value.substring(0, index)//ignoring params
+        //tem que mandar procurar a rota primeiro em config/routes.rb
+        taskInterface.calledPageMethods += [name: value, file: RubyUtil.ROUTES_ID]
+        log.info "param is literal: $value"
+    }
+
+    private registryVisitDynamicStringArg(FCallNode iVisited){
+        String name = ""
+        iVisited.args.last.childNodes().each{ c-> if(c instanceof StrNode) name += c.value.trim() }
+        name = extractPath(name)
+        def index = name.indexOf("?")
+        if(index>0) name = name.substring(0, index)//ignoring params
+
+        /* if the dynamic content is not at the end of the string, the resultin url will be wrong. Example:
+           visit "/portal/classes/#{clazz.id}/remove_offering?offering_id=#{offering.id}"
+           Extracted url: /portal/classes//remove_offering  */
+        if(name.contains("//edit")){
+            def begin = name.indexOf("//edit")
+            def end = index + 7
+            def finalName = ""
+            if(index>0)  finalName = name.substring(0,begin) + "/edit" + name.substring(end)
+            if(!finalName.empty){
+                taskInterface.calledPageMethods += [name: name, file: RubyUtil.ROUTES_ID]
+                log.info "param is dynamic literal: $name"
             }
         }
-        /* If the argument is a method call that returns a literal, we understand the view was found.
-           Otherwise, it is not possible to extract it and find the view. */
-        else if(iVisited.args.last.class == VCallNode || iVisited.args.last.class == CallNode ||
-                iVisited.args.last.class == FCallNode){ //caso da chamada visit to_url(arg1)
-            def methodsToVisit = methods.findAll{ it.name == iVisited.args.last.name }
-            methodsToVisit?.each{ m ->
-                taskInterface.calledPageMethods += [name: iVisited.name, arg:m.name, file:m.path]
-            }
+        else if(!name.contains("//")) {
+            //tem que mandar procurar a rota primeiro em config/routes.rb
+            taskInterface.calledPageMethods += [name: name, file: RubyUtil.ROUTES_ID]
+            log.info "param is dynamic literal: $name"
+        }
+        else log.warn "param is dynamic literal that cannot be correctly retrieved: $name"
+    }
+
+    private analyseVisitCall(FCallNode iVisited){
+        log.info "VISIT CALL: ${lastVisitedFile} (${iVisited.position.startLine+1});"
+
+        /* if the argument is a literal, the view path was found */
+        switch(iVisited.args.last.class) {
+            case LocalVarNode: //esse caso pode ser resolvido se o parametro vier do texto do step
+                /*  def verified_visit(path)
+                      visit path
+                      verify_current_path(path)
+                    end */
+                log.info "param is a local variable: ${iVisited.args.last.name}"
+                break
+            case InstVarNode: //visit @contract
+                log.info "param is a instance variable: ${iVisited.args.last.name}"
+                break
+            case CaseNode:
+                /* https://github.com/leihs/leihs/blob/8fb0eace3f441320b6aa70980acf5ee1d279dc6c/features/
+                   step_definitions/examples/benutzerverwaltung_steps.rb
+                    When(/^I am looking at the user list( outside an inventory pool| in any inventory pool)?$/) do |arg1|
+                      visit case arg1
+                              when " outside an inventory pool"
+                                manage_users_path
+                              when " in any inventory pool"
+                                @current_inventory_pool = InventoryPool.first
+                                manage_inventory_pool_users_path(@current_inventory_pool)
+                              else
+                                manage_inventory_pool_users_path(@current_inventory_pool)
+                            end
+                    end
+               */
+                log.info "param is a case node"
+                break
+            case StrNode: //Representing a simple String literal
+                registryVisitStringArg(iVisited.args.last.value)
+                break
+            case DStrNode://A string which contains some dynamic elements which needs to be evaluated (introduced by #)
+                registryVisitDynamicStringArg(iVisited)
+                break
+            case DVarNode: //dynamic variable (e.g. block scope local variable)
+                log.info "param is a dynamic variable: ${iVisited.args.last.name}"
+                break
+            /* If the argument is a method call that returns a literal, we understand the view was found.
+            Otherwise, it is not possible to extract it and find the view. */ //caso da chamada visit to_url(arg1)
+            case VCallNode:
+            case CallNode:
+            case FCallNode:
+                registryMethodCallVisitArg(iVisited)
+                break
+            default:
+                log.info "info about visit call: "
+                iVisited.properties.each { k, v -> log.info "$k: $v" }
         }
     }
 
@@ -192,11 +293,14 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         def excludedMethods = ["should", "should_not"] + operators
         if(iVisited.name in excludedMethods ) return iVisited
 
-        /* unit test file */
+        // unit test file
         if(productionClass && iVisited.receiver.properties.containsKey("name") && iVisited.receiver.name == "subject") {
             taskInterface.methods += [name: iVisited.name, type: productionClass.name, file: productionClass.path]
         }
-        else {
+        // routing methods
+        else if(iVisited.name!="current_path" && iVisited.name.endsWith(RubyUtil.ROUTE_SUFIX)){
+            taskInterface.calledPageMethods += [name: iVisited.name-RubyUtil.ROUTE_SUFIX, file:RubyUtilUtil.ROUTES_ID]
+        } else {
             switch (iVisited.receiver.class) {
                 case Colon3Node: //Global scope node (::FooBar).  This is used to gain access to the global scope (that of the Object class) when referring to a constant or method.
                 case ConstNode: //constant expression; static method call; example: User.find_by_email("trashmail@meurio.org.br")
@@ -272,12 +376,14 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
         switch (iVisited.name){
             case "visit": //indicates the view
-                log.info "VISIT CALL: $lastVisitedFile (${iVisited.position.startLine+1})"
                 analyseVisitCall(iVisited)
                 break
             case "expect": //alternative for should and should_not
                 analyseExpectCall(iVisited)
                 break
+            /*case "many_steps": //another way to call steps (check if is really used)
+                log.info "many_steps call!"
+                break*/
             case "steps": //when a step calls another step
             case "step":
                 registryStepCall(iVisited)
@@ -291,13 +397,37 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     /**
-     * RubyMethod call without any arguments
+     * RubyMethod call without any arguments.
      */
     @Override
     Object visitVCallNode(VCallNode iVisited) {
         super.visitVCallNode(iVisited)
         //log.info "Method call: ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1}); no args!"
-        registryMethodCallFromUnknownReceiver(iVisited, false)
+        if(iVisited.name!="current_path" && iVisited.name.endsWith(RubyUtil.ROUTE_SUFIX)) {
+            taskInterface.calledPageMethods += [name: iVisited.name - RubyUtil.ROUTE_SUFIX, file: RubyUtil.ROUTES_ID]
+        } else registryMethodCallFromUnknownReceiver(iVisited, false)
+        iVisited
+    }
+
+    /**
+     * Represents an instance variable assignment.
+     */
+    @Override
+    Object visitInstAsgnNode(InstAsgnNode iVisited) {
+        super.visitInstAsgnNode(iVisited)
+        def className = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.name, projectFiles)
+        if(className && !className.empty) registryClassUsageUsingFilename(className)
+        iVisited
+    }
+
+    /**
+     * Represents an instance variable accessor.
+     */
+    @Override
+    Object visitInstVarNode(InstVarNode iVisited) {
+        super.visitInstVarNode(iVisited)
+        def className = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.name, projectFiles)
+        if(className && !className.empty) registryClassUsageUsingFilename(className)
         iVisited
     }
 

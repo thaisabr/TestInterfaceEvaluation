@@ -3,6 +3,7 @@ package taskAnalyser
 import commitAnalyser.Commit
 import groovy.util.logging.Slf4j
 import util.Util
+import util.ruby.RubyUtil
 
 /***
  * Represents a done task, that is, a task that contains production and test code. The code is published in a public
@@ -238,7 +239,7 @@ class DoneTask extends Task {
                     def index = path.lastIndexOf(File.separator)
                     taskInterface.classes += [name:path.substring(index+1), file:path]
                 } else {
-                    taskInterface.classes += [name:Util.getClassName(path), file:path]
+                    taskInterface.classes += [name:RubyUtil.getClassName(path), file:path]
                 }
             }
         }

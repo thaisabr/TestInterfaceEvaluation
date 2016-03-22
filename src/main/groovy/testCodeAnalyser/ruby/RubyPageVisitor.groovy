@@ -1,14 +1,20 @@
 package testCodeAnalyser.ruby
 
+import groovy.util.logging.Slf4j
+import org.jrubyparser.ast.CallNode
+import org.jrubyparser.ast.DStrNode
 import org.jrubyparser.ast.DefnNode
 import org.jrubyparser.ast.DefsNode
+import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.ast.MethodDefNode
 import org.jrubyparser.ast.ReturnNode
 import org.jrubyparser.ast.StrNode
+import org.jrubyparser.ast.VCallNode
 import org.jrubyparser.util.NoopVisitor
+import util.ruby.RubyUtil
 
-import util.Util
 
+@Slf4j
 class RubyPageVisitor extends NoopVisitor {
 
     Set<String> pages
@@ -22,37 +28,59 @@ class RubyPageVisitor extends NoopVisitor {
         returnNodes = []
     }
 
+    public RubyPageVisitor(List<String> viewFiles, String name){
+        this.pages = [] as Set
+        this.viewFiles = viewFiles
+        methodName = name
+        returnNodes = []
+    }
+
     private extractViewPathFromNode(MethodDefNode iVisited){
         if(iVisited.name == methodName){
             def lines = iVisited.position.startLine .. iVisited.position.endLine
             def nodes = returnNodes?.findAll{ it.line in lines }
-
-            /* se o metodo pode retornar diferentes valores, provavelmente ele é um método de propósito geral, o que significa
-            * que nem toda view está associada à tarefa. Ainda assim, aqui está sendo aceito ruído e todas as views serão consideradas.*/
-            nodes?.each{ node ->
-                def page = Util.findViewPathForRailsProjects(node.value, viewFiles)
-                if(page && !page.isEmpty()) pages += page
-            }
+            pages = nodes*.value
         }
     }
 
-    @Override
     /***
      * Identifies all return nodes that returns a string literal.
      */
+    @Override
     Object visitReturnNode(ReturnNode iVisited) {
         super.visitReturnNode(iVisited)
-        if(iVisited.value instanceof StrNode){ //returns a literal
-            def node = (StrNode) iVisited.value
-            returnNodes += [line: iVisited.position.startLine, value: node.value]
+        switch (iVisited.value.class){
+            case StrNode: //Representing a simple String literal
+                def node = (StrNode) iVisited.value
+                returnNodes += [line: iVisited.position.startLine, value: node.value]
+                break
+            case DStrNode: //A string which contains some dynamic elements which needs to be evaluated (introduced by #)
+                def name = ""
+                iVisited.value.childNodes().each{ c-> if(c instanceof StrNode) name += c.value.trim() }
+                def index = name.indexOf("?")
+                if(index>0) name = name.substring(0, index)//ignoring params
+                if(!name.contains("//")) {
+                    returnNodes += [line: iVisited.position.startLine, value: name]
+                }
+                break
+            case FCallNode: //Method call with self as an implicit receiver
+            case VCallNode: //Method call without any arguments
+            case CallNode: //Method call
+                def value = iVisited.value.name
+                if(value.contains(RubyUtil.ROUTE_SUFIX)){ //it is a path helper method
+                    value -= RubyUtil.ROUTE_SUFIX
+                    returnNodes += [line: iVisited.position.startLine, value:value]
+                }
+                break
         }
-        return iVisited
+
+        iVisited
     }
 
-    @Override
     /***
      * Identifies the method node of interest to extract view path.
      */
+    @Override
     Object visitDefnNode(DefnNode iVisited) {
         super.visitDefnNode(iVisited)
         extractViewPathFromNode(iVisited)

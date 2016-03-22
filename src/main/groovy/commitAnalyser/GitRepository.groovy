@@ -143,7 +143,7 @@ class GitRepository {
         formatter.setDetectRenames(true)
         formatter.setContext(1000) //to show all lines
         formatter.format(entry)
-        def lines = stream.toString().readLines()
+        def lines = stream.toString("UTF-8").readLines()
         def result = lines.getAt(5..lines.size()-1)
         result.eachWithIndex{ val, index ->
             println "($index) $val"
@@ -463,7 +463,7 @@ class GitRepository {
             ByteArrayOutputStream stream = new ByteArrayOutputStream()
             loader.copyTo(stream)
             revWalk.dispose()
-            result = stream.toString()
+            result = stream.toString("UTF-8")
             stream.reset()
         }
         catch(ignored){

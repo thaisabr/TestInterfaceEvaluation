@@ -145,58 +145,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         node?.accept(auxVisitor)
     }
 
-    @Override
-    void findAllPages(TestCodeVisitor visitor) {
-        def filesToVisit = visitor?.taskInterface?.calledPageMethods
-        log.info "filesToVisit: $filesToVisit"
-        if(!routes) routes = findAllRoutes()
-        log.info "all routes: $routes"
-
-        def result = [] as Set
-        filesToVisit = filesToVisit.findAll{ it!= null } //it could be null if the test code references a class or file that does not exist
-        filesToVisit?.each{ f ->
-            log.info "FIND_ALL_PAGES; visiting file '${f.file}' and method '${f.name}'"
-            if(f.file == RubyUtil.ROUTES_ID) { //search for route
-                def route = routes?.find{ it.name == f.name }
-                if(route) {
-                    log.info "founded route: $route"
-                    result += route.arg
-                } else {
-                    log.info "failed to found route: ${f.name}"
-                    result += f.name //if the route was not found, searches for path directly
-                }
-            }
-            else { //it was used an auxiliary method; the view path must be extracted
-                def pageVisitor = new RubyPageVisitor(viewFiles, f.name)
-                generateAst(f.file)?.accept(pageVisitor) //extrai caminho do método
-                if(!pageVisitor.pages.empty) {
-                    log.info "pageVisitor.pages: ${pageVisitor.pages}"
-                    pageVisitor.pages.each { page ->
-                        def route = routes?.find{ it.name == page || it.value == page}
-                        if(route) {
-                            log.info "founded route: $route"
-                            result += route.arg
-                        } else {
-                            log.info "failed to found route: $page"
-                            result += page //if the route was not found, searches for path directly
-                        }
-                    }
-                } else log.info "no founded route inside method: ${f.name}"
-            }
-        }
-
-        log.info "All pages to identify: ${result}"
-        result?.each{ page ->
-            def foundPages = RubyUtil.findViewPathForRailsProjects(page, viewFiles)
-            if(foundPages && !foundPages.empty) {
-                visitor?.taskInterface?.referencedPages += foundPages
-                log.info "View(s) found: $foundPages"
-            }
-            else log.info "View(s) not found: $page"
-        }
-    }
-
-    def findAllRoutes(){
+    private findAllRoutes(){
         FileReader reader = null
         ConfigRoutesVisitor visitor = null
         try{
@@ -208,12 +157,66 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             def node = rubyParser.parse("<code>", reader, config)
             node?.accept(visitor)
         } catch(SyntaxException ex){
-            log.info "Problem to visit file $routesFile: ${ex.message}"
+            log.warn "Problem to visit file $routesFile: ${ex.message}"
         }
         finally {
             reader?.close()
         }
         visitor?.routingMethods
+    }
+
+    private identifyRoutes(def f){
+        def result = [] as Set
+        if(f.file == RubyUtil.ROUTES_ID) { //search for route
+            def route = routes?.find{ it.name == f.name }
+            if(route) {
+                result += route.arg
+            } else {
+                result += f.name //if the route was not found, searches for path directly
+            }
+        }
+        else { //it was used an auxiliary method; the view path must be extracted
+            def pageVisitor = new RubyPageVisitor(viewFiles, f.name)
+            generateAst(f.file)?.accept(pageVisitor) //extracts path from method
+            if(!pageVisitor.pages.empty) {
+                pageVisitor.pages.each { page ->
+                    def route = routes?.find{ it.name == page || it.value == page}
+                    if(route) {
+                        result += route.arg
+                    } else {
+                        result += page //if the route was not found, searches for path directly
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    @Override
+    void findAllPages(TestCodeVisitor visitor) {
+        def filesToVisit = visitor?.taskInterface?.calledPageMethods
+        if(!routes) routes = findAllRoutes()
+        log.info "all routes: $routes"
+
+        def result = [] as Set
+        filesToVisit = filesToVisit.findAll{ it!= null } //it could be null if the test code references a class or file that does not exist
+        filesToVisit?.each{ f ->
+            log.info "FIND_ALL_PAGES; visiting file '${f.file}' and method '${f.name}'"
+            result += identifyRoutes(f)
+        }
+
+        result = result.unique()
+        log.info "All pages to identify: $result"
+        def founded = []
+        result?.each{ page ->
+            def foundPages = RubyUtil.findViewPathForRailsProjects(page, viewFiles)
+            if(foundPages && !foundPages.empty) {
+                visitor?.taskInterface?.referencedPages += foundPages
+                founded += page
+            }
+        }
+        log.info "All founded views: ${visitor?.taskInterface?.referencedPages}"
+        log.info "Not identified pages: ${result - founded}"
     }
 
     @Override

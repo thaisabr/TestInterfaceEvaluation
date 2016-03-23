@@ -166,14 +166,11 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     }
 
     private identifyRoutes(def f){
-        def result = [] as Set
+        def result = []
         if(f.file == RubyUtil.ROUTES_ID) { //search for route
             def route = routes?.find{ it.name == f.name }
-            if(route) {
-                result += route.arg
-            } else {
-                result += f.name //if the route was not found, searches for path directly
-            }
+            if(route) result += route.arg
+            else result += f.name //if the route was not found, searches for path directly
         }
         else { //it was used an auxiliary method; the view path must be extracted
             def pageVisitor = new RubyPageVisitor(viewFiles, f.name)
@@ -189,7 +186,18 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                 }
             }
         }
-        result
+
+        def finalResult = []
+        result.each{ r ->
+            if(r.startsWith("/")){ //dealing with redirects (to validate)
+                def newRoutes = identifyRoutes([name:r.substring(1), file:RubyUtil.ROUTES_ID])
+                def newResult = newRoutes?.findAll{ it != r.substring(1) }
+                if(newResult && !newResult.empty) r = newResult
+            }
+            finalResult += r
+        }
+
+        finalResult
     }
 
     @Override

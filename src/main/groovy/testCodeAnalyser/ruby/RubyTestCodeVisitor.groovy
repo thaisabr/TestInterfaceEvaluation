@@ -64,7 +64,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         if(path) taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
     }
 
-    private static int countArgsMethodCall(CallNode iVisited){
+    private static int countArgsMethodCall(def iVisited){
         def counter = 0
         iVisited?.args?.childNodes()?.each{ child ->
             if(child instanceof HashNode && child?.listNode?.size()>0){
@@ -76,7 +76,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
     private searchForMethodMatch(Node iVisited){
         def matches = []
-        def argsCounter = countArgsMethodCall((CallNode)iVisited)
+        def argsCounter = countArgsMethodCall(iVisited)
         matches = methods.findAll {
             it.name == iVisited.name && argsCounter <= it.args && argsCounter >= it.args-it.optionalArgs
         }
@@ -90,7 +90,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
         if(matches.empty) taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
         else matches.each{
-            log.info "match: ${it.name}; ${it.path}; ${it.args}; ${it.optionalArgs}"
             taskInterface.methods += [name: iVisited.name, type: RubyUtil.getClassName(it.path), file: it.path]
         }
     }
@@ -100,7 +99,14 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             def index = lastVisitedFile.lastIndexOf(File.separator)
             taskInterface.methods += [name: iVisited.name, type:lastVisitedFile.substring(index+1), file:lastVisitedFile]
         } else {
-            taskInterface.methods += [name: iVisited.name, type:RubyUtil.getClassName(lastVisitedFile), file:lastVisitedFile]
+            def matches = searchForMethodMatch(iVisited)
+            if(matches.empty) {
+                taskInterface.methods += [name: iVisited.name, type: RubyUtil.getClassName(lastVisitedFile), file: lastVisitedFile]
+            } else {
+                matches.each{
+                    taskInterface.methods += [name: iVisited.name, type: RubyUtil.getClassName(it.path), file: it.path]
+                }
+            }
         }
     }
 
@@ -168,7 +174,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         value = extractPath(value)
         def index = value.indexOf("?")
         if(index>0) value = value.substring(0, index)//ignoring params
-        //tem que mandar procurar a rota primeiro em config/routes.rb
         taskInterface.calledPageMethods += [name: value, file: RubyUtil.ROUTES_ID]
         log.info "param is literal: $value"
     }
@@ -194,7 +199,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             }
         }
         else if(!name.contains("//")) {
-            //tem que mandar procurar a rota primeiro em config/routes.rb
             taskInterface.calledPageMethods += [name: name, file: RubyUtil.ROUTES_ID]
             log.info "param is dynamic literal: $name"
         }
@@ -286,7 +290,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     @Override
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
-        //println "Method call: ${iVisited.name} (${iVisited.position.startLine});   Receptor: ${iVisited.receiver.name}"
+        //println "Method call: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine+1});   Receptor: ${iVisited.receiver.name}"
 
         def operators = ["[]","*","/","+","-","==","!=",">","<",">=","<=","<=>","===",".eql?","equal?","defined?","%",
                          "<<",">>","=~","&","|","^","~","!","**"]
@@ -299,7 +303,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         }
         // routing methods
         else if(iVisited.name!="current_path" && iVisited.name.endsWith(RubyUtil.ROUTE_SUFIX)){
-            taskInterface.calledPageMethods += [name: iVisited.name-RubyUtil.ROUTE_SUFIX, file:RubyUtilUtil.ROUTES_ID]
+            taskInterface.calledPageMethods += [name: iVisited.name-RubyUtil.ROUTE_SUFIX, file:RubyUtil.ROUTES_ID]
         } else {
             switch (iVisited.receiver.class) {
                 case Colon3Node: //Global scope node (::FooBar).  This is used to gain access to the global scope (that of the Object class) when referring to a constant or method.
@@ -388,7 +392,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             case "step":
                 registryStepCall(iVisited)
                 break
-            default: //helper method for visit and expect can match such a condition
+            default: //helper methods for visit can match such a condition
                 if(!(iVisited.name in Util.STEP_KEYWORDS) && !(iVisited.name in  Util.STEP_KEYWORDS_PT) ){
                     registryMethodCallFromSelf(iVisited)
                 }

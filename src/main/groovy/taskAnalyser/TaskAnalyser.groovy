@@ -8,57 +8,32 @@ import util.Util
 @Slf4j
 class TaskAnalyser {
 
-    static analyse(){
-        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV()
+    private static organizeTaskData(List<DoneTask> tasks){
         log.info "Number of tasks: ${tasks.size()}"
-
         def gherkinCounter = 0
-        def testBasedInterfaces = []
+        def result = []
         def relevantTasks = tasks.findAll{ !it.changedGherkinFiles.empty || !it.changedStepDefinitions.empty }
         relevantTasks?.each{ task ->
             def taskInterface = task.computeTestBasedInterface()
             def stepCalls = taskInterface.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
             def methods = taskInterface.methods?.findAll{ it.type == "Object"}?.unique()
-            if(!methods.empty) testBasedInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:methods*.name, stepCalls:stepCalls]
-            else testBasedInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:"", stepCalls:stepCalls]
-            if(!task.changedGherkinFiles.empty){ gherkinCounter++ }
-        }
+            if(!methods.empty) result += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:methods*.name, stepCalls:stepCalls]
+            else result += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:"", stepCalls:stepCalls]
+            if(!task.changedGherkinFiles.empty){
+                gherkinCounter++
 
+            }
+        }
         log.info "Number of tasks that contains acceptance tests: ${relevantTasks.size()}"
         log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
-
-        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), gherkinCounter, testBasedInterfaces)
+        [tasks:relevantTasks, testCounter:gherkinCounter, testInterfaces:result]
     }
 
-    static analyse(String filename){
-        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV(filename)
-        log.info "Number of tasks: ${tasks.size()}"
-
-        def gherkinCounter = 0
-        def testBasedInterfaces = []
-        def relevantTasks = tasks.findAll{ !it.changedGherkinFiles.empty || !it.changedStepDefinitions.empty }
-        relevantTasks?.each{ task ->
-            def taskInterface = task.computeTestBasedInterface()
-            def stepCalls = taskInterface.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
-            def methods = taskInterface.methods?.findAll{ it.type == "Object"}?.unique()
-            if(!methods.empty) testBasedInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:methods*.name,  stepCalls:stepCalls]
-            else testBasedInterfaces += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:"",  stepCalls:stepCalls]
-            if(!task.changedGherkinFiles.empty){ gherkinCounter++ }
-        }
-
-        log.info "Number of tasks that contains acceptance tests: ${relevantTasks.size()}"
-        log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
-
-        File file = new File(filename)
-        def outputFile = Util.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
-        exportResult(outputFile, tasks.size(), gherkinCounter, testBasedInterfaces)
-    }
-
-    static exportResult(def allTasksCounter, def tasksCounter,  def taskInterfaces){
+    private static exportResult(def allTasksCounter, def tasksCounter,  def taskInterfaces){
         exportResult(Util.DEFAULT_EVALUATION_FILE, allTasksCounter, tasksCounter, taskInterfaces)
     }
 
-    static exportResult(def filename, def allTasksCounter, def tasksCounter, def taskInterfaces){
+    private static exportResult(def filename, def allTasksCounter, def tasksCounter, def taskInterfaces){
         CSVWriter writer = new CSVWriter(new FileWriter(filename))
         writer.writeNext("Number of tasks: $allTasksCounter")
         writer.writeNext("Number of tasks that changed Gherkin files: $tasksCounter")
@@ -80,6 +55,20 @@ class TaskAnalyser {
 
         writer.close()
         log.info "The results were saved!"
+    }
+
+    static analyse(){
+        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV()
+        def result = organizeTaskData(tasks)
+        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), result.testCounter, result.testInterfaces)
+    }
+
+    static analyse(String filename){
+        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV(filename)
+        def result = organizeTaskData(tasks)
+        File file = new File(filename)
+        def outputFile = Util.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
+        exportResult(outputFile, tasks.size(), result.testCounter, result.testInterfaces)
     }
 
 }

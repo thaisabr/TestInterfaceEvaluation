@@ -36,8 +36,8 @@ class OutputManager {
             writer.writeNext(value)
         }
 
-        String[] resultHeader = entries.get(3).findAll{!it.allWhitespace} +
-                ["Empty_ITest", "Empty_IReal", "Valid_IReal", "Excluded_IReal", "New_Precision", "New_Recall"]
+        String[] resultHeader = entries.get(3).findAll{!it.allWhitespace} + ["Empty_ITest", "Empty_IReal"]
+        /* ["Valid_IReal", "Excluded_IReal", "New_Precision", "New_Recall"]*/
         entries = entries.subList(4,entries.size())
 
         def emptyITest = entries.findAll{ it[4].empty }
@@ -49,7 +49,7 @@ class OutputManager {
         def emptyITestAndIReal = entries.findAll{ it[4].empty && it[5].empty }
         writer.writeNext("Number of tasks with empty ITest and IReal: ${emptyITestAndIReal.size()}")
 
-        writer.writeNext("Number of valid tasks: ${(entries-emptyITestAndIReal-emptyIReal-emptyITest).size()}")
+        writer.writeNext("Number of valid tasks: ${(entries-(emptyITestAndIReal+emptyIReal+emptyITest)).size()}")
         writer.writeNext(resultHeader)
 
         /*writeResult(emptyITestAndIReal, writer)

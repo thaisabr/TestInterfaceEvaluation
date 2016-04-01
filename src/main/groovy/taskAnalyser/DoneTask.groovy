@@ -197,6 +197,11 @@ class DoneTask extends Task {
         taskInterface
     }
 
+    @Override
+    List<GherkinFile> getAcceptanceTests() {
+        changedGherkinFiles
+    }
+
     /***
      * Computes task interface based in acceptance test code.
      * @return task interface

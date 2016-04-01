@@ -3,6 +3,8 @@ package util
 import au.com.bytecode.opencsv.CSVReader
 import au.com.bytecode.opencsv.CSVWriter
 import groovy.util.logging.Slf4j
+import similarityAnalyser.test.TestSimilarityAnalyser
+import similarityAnalyser.text.TextualSimilarityAnalyser
 
 @Slf4j
 class OutputManager {
@@ -24,6 +26,7 @@ class OutputManager {
     }
 
     static organizeResult(String filename){
+        log.info "Organizing results..."
         if(!filename || filename.empty) return
         List<String[]> entries = readOutputCSV(filename)
         if(entries.size() <= 4) return
@@ -103,4 +106,44 @@ class OutputManager {
         }
     }
 
+    static analyseSimilarity(String filename){
+        log.info "Checking similarity among tasks..."
+        if(!filename || filename.empty) return
+        List<String[]> entries = readOutputCSV(filename)
+        if(entries.size() <= 4) return
+
+        CSVWriter writer = new CSVWriter(new FileWriter(filename-"-organized.csv"+"-similarity.csv"))
+        writer.writeNext(entries.get(0))
+        writer.writeNext(entries.get(1))
+
+        String[] resultHeader = ["Task_A", "ITest_A", "Text_A", "IReal_A", "Task_B", "ITest_B", "Text_B", "IReal_B", "Text_Sim", "Test_Sim", "Real_Sim" ]
+        writer.writeNext(resultHeader)
+
+        def allTasks = entries.subList(8,entries.size())
+        if(allTasks.size()<=1) return
+        def taskPairs = allTasks.findAll{it[10]!=""}.subsequences()?.findAll{ it.size() == 2 }
+        List<String[]> lines = []
+        taskPairs.each{ tasks ->
+            def task = tasks.get(0)
+            def other = tasks.get(1)
+            log.info "Similarity: tasks ${task[0]} and ${other[0]}"
+            def textualSimilarityAnalyser = new TextualSimilarityAnalyser()
+            def textSimilarity = textualSimilarityAnalyser.calculateSimilarity(task[10], other[10])
+            log.info "Similarity result: $textSimilarity"
+            def testSimilarityAnalyser = new TestSimilarityAnalyser()
+            def itest1 = task[4].split(", ") as List
+            def itest2 = other[4].split(", ") as List
+            def ireal1 = task[5].split(", ") as List
+            def ireal2 = other[5].split(", ") as List
+            def testSimilarity = testSimilarityAnalyser.calculateSimilarity(itest1, itest2)
+            def realSimilarity = testSimilarityAnalyser.calculateSimilarity(ireal1, ireal2)
+            String[] line = [task[0], task[4], task[10], task[5], other[0], other[4], other[10], other[5],
+                             textSimilarity, testSimilarity, realSimilarity]
+            lines += line
+        }
+
+        writer.writeAll(lines)
+        writer.close()
+        log.info "The results were saved!"
+    }
 }

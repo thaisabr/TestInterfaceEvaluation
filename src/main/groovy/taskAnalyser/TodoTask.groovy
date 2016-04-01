@@ -64,4 +64,9 @@ class TodoTask extends Task {
         else return null
     }
 
+    @Override
+    List<GherkinFile> getAcceptanceTests() {
+        testDescription
+    }
+
 }

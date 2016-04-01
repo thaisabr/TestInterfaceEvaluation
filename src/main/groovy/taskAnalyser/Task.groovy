@@ -45,4 +45,6 @@ abstract class Task {
 
     abstract TaskInterface computeTestBasedInterface()
 
+    abstract List<GherkinFile> getAcceptanceTests()
+
 }

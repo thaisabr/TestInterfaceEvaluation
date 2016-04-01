@@ -8,22 +8,41 @@ import util.Util
 @Slf4j
 class TaskAnalyser {
 
+    private static extractTaskText(Task task){
+        def text = ""
+        def steps = task.acceptanceTests*.changedScenarioDefinitions*.steps?.flatten()?.unique()
+        steps.each {
+            text += "${it.keyword}: ${it.text}\n" //is really necessary to consider keyword?
+        }
+        text
+    }
+
     private static organizeTaskData(List<DoneTask> tasks){
         log.info "Number of tasks: ${tasks.size()}"
         def gherkinCounter = 0
         def result = []
         def relevantTasks = tasks.findAll{ !it.changedGherkinFiles.empty || !it.changedStepDefinitions.empty }
+
         relevantTasks?.each{ task ->
             def taskInterface = task.computeTestBasedInterface()
             def stepCalls = taskInterface.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
             def methods = taskInterface.methods?.findAll{ it.type == "Object"}?.unique()
-            if(!methods.empty) result += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:methods*.name, stepCalls:stepCalls]
-            else result += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:"", stepCalls:stepCalls]
+            def text = ""
             if(!task.changedGherkinFiles.empty){
                 gherkinCounter++
+                text = extractTaskText(task)
+            }
 
+            if(!methods.empty) {
+                result += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:methods*.name,
+                           stepCalls:stepCalls, text:text]
+            }
+            else {
+                result += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:"",
+                           stepCalls:stepCalls, text:text]
             }
         }
+
         log.info "Number of tasks that contains acceptance tests: ${relevantTasks.size()}"
         log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
         [tasks:relevantTasks, testCounter:gherkinCounter, testInterfaces:result]
@@ -38,7 +57,7 @@ class TaskAnalyser {
         writer.writeNext("Number of tasks: $allTasksCounter")
         writer.writeNext("Number of tasks that changed Gherkin files: $tasksCounter")
         writer.writeNext("Number of tasks that contains acceptance tests: ${taskInterfaces?.size()}")
-        String[] header = ["Task","Date","#Devs","Commit_Message","ITest","IReal","Precision","Recall", "Methods_Unknown_Type", "#Step_Call"]
+        String[] header = ["Task","Date","#Devs","Commit_Message","ITest","IReal","Precision","Recall", "Methods_Unknown_Type", "#Step_Call", "Text"]
         writer.writeNext(header)
 
         taskInterfaces?.each{ entry ->
@@ -49,7 +68,8 @@ class TaskAnalyser {
             else dates = []
             def devs = entry?.task?.commits*.author?.flatten()?.unique()?.size()
             def msgs = entry?.task?.commits*.message?.flatten()
-            String[] line = [entry.task.id, dates, devs, msgs, entry.itest, entry.ireal, precision, recall, entry.methods, entry.stepCalls]
+            String[] line = [entry.task.id, dates, devs, msgs, entry.itest, entry.ireal, precision, recall,
+                             entry.methods, entry.stepCalls, entry.text]
             writer.writeNext(line)
         }
 

@@ -18,6 +18,7 @@ class Main {
         cvsFiles?.each{
             log.info "<  Organizing tasks from '$it'  >"
             OutputManager.organizeResult(it)
+            OutputManager.analyseSimilarity(it)
         }
     }
 

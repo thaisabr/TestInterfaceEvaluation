@@ -92,26 +92,11 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     @Override
     Set doExtractMethodDefinitions(String file) {
-        FileReader reader = new FileReader(file)
-        Parser rubyParser = new Parser()
-        CompatVersion version = CompatVersion.RUBY2_0
-        ParserConfiguration config = new ParserConfiguration(0, version)
-
-        def result = [] as Set
         RubyMethodDefinitionVisitor visitor = new RubyMethodDefinitionVisitor()
         visitor.path = file
-
-        try{
-            def node = rubyParser.parse("<code>", reader, config)
-            node.accept(visitor)
-            result = visitor.methods
-        } catch(SyntaxException ex){
-            log.error "Problem to visit file $file: ${ex.message}"
-        }
-        finally {
-            reader?.close()
-        }
-        result
+        def node = generateAst(file)
+        node?.accept(visitor)
+        visitor.methods
     }
 
     /***
@@ -146,22 +131,9 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     }
 
     private findAllRoutes(){
-        FileReader reader = null
-        ConfigRoutesVisitor visitor = null
-        try{
-            visitor = new ConfigRoutesVisitor(routesFile)
-            CompatVersion version = CompatVersion.RUBY2_0
-            reader = new FileReader(routesFile)
-            ParserConfiguration config = new ParserConfiguration(0, version)
-            Parser rubyParser = new Parser()
-            def node = rubyParser.parse("<code>", reader, config)
-            node?.accept(visitor)
-        } catch(SyntaxException ex){
-            log.warn "Problem to visit file $routesFile: ${ex.message}"
-        }
-        finally {
-            reader?.close()
-        }
+        ConfigRoutesVisitor visitor = new ConfigRoutesVisitor(routesFile)
+        def node = generateAst(routesFile)
+        node?.accept(visitor)
         visitor?.routingMethods
     }
 

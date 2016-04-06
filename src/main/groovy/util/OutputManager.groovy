@@ -59,7 +59,7 @@ class OutputManager {
         writeResult(emptyIReal-emptyITestAndIReal, writer)
         writeResult(emptyITest-emptyITestAndIReal, writer)
         writeResult(entries-emptyITestAndIReal-emptyIReal-emptyITest, writer)*/
-        writeResult(entries,writer)
+        writeResult(entries-emptyIReal,writer)
 
         writer.close()
         log.info "The results were saved!"
@@ -106,6 +106,16 @@ class OutputManager {
         }
     }
 
+    private static computePairs(def set){
+        def result = [] as Set
+        if(!set || set.empty || set.size()==1) return set
+        set.eachWithIndex{ v, k ->
+            def next = set.drop(k+1)
+            next.each{ n -> result.add([v, n]) }
+        }
+        result
+    }
+
     static analyseSimilarity(String filename){
         log.info "Checking similarity among tasks..."
         if(!filename || filename.empty) return
@@ -121,7 +131,7 @@ class OutputManager {
 
         def allTasks = entries.subList(8,entries.size())
         if(allTasks.size()<=1) return
-        def taskPairs = allTasks.findAll{it[10]!=""}.subsequences()?.findAll{ it.size() == 2 }
+        def taskPairs = computePairs(allTasks)
         List<String[]> lines = []
         taskPairs.each{ tasks ->
             def task = tasks.get(0)

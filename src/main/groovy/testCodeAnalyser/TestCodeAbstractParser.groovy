@@ -1,6 +1,6 @@
 package testCodeAnalyser
 
-
+import gherkin.ast.Background
 import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
 import taskAnalyser.GherkinFile
@@ -48,7 +48,7 @@ abstract class TestCodeAbstractParser {
         gherkinFiles?.each { gherkinFile ->
             /* finds step code for changed scenario definitions from a Gherkin file */
             gherkinFile?.changedScenarioDefinitions?.each { definition ->
-                def test = findStepCode(definition, gherkinFile.path)
+                def test = findStepCode(definition, gherkinFile.feature.background, gherkinFile.path)
                 if(test) acceptanceTests += test
             }
         }
@@ -237,9 +237,15 @@ abstract class TestCodeAbstractParser {
      * @param scenarioDefinitionPath path of Gherkin file that contains the scenario definition
      * @return AcceptanceTest object that represents a match between scenario definition and implementation.
      */
-    AcceptanceTest findStepCode(ScenarioDefinition scenarioDefinition, String scenarioDefinitionPath) {
+    AcceptanceTest findStepCode(ScenarioDefinition scenarioDefinition, Background background, String scenarioDefinitionPath) {
         List<StepCode> codes = []
-        scenarioDefinition?.steps?.each { step ->
+        def steps = []
+        if(background && !background.steps.empty) {
+            steps += background.steps
+        }
+        if(scenarioDefinition && !scenarioDefinition.steps.empty) steps += scenarioDefinition.steps
+
+        steps.each { step ->
             def stepCodeMatch = regexList?.findAll{ step.text ==~ it.value }
             if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
                 if(stepCodeMatch.size()==1) {
@@ -393,7 +399,7 @@ abstract class TestCodeAbstractParser {
             interfaces += testCodeVisitor.taskInterface
         }
 
-        /* identifies more step definitions to analyse */
+        /* identifies more step definitions to analyseInterface */
         def newStepsToAnalyse = identifyMethodsPerFileToVisitByStepCalls(calledSteps)
         newStepsToAnalyse = updateStepFiles(filesToAnalyse, newStepsToAnalyse)
         if(!newStepsToAnalyse.empty) interfaces += computeInterface(newStepsToAnalyse)

@@ -32,7 +32,11 @@ class GherkinFile {
 
     @Override
     String toString() {
-        def text = "Gherkin file: ${path}\nFeature: ${feature.name}\nChanged scenario definitions:\n"
+        def text = "Gherkin file: ${path}\nFeature: ${feature.name}\nBackground (line ${feature.background.location.line}):${feature.background.name}\n"
+        feature.background.steps.each{
+            text += "${it.keyword}: ${it.text}\n"
+        }
+        text += "\nChanged scenario definitions:\n"
         changedScenarioDefinitions.each{ definition ->
             text += "Scenario (line ${definition.location.line}): ${definition.name}\n"
         }

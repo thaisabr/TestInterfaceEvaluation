@@ -31,7 +31,7 @@ class IndexManager {
 
     def index(List<GherkinFile> gherkinFiles) {
         def text = ""
-        def steps = gherkinFiles*.changedScenarioDefinitions*.steps?.flatten()?.unique()
+        def steps = gherkinFiles*.changedScenarioDefinitions*.steps?.flatten()
         steps.each {
             text += "${it.keyword}: ${it.text}\n" //is really necessary to consider keyword?
         }

@@ -11,19 +11,24 @@ class Main {
         def cvsFiles = Util.findFilesFromDirectory("tasks")
         cvsFiles?.each{
             log.info "<  Analysing tasks from '$it'  >"
-            TaskAnalyser.analyse(it)
+            TaskAnalyser.analyseGherkinInterface(it) //TaskAnalyser.analyseInterface(it)
         }
 
         cvsFiles = Util.findFilesFromDirectory("output")?.findAll{ it.endsWith(".csv") }
         cvsFiles?.each{
             log.info "<  Organizing tasks from '$it'  >"
             OutputManager.organizeResult(it)
+        }
+
+        cvsFiles = Util.findFilesFromDirectory("output")?.findAll{ it.endsWith("-organized.csv") }
+        cvsFiles?.each{
+            log.info "<  Analysing similarity among tasks from '$it'  >"
             OutputManager.analyseSimilarity(it)
         }
     }
 
     static analyseProject(){
-        TaskAnalyser.analyse()
+        TaskAnalyser.analyseGherkinInterface() //TaskAnalyser.analyseInterface()
         OutputManager.organizeResult("output${File.separator}evaluation_result.csv")
         OutputManager.analyseSimilarity("output${File.separator}evaluation_result-organized.csv")
     }

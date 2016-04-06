@@ -111,12 +111,10 @@ class DoneTask extends Task {
         stepFiles
     }
 
-    private identifyAllRelevantChanges(){
-        gitRepository.reset(commits?.last()?.hash)
+    private TaskInterface identifyProductionChangedFiles(){
         def allFiles = Util.findFilesFromDirectory(gitRepository.localPath).collect{
             it - (Util.getRepositoriesCanonicalPath()+gitRepository.name+File.separator)
         }
-        gitRepository.reset()
 
         def allChanges = commits?.sort{it.date}*.codeChanges?.flatten()
         def files = [] as Set
@@ -125,7 +123,22 @@ class DoneTask extends Task {
             def changes = allChanges.findAll{ it.filename == file }
             if(changes?.last()?.filename in allFiles) files += file
         }
-        files
+        organizeProductionFiles(files)
+    }
+
+    private TaskInterface organizeProductionFiles(def files){
+        def taskInterface = new TaskInterface()
+        def productionFiles = Util.findAllProductionFiles(files)
+        productionFiles.each{ file ->
+            def path = gitRepository.name+File.separator+file
+            if(path.contains(Util.VIEWS_FILES_RELATIVE_PATH)){
+                def index = path.lastIndexOf(File.separator)
+                taskInterface.classes += [name:path.substring(index+1), file:path]
+            } else {
+                taskInterface.classes += [name:RubyUtil.getClassName(path), file:path]
+            }
+        }
+        taskInterface
     }
 
     /***
@@ -233,22 +246,65 @@ class DoneTask extends Task {
         taskInterface
     }
 
+    @Override
+    String computeTextBasedInterface() {
+        def text = ""
+        if(!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
+            // resets repository to the state of the last commit to extract changes
+            gitRepository.reset(commits?.last()?.hash)
+
+            //computes task text based in gherkin scenarios
+            text = super.computeTextBasedInterface()
+
+            // resets repository to last version
+            gitRepository.reset()
+        }
+        text
+    }
+
     TaskInterface computeRealInterface(){
         def taskInterface = new TaskInterface()
         if(commits && !commits.empty){
-            def files = identifyAllRelevantChanges()
-            def productionFiles = Util.findAllProductionFiles(files)
-            productionFiles.each{ file ->
-                def path = gitRepository.name+File.separator+file
-                if(path.contains(Util.VIEWS_FILES_RELATIVE_PATH)){
-                    def index = path.lastIndexOf(File.separator)
-                    taskInterface.classes += [name:path.substring(index+1), file:path]
-                } else {
-                    taskInterface.classes += [name:RubyUtil.getClassName(path), file:path]
-                }
-            }
+            gitRepository.reset(commits?.last()?.hash)
+            taskInterface = identifyProductionChangedFiles()
+            gitRepository.reset()
         }
-        return taskInterface
+        taskInterface
+    }
+
+    def computeInterfaces(){
+        def itest = []
+        def itext = []
+        def ireal = []
+
+        if(!commits || commits.empty) {
+            log.warn "TASK ID: $id; NO COMMITS!"
+            return [itest:itest, itext:itext, ireal:ireal]
+        }
+
+        log.info "TASK ID: $id"
+        log.info "COMMITS: ${this.commits*.hash}"
+        log.info "COMMITS CHANGED GERKIN FILE: ${this.commits?.findAll{it.gherkinChanges && !it.gherkinChanges.isEmpty()}*.hash}"
+        log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll{it.stepChanges && !it.stepChanges.isEmpty()}*.hash}"
+
+        if(!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
+            // resets repository to the state of the last commit to extract changes
+            gitRepository.reset(commits?.last()?.hash)
+
+            // computes task interface based on the production code exercised by tests
+            itest = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions)
+
+            //computes task text based in gherkin scenarios
+            itext = computeTextBasedInterface()
+
+            //computes real interface
+            ireal = identifyProductionChangedFiles()
+
+            // resets repository to last version
+            gitRepository.reset()
+        }
+
+        [itest:itest, itext:itext, ireal:ireal]
     }
 
 }

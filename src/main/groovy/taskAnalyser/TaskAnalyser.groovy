@@ -8,59 +8,63 @@ import util.Util
 @Slf4j
 class TaskAnalyser {
 
-    private static extractTaskText(Task task){
-        def text = ""
-        def steps = task.acceptanceTests*.changedScenarioDefinitions*.steps?.flatten()?.unique()
-        steps.each {
-            text += "${it.keyword}: ${it.text}\n" //is really necessary to consider keyword?
-        }
-        text
+    private static searchForGherkinTasks = { tasks ->
+        tasks.findAll{ !it.changedGherkinFiles.empty }
     }
 
-    private static organizeTaskData(List<DoneTask> tasks){
+    private static searchForAcceptanceTestTasks = { tasks ->
+        tasks.findAll{ !it.changedGherkinFiles.empty || !it.changedStepDefinitions.empty }
+    }
+
+    private static computeTaskData(List<DoneTask> tasks, Closure searchRelevantTasks){
         log.info "Number of tasks: ${tasks.size()}"
         def gherkinCounter = 0
         def result = []
-        def relevantTasks = tasks.findAll{ !it.changedGherkinFiles.empty || !it.changedStepDefinitions.empty }
+        def relevantTasks = searchRelevantTasks(tasks)
 
         relevantTasks?.each{ task ->
-            def taskInterface = task.computeTestBasedInterface()
-            def stepCalls = taskInterface.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
-            def methods = taskInterface.methods?.findAll{ it.type == "Object"}?.unique()
-            def text = ""
-            if(!task.changedGherkinFiles.empty){
-                gherkinCounter++
-                text = extractTaskText(task)
-            }
+            def interfaces = task.computeInterfaces()
+            def itest = interfaces.itest
+            def stepCalls = itest.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
+            def methods = itest.methods?.findAll{ it.type == "Object"}?.unique()
+            if(!task.changedGherkinFiles.empty) gherkinCounter++
 
             if(!methods.empty) {
-                result += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:methods*.name,
-                           stepCalls:stepCalls, text:text]
+                result += [task:task, itest:itest, ireal:interfaces.ireal, methods:methods*.name,
+                           stepCalls:stepCalls, text:interfaces.itext]
             }
             else {
-                result += [task:task, itest:taskInterface, ireal:task.computeRealInterface(), methods:"",
-                           stepCalls:stepCalls, text:text]
+                result += [task:task, itest:itest, ireal:interfaces.ireal, methods:"",
+                           stepCalls:stepCalls, text:interfaces.itext]
             }
         }
 
         log.info "Number of tasks that contains acceptance tests: ${relevantTasks.size()}"
         log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
-        [tasks:relevantTasks, testCounter:gherkinCounter, testInterfaces:result]
+        [tasks:relevantTasks, testCounter:gherkinCounter, data:result]
+    }
+
+    private static analyseTasksWithGherkinTest(List<DoneTask> tasks){
+        computeTaskData(tasks, searchForGherkinTasks)
+    }
+
+    private static analyseTasksWithAcceptanceTest(List<DoneTask> tasks){
+        computeTaskData(tasks, searchForAcceptanceTestTasks)
     }
 
     private static exportResult(def allTasksCounter, def tasksCounter,  def taskInterfaces){
         exportResult(Util.DEFAULT_EVALUATION_FILE, allTasksCounter, tasksCounter, taskInterfaces)
     }
 
-    private static exportResult(def filename, def allTasksCounter, def tasksCounter, def taskInterfaces){
+    private static exportResult(def filename, def allTasksCounter, def tasksCounter, def taskData){
         CSVWriter writer = new CSVWriter(new FileWriter(filename))
         writer.writeNext("Number of tasks: $allTasksCounter")
         writer.writeNext("Number of tasks that changed Gherkin files: $tasksCounter")
-        writer.writeNext("Number of tasks that contains acceptance tests: ${taskInterfaces?.size()}")
-        String[] header = ["Task","Date","#Devs","Commit_Message","ITest","IReal","Precision","Recall", "Methods_Unknown_Type", "#Step_Call", "Text"]
+        writer.writeNext("Number of tasks that contains acceptance tests: ${taskData?.size()}")
+        String[] header = ["Task","Date","#Devs","Commit_Message","ITest","IReal","Precision","Recall", "Methods_Unknown_Type", "#Step_Call", "IText"]
         writer.writeNext(header)
 
-        taskInterfaces?.each{ entry ->
+        taskData?.each{ entry ->
             def precision = TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)
             def recall = TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)
             def dates =  entry?.task?.commits*.date?.flatten()?.sort()
@@ -77,18 +81,30 @@ class TaskAnalyser {
         log.info "The results were saved!"
     }
 
-    static analyse(){
+    static analyseGherkinInterface(){
         List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV()
-        def result = organizeTaskData(tasks)
-        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), result.testCounter, result.testInterfaces)
+        def result = analyseTasksWithGherkinTest(tasks)
+        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), result.testCounter, result.data)
     }
 
-    static analyse(String filename){
+    static analyseGherkinInterface(String filename){
         List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV(filename)
-        def result = organizeTaskData(tasks)
+        def result = analyseTasksWithGherkinTest(tasks)
+        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), result.testCounter, result.data)
+    }
+
+    static analyseInterface(){
+        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV()
+        def result = analyseTasksWithAcceptanceTest(tasks)
+        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), result.testCounter, result.data)
+    }
+
+    static analyseInterface(String filename){
+        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV(filename)
+        def result = analyseTasksWithAcceptanceTest(tasks)
         File file = new File(filename)
         def outputFile = Util.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
-        exportResult(outputFile, tasks.size(), result.testCounter, result.testInterfaces)
+        exportResult(outputFile, tasks.size(), result.testCounter, result.data)
     }
 
 }

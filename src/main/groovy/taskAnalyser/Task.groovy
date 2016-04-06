@@ -43,6 +43,29 @@ abstract class Task {
         }
     }
 
+    String computeTextBasedInterface(){
+        def text = ""
+        def gherkinFiles = getAcceptanceTests()
+        if(!gherkinFiles || gherkinFiles.empty) return text
+        gherkinFiles?.each{ file ->
+            text += "${file.feature.keyword}: ${file.feature.name}\n${file.feature.description}\n"
+
+            if(file.feature.background) {
+                text += "${file.feature.background.keyword}: ${file.feature.background.name}\n"
+                file.feature.background.steps.each { step ->
+                    text += "${step.keyword}: ${step.text}\n"
+                }
+            }
+            file.changedScenarioDefinitions?.each{ definition ->
+                text += "${definition.keyword}: ${definition.name}\n"
+                definition.steps.each{ step ->
+                    text += "${step.keyword}: ${step.text}\n"
+                }
+            }
+        }
+        text
+    }
+
     abstract TaskInterface computeTestBasedInterface()
 
     abstract List<GherkinFile> getAcceptanceTests()

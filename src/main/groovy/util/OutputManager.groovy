@@ -122,7 +122,7 @@ class OutputManager {
         List<String[]> entries = readOutputCSV(filename)
         if(entries.size() <= 4) return
 
-        CSVWriter writer = new CSVWriter(new FileWriter(filename-"-organized2.csv"+"-similarity.csv"))
+        CSVWriter writer = new CSVWriter(new FileWriter(filename-"-organized.csv"+"-similarity.csv"))
         writer.writeNext(entries.get(0))
         writer.writeNext(entries.get(1))
 

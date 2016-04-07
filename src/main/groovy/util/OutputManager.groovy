@@ -122,7 +122,7 @@ class OutputManager {
         List<String[]> entries = readOutputCSV(filename)
         if(entries.size() <= 4) return
 
-        CSVWriter writer = new CSVWriter(new FileWriter(filename-"-organized.csv"+"-similarity.csv"))
+        CSVWriter writer = new CSVWriter(new FileWriter(filename-"-organized2.csv"+"-similarity.csv"))
         writer.writeNext(entries.get(0))
         writer.writeNext(entries.get(1))
 
@@ -139,14 +139,20 @@ class OutputManager {
             log.info "Similarity: tasks ${task[0]} and ${other[0]}"
             def textualSimilarityAnalyser = new TextualSimilarityAnalyser()
             def textSimilarity = textualSimilarityAnalyser.calculateSimilarity(task[10], other[10])
-            log.info "Similarity result: $textSimilarity"
-            def testSimilarityAnalyser = new TestSimilarityAnalyser()
+            log.info "Textual similarity result: $textSimilarity"
             def itest1 = task[4].split(", ") as List
             def itest2 = other[4].split(", ") as List
             def ireal1 = task[5].split(", ") as List
             def ireal2 = other[5].split(", ") as List
-            def testSimilarity = testSimilarityAnalyser.calculateSimilarity(itest1, itest2)
-            def realSimilarity = testSimilarityAnalyser.calculateSimilarity(ireal1, ireal2)
+            def testSimilarity = TestSimilarityAnalyser.calculateSimilarityByJaccard(itest1, itest2)
+            def cosine = TestSimilarityAnalyser.calculateSimilarityByCosine(itest1, itest2)
+            log.info "itest1 = $itest1"
+            log.info "itest2 = $itest2"
+            log.info "Test similarity (jaccard index): $testSimilarity"
+            log.info "Test similarity (cosine): $cosine"
+
+            def realSimilarity = TestSimilarityAnalyser.calculateSimilarityByCosine(ireal1, ireal2)
+
             String[] line = [task[0], task[4], task[10], task[5], other[0], other[4], other[10], other[5],
                              textSimilarity, testSimilarity, realSimilarity]
             lines += line

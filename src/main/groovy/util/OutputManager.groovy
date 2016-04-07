@@ -151,7 +151,7 @@ class OutputManager {
             log.info "Test similarity (jaccard index): $testSimilarity"
             log.info "Test similarity (cosine): $cosine"
 
-            def realSimilarity = TestSimilarityAnalyser.calculateSimilarityByCosine(ireal1, ireal2)
+            def realSimilarity = TestSimilarityAnalyser.calculateSimilarityByJaccard(ireal1, ireal2)
 
             String[] line = [task[0], task[4], task[10], task[5], other[0], other[4], other[10], other[5],
                              textSimilarity, testSimilarity, realSimilarity]

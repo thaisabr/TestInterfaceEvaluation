@@ -3,6 +3,8 @@ package similarityAnalyser.text
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
+import org.apache.lucene.document.FieldType
+import org.apache.lucene.index.IndexOptions
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.Directory
@@ -16,6 +18,16 @@ class IndexManager {
     Directory indexDirectory
     IndexWriter writer
 
+    private static final FieldType TYPE_STORED = new FieldType()
+
+    static {
+        TYPE_STORED.setIndexOptions(IndexOptions.DOCS_AND_FREQS)
+        TYPE_STORED.tokenized = true
+        TYPE_STORED.stored = true
+        TYPE_STORED.storeTermVectors = true
+    }
+
+
     public IndexManager() {
         analyzer = new StandardAnalyzer()
         indexDirectory = new RAMDirectory() //Creates a memory directory; if necessary, it is possible to use an index database
@@ -24,8 +36,7 @@ class IndexManager {
 
     private addDoc(String text){
         Document doc = new Document()
-        //doc.add(new Field("content", text, TextField.TYPE_STORED))
-        doc.add(new Field("content", text, Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.YES))
+        doc.add(new Field("content", text, TYPE_STORED))
         writer.addDocument(doc)
     }
 

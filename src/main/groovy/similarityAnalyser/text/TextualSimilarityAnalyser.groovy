@@ -20,12 +20,14 @@ class TextualSimilarityAnalyser {
         indexManager = new IndexManager()
         indexManager.index(task1.acceptanceTests)
         indexManager.index(task2.acceptanceTests)
+        terms = [] as Set
     }
 
     private configureIndexManager(String task1, String task2){
         indexManager = new IndexManager()
         indexManager.index(task1)
         indexManager.index(task2)
+        terms = [] as Set
     }
 
     private getTermFrequencies(int docId){
@@ -60,14 +62,13 @@ class TextualSimilarityAnalyser {
     }
 
     double calculateSimilarity(Task task1, Task task2){
-        terms = [] as Set
         configureIndexManager(task1, task2)
         reader = DirectoryReader.open(indexManager.indexDirectory)
 
         def freqVectorTask1 = getTermFrequencies(0).sort()
-        //println "vector1: $freqVectorTask1"
+        log.info "vector1: $freqVectorTask1"
         def freqVectorTask2 = getTermFrequencies(1).sort()
-        //println "vector2: $freqVectorTask2"
+        log.info "vector2: $freqVectorTask2"
 
         RealVector v1 = toRealVector(freqVectorTask1)
         RealVector v2 = toRealVector(freqVectorTask2)
@@ -77,7 +78,6 @@ class TextualSimilarityAnalyser {
 
     double calculateSimilarity(String task1, String task2){
         if(task1=="" || task2=="") return 0
-        terms = [] as Set
         configureIndexManager(task1, task2)
         reader = DirectoryReader.open(indexManager.indexDirectory)
 

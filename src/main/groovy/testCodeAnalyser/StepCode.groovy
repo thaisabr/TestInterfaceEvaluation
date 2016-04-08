@@ -24,6 +24,11 @@ class StepCode {
      */
     int line
 
+    /**
+     * Argument values.
+     */
+    List<String> args
+
     @Override
     String toString() {
         def location = codePath - Util.getRepositoriesCanonicalPath()

@@ -238,6 +238,7 @@ abstract class TestCodeAbstractParser {
      * @return AcceptanceTest object that represents a match between scenario definition and implementation.
      */
     AcceptanceTest findStepCode(ScenarioDefinition scenarioDefinition, Background background, String scenarioDefinitionPath) {
+        def argsRegex = /(["'])(?:(?=(\\?))\2.)*?\1/
         List<StepCode> codes = []
         def steps = []
         if(background && !background.steps.empty) {
@@ -248,14 +249,15 @@ abstract class TestCodeAbstractParser {
         steps.each { step ->
             def stepCodeMatch = regexList?.findAll{ step.text ==~ it.value }
             if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
+                def args = (step.text =~ argsRegex).collect{ it.getAt(0).toString().trim().replaceAll(/(["'])/,"") }
                 if(stepCodeMatch.size()==1) {
                     stepCodeMatch = stepCodeMatch.get(0)
-                    codes += new StepCode(step: step, codePath: stepCodeMatch.path, line: stepCodeMatch.line)
+                    codes += new StepCode(step: step, codePath: stepCodeMatch.path, line: stepCodeMatch.line, args:args)
                 } else {
                     log.warn "There are many implementations for step code: ${step.text}; $scenarioDefinitionPath (${step.location.line})"
                     stepCodeMatch?.each{
                         log.warn it.toString()
-                        if(it.value!=".*" && it.value!=".+") codes += new StepCode(step: step, codePath: it.path, line: it.line)
+                        if(it.value!=".*" && it.value!=".+") codes += new StepCode(step: step, codePath: it.path, line: it.line, args:args)
                     }
                 }
             } else {

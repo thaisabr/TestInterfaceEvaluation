@@ -111,9 +111,22 @@ class OutputManager {
         if(!set || set.empty || set.size()==1) return set
         set.eachWithIndex{ v, k ->
             def next = set.drop(k+1)
-            next.each{ n -> result.add([v, n]) }
+            result.add([task: v, pairs: next]) //next.each{ n -> result.add([v, n]) }
         }
         result
+    }
+
+    private static extractTaskText(def filename, def taskId){
+        def text = ""
+        File file = new File("${filename-"-organized.csv"}_text_${taskId}.txt")
+        file.withReader { reader ->
+            text = reader.readLines().join(System.lineSeparator())
+        }
+        text
+    }
+
+    static analyseSimilarity(){
+        analyseSimilarity(Util.DEFAULT_EVALUATION_ORGANIZED_FILE)
     }
 
     static analyseSimilarity(String filename){
@@ -126,36 +139,42 @@ class OutputManager {
         writer.writeNext(entries.get(0))
         writer.writeNext(entries.get(1))
 
-        String[] resultHeader = ["Task_A", "ITest_A", "Text_A", "IReal_A", "Task_B", "ITest_B", "Text_B", "IReal_B", "Text_Sim", "Test_Sim", "Real_Sim" ]
+        String[] resultHeader = ["Task_A", "Task_B", "Text", "Test", "Real" ]
         writer.writeNext(resultHeader)
 
         def allTasks = entries.subList(8,entries.size())
         if(allTasks.size()<=1) return
         def taskPairs = computePairs(allTasks)
         List<String[]> lines = []
-        taskPairs.each{ tasks ->
-            def task = tasks.get(0)
-            def other = tasks.get(1)
-            log.info "Similarity: tasks ${task[0]} and ${other[0]}"
-            def textualSimilarityAnalyser = new TextualSimilarityAnalyser()
-            def textSimilarity = textualSimilarityAnalyser.calculateSimilarity(task[10], other[10])
-            log.info "Textual similarity result: $textSimilarity"
+        taskPairs?.each { item ->
+            def task = item.task
+            def taskText = extractTaskText(filename, task[0])
             def itest1 = task[4].split(", ") as List
-            def itest2 = other[4].split(", ") as List
             def ireal1 = task[5].split(", ") as List
-            def ireal2 = other[5].split(", ") as List
-            def testSimilarity = TestSimilarityAnalyser.calculateSimilarityByJaccard(itest1, itest2)
-            def cosine = TestSimilarityAnalyser.calculateSimilarityByCosine(itest1, itest2)
-            log.info "itest1 = $itest1"
-            log.info "itest2 = $itest2"
-            log.info "Test similarity (jaccard index): $testSimilarity"
-            log.info "Test similarity (cosine): $cosine"
 
-            def realSimilarity = TestSimilarityAnalyser.calculateSimilarityByJaccard(ireal1, ireal2)
+            item.pairs?.each { other ->
+                log.info "Similarity between tasks ${task[0]} and ${other[0]}"
 
-            String[] line = [task[0], task[4], task[10], task[5], other[0], other[4], other[10], other[5],
-                             textSimilarity, testSimilarity, realSimilarity]
-            lines += line
+                def otherText = extractTaskText(filename, other[0]) //other[10]
+                def textualSimilarityAnalyser = new TextualSimilarityAnalyser()
+                def textSimilarity = textualSimilarityAnalyser.calculateSimilarity(taskText, otherText)
+                log.info "Textual similarity result: $textSimilarity"
+
+                def itest2 = other[4].split(", ") as List
+                def ireal2 = other[5].split(", ") as List
+                def testSimilarity = TestSimilarityAnalyser.calculateSimilarityByJaccard(itest1, itest2)
+                def cosine = TestSimilarityAnalyser.calculateSimilarityByCosine(itest1, itest2)
+                log.info "Test similarity (jaccard index): $testSimilarity"
+                log.info "Test similarity (cosine): $cosine"
+
+                def realSimilarity = TestSimilarityAnalyser.calculateSimilarityByJaccard(ireal1, ireal2)
+                cosine = TestSimilarityAnalyser.calculateSimilarityByCosine(ireal1, ireal2)
+                log.info "Real similarity (jaccard index): $realSimilarity"
+                log.info "Real similarity (cosine): $cosine"
+
+                String[] line = [task[0], other[0], textSimilarity, testSimilarity, realSimilarity]
+                lines += line
+            }
         }
 
         writer.writeAll(lines)

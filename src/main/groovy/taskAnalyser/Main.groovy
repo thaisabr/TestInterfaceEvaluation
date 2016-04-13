@@ -29,8 +29,8 @@ class Main {
 
     static analyseProject(){
         TaskAnalyser.analyseGherkinInterface() //TaskAnalyser.analyseInterface()
-        OutputManager.organizeResult("output${File.separator}evaluation_result.csv")
-        OutputManager.analyseSimilarity("output${File.separator}evaluation_result-organized.csv")
+        OutputManager.organizeResult()
+        OutputManager.analyseSimilarity()
     }
 
     public static void main(String[] args){

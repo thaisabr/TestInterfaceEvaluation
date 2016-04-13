@@ -27,6 +27,7 @@ class Util {
     protected static final String DEFAULT_TASK_FILE = "tasks.csv"
     protected static final String DEFAULT_EVALUATION_FOLDER = "output"
     protected static final String DEFAULT_EVALUATION_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result.csv"
+    protected static final String DEFAULT_EVALUATION_ORGANIZED_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result-organized.csv"
     protected static final String GHERKIN_FILES_RELATIVE_PATH
     protected static final String STEPS_FILES_RELATIVE_PATH
     protected static final String UNIT_TEST_FILES_RELATIVE_PATH

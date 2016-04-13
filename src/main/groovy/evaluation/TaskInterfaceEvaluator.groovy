@@ -29,14 +29,11 @@ class TaskInterfaceEvaluator {
      */
     static double calculateFilesPrecision(TaskInterface ITest, TaskInterface IReal){
         double result = 0
+        if(!ITest || ITest.empty || !IReal || IReal.empty) return 0
         def testFiles = ITest.findAllFiles()
-        if(!testFiles.isEmpty()){
-            def truePositives = calculateTruePositives(testFiles,IReal.findAllFiles())
-            //println "truePositives in precision: $truePositives"
-            //println "total in precision: ${testFiles.size()}"
-            if(truePositives>0) result = (double) truePositives/testFiles.size()
-        }
-        return result
+        def truePositives = calculateTruePositives(testFiles,IReal.findAllFiles())
+        if(truePositives>0) result = (double) truePositives/testFiles.size()
+        result
     }
 
     /***
@@ -48,14 +45,11 @@ class TaskInterfaceEvaluator {
      */
     static double calculateFilesRecall(TaskInterface ITest, TaskInterface IReal){
         double result = 0
+        if(!ITest || ITest.empty || !IReal || IReal.empty) return 0
         def realFiles = IReal.findAllFiles()
-        if(!realFiles.isEmpty()){
-            def truePositives = calculateTruePositives(ITest.findAllFiles(),realFiles)
-            //println "truePositives in recall: $truePositives"
-            //println "total in recall: ${IReal.files.size()}"
-            if(truePositives>0) result = (double) truePositives/realFiles.size()
-        }
-        return result
+        def truePositives = calculateTruePositives(ITest.findAllFiles(),realFiles)
+        if(truePositives>0) result = (double) truePositives/realFiles.size()
+        result
     }
 
 }

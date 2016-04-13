@@ -1,6 +1,5 @@
 package similarityAnalyser.text
 
-import groovy.util.logging.Slf4j
 import org.apache.commons.math3.linear.ArrayRealVector
 import org.apache.commons.math3.linear.RealVector
 import org.apache.lucene.index.DirectoryReader
@@ -10,7 +9,6 @@ import org.apache.lucene.index.TermsEnum
 import org.apache.lucene.util.BytesRef
 import taskAnalyser.Task
 
-@Slf4j
 class TextualSimilarityAnalyser {
     IndexManager indexManager
     IndexReader reader
@@ -61,35 +59,25 @@ class TextualSimilarityAnalyser {
         v1.dotProduct(v2) / (v1.norm * v2.norm)
     }
 
+    private calculateFreqVectorSimilarity(){
+        def freqVectorTask1 = getTermFrequencies(0).sort()
+        def freqVectorTask2 = getTermFrequencies(1).sort()
+        RealVector v1 = toRealVector(freqVectorTask1)
+        RealVector v2 = toRealVector(freqVectorTask2)
+        getCosineSimilarity(v1, v2)
+    }
+
     double calculateSimilarity(Task task1, Task task2){
         configureIndexManager(task1, task2)
         reader = DirectoryReader.open(indexManager.indexDirectory)
-
-        def freqVectorTask1 = getTermFrequencies(0).sort()
-        log.info "vector1: $freqVectorTask1"
-        def freqVectorTask2 = getTermFrequencies(1).sort()
-        log.info "vector2: $freqVectorTask2"
-
-        RealVector v1 = toRealVector(freqVectorTask1)
-        RealVector v2 = toRealVector(freqVectorTask2)
-
-        getCosineSimilarity(v1, v2)
+        calculateFreqVectorSimilarity()
     }
 
     double calculateSimilarity(String task1, String task2){
         if(task1=="" || task2=="") return 0
         configureIndexManager(task1, task2)
         reader = DirectoryReader.open(indexManager.indexDirectory)
-
-        def freqVectorTask1 = getTermFrequencies(0).sort()
-        log.info "vector1: $freqVectorTask1"
-        def freqVectorTask2 = getTermFrequencies(1).sort()
-        log.info "vector2: $freqVectorTask2"
-
-        RealVector v1 = toRealVector(freqVectorTask1)
-        RealVector v2 = toRealVector(freqVectorTask2)
-
-        getCosineSimilarity(v1, v2)
+        calculateFreqVectorSimilarity()
     }
 
 }

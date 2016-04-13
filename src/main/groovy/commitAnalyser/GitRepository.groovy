@@ -1,12 +1,7 @@
 package commitAnalyser
 
-import gherkin.Parser
-import gherkin.ParserException
-import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
-import org.eclipse.jgit.api.ListBranchCommand
-import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.treewalk.AbstractTreeIterator
 import org.eclipse.jgit.treewalk.CanonicalTreeParser
 import taskAnalyser.GherkinFile
@@ -47,7 +42,7 @@ class GitRepository {
 
     static int counter = 0 //used to compute branch name
 
-    public GitRepository(String url){
+    GitRepository(String url){
         this.url = url + Util.GIT_EXTENSION
         this.name = Util.configureGitRepositoryName(url)
         this.localPath = Util.REPOSITORY_FOLDER_PATH + name
@@ -153,74 +148,14 @@ class GitRepository {
         formatter.release()
     }
 
-    private static Feature parseGherkinFile(String content, String filename, String sha){
-        Feature feature = null
-        if(!content || content==""){
-            log.warn "Problem to parse Gherkin file '$filename'. Reason: The commit deleted it."
-        }
-        else{
-            try{
-                Parser<Feature> parser = new Parser<>()
-                feature = parser.parse(content)
-            } catch(ParserException ex){
-                log.warn "Problem to parse Gherkin file '$filename' (commit $sha). ${ex.class}: ${ex.message}."
-                log.warn content
-            }
-        }
-        feature
-    }
-
-    private static boolean equals(ScenarioDefinition sd1, ScenarioDefinition sd2){
-        def result = true
-        for (int i = 0; i < sd1.steps.size(); i++) {
-            def step1 = sd1.steps.get(i)
-            def step2 = sd2.steps.get(i)
-            if(step1.text != step2.text || step1.keyword != step2.keyword) {
-                result = false
-                break
-            }
-        }
-        result
-    }
-
-    private static boolean equals(StepDefinition sd1, StepDefinition sd2){
-        def result = true
-        for (int i = 0; i < sd1.body.size(); i++) {
-            def step1 = sd1.body.get(i)
-            def step2 = sd2.body.get(i)
-            if(step1 != step2) {
-                result = false
-                break
-            }
-        }
-        result
-    }
-
-    private static List<StepDefinition> parseStepDefinitionFile(String filename, String content, String sha,
-                                                           TestCodeAbstractParser parser){
-        List<StepDefinition> stepDefinitions = null
-        if(!content || content==""){
-            log.warn "Problem to parse step definition file '$filename'. Reason: The commit deleted it."
-        }
-        else{
-            try{
-                stepDefinitions = parser.doExtractStepDefinitions(filename, content)
-            } catch(ParserException ex){
-                log.warn "Problem to parse step definition file '$filename' (commit $sha). ${ex.class}: ${ex.message}."
-                log.warn content
-            }
-        }
-        stepDefinitions
-    }
-
     private CodeChange extractStepDefinitionChanges(RevCommit commit, RevCommit parent, DiffEntry entry,
                                                     TestCodeAbstractParser parser){
         CodeChange codeChange = null
 
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newStepDefinitions = parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
+        def newStepDefinitions = StepDefinitionManager.parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
         def oldVersion = extractFileContent(parent, entry.oldPath)
-        def oldStepDefinitions = parseStepDefinitionFile( entry.oldPath, oldVersion, parent.name, parser)
+        def oldStepDefinitions = StepDefinitionManager.parseStepDefinitionFile( entry.oldPath, oldVersion, parent.name, parser)
 
         //searches for changed or removed step definitions
         List<StepDefinition> changedStepDefinitions = []
@@ -228,7 +163,7 @@ class GitRepository {
             def foundStepDef = newStepDefinitions?.find{ it.value == stepDef.value }
             if(foundStepDef && foundStepDef.value && foundStepDef.value != ""){
                 if (stepDef.size() == foundStepDef.size()){ //step definition might be changed
-                    def stepDefEquals = equals(foundStepDef, stepDef)
+                    def stepDefEquals = GherkinManager.equals(foundStepDef, stepDef)
                     if(!stepDefEquals) changedStepDefinitions += foundStepDef
                 } else {//step definition was changed
                     changedStepDefinitions += foundStepDef
@@ -255,29 +190,13 @@ class GitRepository {
     }
 
     /***
-     * Identifies step definitions at added step definition files by the first commit of the repository.
-     * It is used only when dealing with done tasks.
-     */
-    private static StepDefinitionFile extractStepDefinitionAdds(RevCommit commit, String content, String path,
-                                                               TestCodeAbstractParser parser){
-        StepDefinitionFile changedStepDefFile = null
-        def newStepDefinitions = parseStepDefinitionFile(path, content, commit.name, parser)
-
-        if(newStepDefinitions && !newStepDefinitions.isEmpty()){
-            changedStepDefFile = new StepDefinitionFile(commitHash:commit.name, path:path,
-                    changedStepDefinitions:newStepDefinitions)
-        }
-        changedStepDefFile
-    }
-
-    /***
      * Identifies step definitions at added step definition files.
      * It is used only when dealing with done tasks.
      */
     private CodeChange extractStepDefinitionAdds(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser){
         CodeChange codeChange = null
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newStepDefinitions = parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
+        def newStepDefinitions = StepDefinitionManager.parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
 
         if(newStepDefinitions && !newStepDefinitions.isEmpty()){
             StepDefinitionFile changedStepFile = new StepDefinitionFile(commitHash:commit.name, path:entry.newPath,
@@ -297,9 +216,9 @@ class GitRepository {
         CodeChange codeChange = null
 
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newFeature = parseGherkinFile(newVersion, entry.newPath, commit.name)
+        def newFeature = GherkinManager.parseGherkinFile(newVersion, entry.newPath, commit.name)
         def oldVersion = extractFileContent(parent, entry.oldPath)
-        def oldFeature = parseGherkinFile(oldVersion, entry.oldPath, parent.name)
+        def oldFeature = GherkinManager.parseGherkinFile(oldVersion, entry.oldPath, parent.name)
 
         if(!newFeature || !oldFeature) return codeChange
 
@@ -312,7 +231,7 @@ class GitRepository {
             def foundScenDef = newScenarioDefinitions?.find{ it.name == oldScenDef.name }
             if(foundScenDef){
                 if (oldScenDef.steps.size() == foundScenDef.steps.size()){ //scenario definition might be changed
-                    def scenDefEquals = equals(foundScenDef, oldScenDef)
+                    def scenDefEquals = GherkinManager.equals(foundScenDef, oldScenDef)
                     if(!scenDefEquals) changedScenarioDefinitions += foundScenDef
                 } else {//scenario definition was changed
                     changedScenarioDefinitions += foundScenDef
@@ -331,27 +250,12 @@ class GitRepository {
         if(!changedScenarioDefinitions.isEmpty()){
             GherkinFile changedGherkinFile = new GherkinFile(commitHash:commit.name, path:entry.newPath,
                     feature:newFeature, changedScenarioDefinitions:changedScenarioDefinitions)
+            GherkinManager.extractTextFromGherkin(newFeature, changedScenarioDefinitions, newVersion, changedGherkinFile)
             codeChange = new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [],
                     gherkinFile: changedGherkinFile)
         }
 
         codeChange
-    }
-
-    /***
-     * Identifies scenarios definitions at added gherkin files (features) by the first commit of the repository.
-     * It is used only when dealing with done tasks.
-     */
-    private static GherkinFile extractGherkinAdds(RevCommit commit, String content, String path){
-        GherkinFile changedGherkinFile = null
-        def newFeature = parseGherkinFile(content, path, commit.name)
-        def newScenarioDefinitions = newFeature?.scenarioDefinitions
-
-        if(newScenarioDefinitions && !newScenarioDefinitions.isEmpty()){
-            changedGherkinFile = new GherkinFile(commitHash:commit.name, path:path,
-                    feature:newFeature, changedScenarioDefinitions:newScenarioDefinitions)
-        }
-        changedGherkinFile
     }
 
     /***
@@ -361,12 +265,13 @@ class GitRepository {
     private CodeChange extractGherkinAdds(RevCommit commit, DiffEntry entry){
         CodeChange codeChange = null
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newFeature = parseGherkinFile(newVersion, entry.newPath, commit.name)
+        def newFeature = GherkinManager.parseGherkinFile(newVersion, entry.newPath, commit.name)
         def newScenarioDefinitions = newFeature?.scenarioDefinitions
 
         if(newScenarioDefinitions && !newScenarioDefinitions.isEmpty()){
             GherkinFile changedGherkinFile = new GherkinFile(commitHash:commit.name, path:entry.newPath,
                     feature:newFeature, changedScenarioDefinitions:newScenarioDefinitions)
+            GherkinManager.extractTextFromGherkin(newFeature, newScenarioDefinitions, newVersion, changedGherkinFile)
             codeChange = new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [],
                     gherkinFile: changedGherkinFile)
         }
@@ -543,7 +448,7 @@ class GitRepository {
         return commits
     }
 
-    //* PROBLEM: Deal with removed lines. */
+    /* PROBLEM: Deal with removed lines. */
     private List<Integer> computeChanges(RevCommit commit, String filename){
         def changedLines = []
         def git = Git.open(new File(localPath))
@@ -553,7 +458,6 @@ class GitRepository {
         BlameResult blameResult = blamer.call()
 
         List<String> fileContent = extractFileContent(commit, filename)?.readLines()
-        //println "commit: ${commit.name}; filename: $filename; file size: ${fileContent.size()}"
         fileContent?.eachWithIndex { line, i ->
             RevCommit c = blameResult?.getSourceCommit(i)
             if(c?.name?.equals(commit.name)) changedLines += i
@@ -582,13 +486,13 @@ class GitRepository {
             if(Util.isValidCode(tw.pathString)) {
                 def result = extractFileContent(commit, tw.pathString)
                 if( Util.isGherkinCode(tw.pathString) ){
-                    def change = extractGherkinAdds(commit, result, tw.pathString)
+                    def change = GherkinManager.extractGherkinAdds(commit, result, tw.pathString)
                     if(change != null) {
                         codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: [],
                                 gherkinFile: change)
                     }
                 } else if(Util.isStepDefinitionCode(tw.pathString)){
-                    def change = extractStepDefinitionAdds(commit, result, tw.pathString, parser)
+                    def change = StepDefinitionManager.extractStepDefinitionAdds(commit, result, tw.pathString, parser)
                     if(change != null) {
                         codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: [],
                                 stepFile: change)

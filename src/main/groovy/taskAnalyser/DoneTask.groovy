@@ -273,9 +273,9 @@ class DoneTask extends Task {
     }
 
     def computeInterfaces(){
-        def itest = []
-        def itext = []
-        def ireal = []
+        TaskInterface itest = new TaskInterface()
+        String itext = ""
+        TaskInterface ireal = new TaskInterface()
 
         if(!commits || commits.empty) {
             log.warn "TASK ID: $id; NO COMMITS!"
@@ -295,7 +295,7 @@ class DoneTask extends Task {
             itest = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions)
 
             //computes task text based in gherkin scenarios
-            itext = computeTextBasedInterface()
+            itext = super.computeTextBasedInterface()
 
             //computes real interface
             ireal = identifyProductionChangedFiles()

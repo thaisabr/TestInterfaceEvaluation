@@ -324,12 +324,16 @@ class DoneTask extends Task {
         }
     }
 
-    def getAcceptanceTestQuantity(){
-        changedGherkinFiles.size()
+    def getGherkinTestQuantity(){
+        def values = changedGherkinFiles*.changedScenarioDefinitions*.size().flatten()
+        if(values.empty) 0
+        else values.sum()
     }
 
     def getStepDefQuantity(){
-        changedStepDefinitions.size()
+        def values = changedStepDefinitions*.changedStepDefinitions*.size().flatten()
+        if(values.empty) 0
+        else values.sum()
     }
 
 }

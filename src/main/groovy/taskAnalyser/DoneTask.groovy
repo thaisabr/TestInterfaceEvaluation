@@ -1,6 +1,7 @@
 package taskAnalyser
 
 import commitAnalyser.Commit
+import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 import util.Util
 import util.ruby.RubyUtil
@@ -305,6 +306,30 @@ class DoneTask extends Task {
         }
 
         [itest:itest, itext:itext, ireal:ireal]
+    }
+
+    def getCommitsQuantity(){
+        commits.size()
+    }
+
+    def getDays(){
+        def size = commits.size()
+        if(size<2) size
+        else{
+            use(TimeCategory) {
+                def last = new Date(commits.last().date*1000).clearTime()
+                def first = new Date(commits.first().date*1000).clearTime()
+                (last - first).days + 1
+            }
+        }
+    }
+
+    def getAcceptanceTestQuantity(){
+        changedGherkinFiles.size()
+    }
+
+    def getStepDefQuantity(){
+        changedStepDefinitions.size()
     }
 
 }

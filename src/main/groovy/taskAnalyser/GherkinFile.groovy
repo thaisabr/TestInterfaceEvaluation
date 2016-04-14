@@ -2,10 +2,13 @@ package taskAnalyser
 
 import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
+import gherkin.ast.ScenarioOutline
+import groovy.util.logging.Slf4j
 
 /***
  * Represents a changed Gherkin File.
  */
+@Slf4j
 class GherkinFile {
 
     /***
@@ -30,6 +33,12 @@ class GherkinFile {
      */
     List<ScenarioDefinition> changedScenarioDefinitions = []
 
+    /***
+     * Textual information to compute text based interfaces for tasks.
+     */
+    List<String> changedScenarioDefinitionsText = []
+    String baseText
+
     @Override
     String toString() {
         def text = "Gherkin file: ${path}\nFeature: ${feature.name}\nBackground (line ${feature.background.location.line}):${feature.background.name}\n"
@@ -38,8 +47,54 @@ class GherkinFile {
         }
         text += "\nChanged scenario definitions:\n"
         changedScenarioDefinitions.each{ definition ->
-            text += "Scenario (line ${definition.location.line}): ${definition.name}\n"
+            text += "${definition.keyword} (line ${definition.location.line}): ${definition.name}\n"
         }
         return text
     }
+
+    def getText(){
+        baseText + "\n" + (changedScenarioDefinitionsText.join("\n"))
+    }
+
+    /*
+    String extractBackgroundArgs(){
+        def text = ""
+        def args = []
+        if(feature.background) {
+            feature.background.steps.each { step ->
+                text += "${step.keyword}: ${step.text}"
+                step.argument.rows.each{ row ->
+                    args += row.cells.value
+                }
+            }
+        }
+        if(!text.empty) [text:text, args:args]
+        else []
+    }
+
+
+    static extractArgs(ScenarioDefinition definition){
+        def text = ""
+        def args = []
+        definition?.steps?.each{ step ->
+            text = "${step.keyword}: ${step.text}"
+            if(step.argument) {
+                step.argument.rows.each{ row ->
+                    args += row.cells.value
+                }
+            }
+        }
+        if(!text.empty) [text:text, args:args]
+        else []
+    }
+
+    static extractArgs(ScenarioOutline scenario){
+        def args = []
+        scenario.examples.each { example ->
+            args += example.tableHeader.cells*.value
+            args += example.tableBody.cells*.value
+        }
+        args
+    }*/
+
 }

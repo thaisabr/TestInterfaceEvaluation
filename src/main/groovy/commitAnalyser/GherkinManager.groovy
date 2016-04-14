@@ -54,41 +54,25 @@ class GherkinManager {
         result
     }
 
-    static extractFeatureText(def locations, Feature feature, def lines){
+    static extractCommonText(def locations, Feature feature, def lines){
+        def text = ""
+        if(!feature) return text
         def featureLocation = feature.location.line
-        def featureText = ""
         def featureIndex = locations.indexOf(featureLocation)
 
         if(featureIndex < locations.size()-1) {
+            //excludes tag of next scenario definition
             int max = locations.get(featureIndex+1)-1 as int
+            def scenDef = feature.scenarioDefinitions?.first()
+            if(!scenDef?.tags?.empty) max--
+
             for(int i = featureLocation-1; i<max; i++){
-                featureText += lines.get(i).trim()+"\n"
+                text += lines.get(i).trim()+"\n"
             }
+
         }
         else{
             for(int i = featureLocation-1; i<lines.size(); i++){
-                featureText += lines.get(i).trim()+"\n"
-            }
-        }
-
-        featureText
-    }
-
-    static extractBackgroundText(def locations, Feature feature, def lines){
-        def text = ""
-        if(!feature.background) return text
-
-        def location = feature.background.location.line
-        def index = locations.indexOf(location)
-
-        if(index < locations.size()-1) {
-            int max = locations.get(index+1)-1 as int
-            for(int i = location-1; i<max; i++){
-                text += lines.get(i).trim()+"\n"
-            }
-        }
-        else{
-            for(int i = location-1; i<lines.size(); i++){
                 text += lines.get(i).trim()+"\n"
             }
         }
@@ -100,11 +84,11 @@ class GherkinManager {
         def locations = feature.scenarioDefinitions*.location*.line.flatten().sort()
         def lines = content.readLines()
 
-        gherkinFile.featureText = extractFeatureText(locations, feature, lines).replaceAll("(?m)^\\s", "")
-        gherkinFile.backgroundText = extractBackgroundText(locations, feature, lines).replaceAll("(?m)^\\s", "")
+        gherkinFile.baseText = extractCommonText(locations, feature, lines)
         scenDefinitions.each{ change ->
             def text = ""
             def initialLine = change.location.line
+            if(!change.tags.empty) text += change.tags*.name.flatten().join(" ")+"\n"
             def index = locations.indexOf(initialLine)
 
             if(index < locations.size()-1) {

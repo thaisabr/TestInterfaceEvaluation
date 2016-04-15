@@ -2,6 +2,7 @@ package taskAnalyser
 
 import au.com.bytecode.opencsv.CSVReader
 import au.com.bytecode.opencsv.CSVWriter
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 import commitAnalyser.Commit
 import evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
@@ -35,10 +36,14 @@ class DataManager {
     }
 
     private static writeHeaderAllResult(CSVWriter writer, def allTasks, def relevantTasks, def stepTasks, def gherkinTasks){
-        writer.writeNext("Number of tasks: $allTasks")
-        writer.writeNext("Number of tasks that have production and test code: $relevantTasks")
-        writer.writeNext("Number of tasks that have changed step definitions: $stepTasks")
-        writer.writeNext("Number of tasks that have changed Gherkin files: $gherkinTasks")
+        String[] text = ["Tasks", allTasks]
+        writer.writeNext(text)
+        text = ["Tasks that have production and test code", relevantTasks]
+        writer.writeNext(text)
+        text = ["Tasks that have changed step definitions", stepTasks]
+        writer.writeNext(text)
+        text = ["Tasks that have changed Gherkin files", gherkinTasks]
+        writer.writeNext(text)
         String[] header = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests", "#StepDef",
                            "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
                            "#AST_Errors", "ITest", "IReal", "Precision", "Recall"] //18 elements
@@ -101,7 +106,8 @@ class DataManager {
 
     private static saveResultForSimilarityAnalysis(String filename, String[] header, List<String[]> entries){
         def writer = new CSVWriter(new FileWriter(filename))
-        writer.writeNext("Number of tasks (the ones that have Gherkin test): ${entries.size()}")
+        String[] text = ["Tasks (the ones that have Gherkin test)", entries.size()]
+        writer.writeNext(text)
         writer.writeNext(header)
         writeResult(entries, writer)
         writer.close()
@@ -149,10 +155,32 @@ class DataManager {
         def others = validTasks - emptyITest
         def zeroPrecisionAndRecall = others.findAll{ it[16] == "0.0" && it[17] == "0.0" }
 
-        writer.writeNext("Number of valid tasks (ones that have acceptance test and no empty IReal): ${validTasks.size()}")
-        writer.writeNext("Number of tasks that have acceptance test and empty ITest: ${emptyITest.size()}")
-        writer.writeNext("Number of tasks that have test and no empty ITest: ${others.size()}")
-        writer.writeNext("Number of tasks that have no empty ITest and precision e recall 0.0: ${zeroPrecisionAndRecall.size()}")
+        String[] text = ["Valid tasks (ones that have acceptance test and no empty IReal)", validTasks.size()]
+        writer.writeNext(text)
+        text = ["Tasks that have acceptance test and empty ITest", emptyITest.size()]
+        writer.writeNext(text)
+        text = ["Tasks that have test and no empty ITest", others.size()]
+        writer.writeNext(text)
+        text = ["Tasks that have no empty ITest and precision e recall 0.0", zeroPrecisionAndRecall.size()]
+        writer.writeNext(text)
+
+        double[] precisionValues = entries.collect{ it[16] as double }
+        def itestStatistics = new DescriptiveStatistics(precisionValues)
+        double[] recallValues = entries.collect{ it[17] as double }
+        def irealStatistics = new DescriptiveStatistics(recallValues)
+
+        text = ["Precision mean", itestStatistics.mean]
+        writer.writeNext(text)
+        text = ["Precision median", itestStatistics.getPercentile(50)]
+        writer.writeNext(text)
+        text = ["Precision standard deviation", itestStatistics.standardDeviation]
+        writer.writeNext(text)
+        text = ["Recall mean", irealStatistics.mean]
+        writer.writeNext(text)
+        text = ["Recall median", irealStatistics.getPercentile(50)]
+        writer.writeNext(text)
+        text = ["Recall standard deviation", irealStatistics.standardDeviation]
+        writer.writeNext(text)
 
         writer.writeNext(resultHeader2)
         writeResult(emptyITest, writer)
@@ -260,7 +288,7 @@ class DataManager {
             item.pairs?.each { other ->
                 log.info "Similarity between tasks ${task[0]} and ${other[0]}"
 
-                def otherText = extractTaskText(filteredFile, other[0]) //other[10]
+                def otherText = extractTaskText(filteredFile, other[0])
                 def textualSimilarityAnalyser = new TextualSimilarityAnalyser()
                 def textSimilarity = textualSimilarityAnalyser.calculateSimilarity(taskText, otherText)
                 log.info "Textual similarity result: $textSimilarity"

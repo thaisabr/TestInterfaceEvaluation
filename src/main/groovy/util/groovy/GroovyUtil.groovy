@@ -1,5 +1,7 @@
 package util.groovy
 
+import util.ConstantData
+import util.RegexUtil
 import util.Util
 
 import java.util.regex.Matcher
@@ -16,11 +18,11 @@ class GroovyUtil extends Util {
      * @return the file name that matches to the class name
      */
     static String getClassPathForGroovy(String className, Collection<String> projectFiles){
-        getClassPath(className, GROOVY_EXTENSION, projectFiles)
+        getClassPath(className, ConstantData.GROOVY_EXTENSION, projectFiles)
     }
 
     static String findViewPathForGrailsProjects(String resourcePath, List projectFiles){
-        def name = resourcePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def name = resourcePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         int n = name.count(File.separator)
         if(n>1){
             def index = name.lastIndexOf(File.separator)
@@ -53,8 +55,8 @@ class GroovyUtil extends Util {
     }
 
     static configClassnameFromMethod(String className){
-        if (className.startsWith(NON_PRIMITIVE_ARRAY_PREFIX) && className.endsWith(";")) {
-            className = className.substring(NON_PRIMITIVE_ARRAY_PREFIX.length(), className.length() - 1)
+        if (className.startsWith(ConstantData.NON_PRIMITIVE_ARRAY_PREFIX) && className.endsWith(";")) {
+            className = className.substring(ConstantData.NON_PRIMITIVE_ARRAY_PREFIX.length(), className.length() - 1)
         }
         return className
     }

@@ -1,5 +1,7 @@
 package util.ruby
 
+import util.ConstantData
+import util.RegexUtil
 import util.Util
 
 import java.util.regex.Matcher
@@ -19,13 +21,13 @@ class RubyUtil extends Util {
      */
     static String getClassPathForRubyClass(String className, Collection<String> projectFiles){
         def underscore = camelCaseToUnderscore(className)
-        def name = (underscore+RUBY_EXTENSION).replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def name = (underscore+ConstantData.RUBY_EXTENSION).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         def regex_expression = ".*${Matcher.quoteReplacement(File.separator)}$name"
         projectFiles?.find{ it ==~ /$regex_expression/ }
     }
 
     static String getClassPathForRubyInstanceVariable(String varName, Collection<String> projectFiles){
-        def name = varName+RUBY_EXTENSION
+        def name = varName+ ConstantData.RUBY_EXTENSION
         def regex_expression = ".*${Matcher.quoteReplacement(File.separator)}$name"
         projectFiles?.find{ it ==~ /$regex_expression/ }
     }
@@ -37,7 +39,7 @@ class RubyUtil extends Util {
         def viewFiles = projectFiles?.findAll{ file ->
             file.contains(VIEWS_FILES_RELATIVE_PATH) && VALID_VIEW_FILES.any{ file.endsWith(it) }
         }
-        def name = resourcePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def name = resourcePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
 
         if(name.contains(".")){ //is a file
             def match = viewFiles?.findAll{ it.contains(name) }

@@ -15,6 +15,8 @@ class Util {
     protected static final String PRODUCTION_FILES_RELATIVE_PATH
     protected static final String VIEWS_FILES_RELATIVE_PATH
     protected static final String VALID_EXTENSION
+    protected static final List<String> VALID_EXTENSIONS
+    protected static final List<String> VALID_FOLDERS
     protected static final List<String> VALID_VIEW_FILES
     protected static final LanguageOption CODE_LANGUAGE
     protected static final Properties properties
@@ -59,6 +61,9 @@ class Util {
                 VALID_VIEW_FILES = []
                 break
         }
+
+        VALID_EXTENSIONS = [VALID_EXTENSION] + VALID_VIEW_FILES + [ConstantData.FEATURE_FILENAME_EXTENSION]
+        VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, UNIT_TEST_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH]
     }
 
     private static loadProperties(){
@@ -194,8 +199,7 @@ class Util {
     }
 
     static boolean isValidCode(String path){
-        if(path != null && path != "" && !(excludedFolders).any{ path?.contains(it) } &&
-                !(excludedExtensions).any{ path?.endsWith(it) } ) true
+        if( path && !path.empty && VALID_FOLDERS.any{path.contains(it+File.separator)} && VALID_EXTENSIONS.any{path.endsWith(it)} ) true
         else false
     }
 

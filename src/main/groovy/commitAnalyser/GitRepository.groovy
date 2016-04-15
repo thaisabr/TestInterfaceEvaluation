@@ -70,38 +70,7 @@ class GitRepository {
     }
 
     /***
-     * Computes the difference between two versions of a file or all files from two commits using DiffFormatter.
-     *
-     * @param filename file to evaluate. If it is empty, all differences between commits are computed.
-     * @param newTree the tree that contains a new version of the file.
-     * @param oldTree the tree that contains an older version of the file.
-     * @return a list of DiffEntry objects that represents the difference between two versions of a file.
-     */
-    private List<DiffEntry> extractDiff(String filename, RevTree newTree, RevTree oldTree){
-        def git = Git.open(new File(localPath))
-
-        DiffFormatter df = new DiffFormatter(new ByteArrayOutputStream())
-        df.setRepository(git.repository)
-        df.setDiffComparator(RawTextComparator.DEFAULT)
-        df.setDetectRenames(true)
-        if(filename!=null && !filename.isEmpty()) df.setPathFilter(PathFilter.create(filename))
-        List<DiffEntry> diffs = df.scan(oldTree, newTree)
-        df.release()
-        git.close()
-
-        List<DiffEntry> result = []
-        diffs.each{
-            it.oldPath = it.oldPath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-            it.newPath = it.newPath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-            result += it
-        }
-
-        return result.findAll{ file -> Util.isValidCode(file.newPath) && Util.isValidCode(file.oldPath) }
-    }
-
-    /***
      * Computes the difference between two versions of a file or all files from two commits.
-     * The result is the same of the previous method.
      *
      * @param filename file to evaluate. If it is empty, all differences between commits are computed.
      * @param newCommit the commit that contains a new version of the file.
@@ -124,7 +93,9 @@ class GitRepository {
             result += it
         }
 
-        return result.findAll{ file -> Util.isValidCode(file.newPath) && Util.isValidCode(file.oldPath) }
+        return result.findAll{ file ->
+            (Util.isValidCode(file.newPath) || Util.isValidCode(file.oldPath))
+        }
     }
 
     /***
@@ -290,45 +261,43 @@ class GitRepository {
                                                            TestCodeAbstractParser parser) {
         List<CodeChange> codeChanges = []
             diffs?.each{ entry ->
-                if(Util.isValidCode(entry.newPath) && Util.isValidCode(entry.oldPath)) {
-                    switch (entry.changeType) {
-                        case DiffEntry.ChangeType.ADD: //it is necessary to know the file size because all lines were changed
-                            def result = extractFileContent(commit, entry.newPath)
-                            if(Util.isGherkinCode(entry.newPath)){
-                                def change = extractGherkinAdds(commit, entry)
-                                if(change != null) { codeChanges += change }
-                            }
-                            else if(Util.isStepDefinitionCode(entry.newPath)){
-                                def change = extractStepDefinitionAdds(commit, entry, parser)
-                                if(change != null) { codeChanges += change }
-                            }
-                            else{
-                                codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: 0..<result.readLines().size())
-                            }
-                            break
-                        case DiffEntry.ChangeType.DELETE: //the file size is already known
-                            def result = extractFileContent(parent, entry.oldPath)
-                            codeChanges += new CodeChange(filename: entry.oldPath, type: entry.changeType, lines: 0..<result.readLines().size())
-                            break
-                        case DiffEntry.ChangeType.MODIFY:
-                            if(Util.isGherkinCode(entry.newPath)) {
-                                def change = extractGherkinChanges(commit, parent, entry)
-                                if (change != null) { codeChanges += change }
-                            }
-                            else if(Util.isStepDefinitionCode(entry.newPath)){
-                                def change = extractStepDefinitionChanges(commit, parent, entry, parser)
-                                if (change != null) { codeChanges += change }
-                            }
-                            else{
-                                def lines = computeChanges(commit, entry.newPath)
-                                codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: lines)
-                            }
-                            break
-                        case DiffEntry.ChangeType.RENAME:
-                            log.info "<RENAME> old:${entry.oldPath}; new:${entry.newPath}"
-                        case DiffEntry.ChangeType.COPY:
-                            codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [])
-                    }
+                switch (entry.changeType) {
+                    case DiffEntry.ChangeType.ADD: //it is necessary to know the file size because all lines were changed
+                        def result = extractFileContent(commit, entry.newPath)
+                        if(Util.isGherkinCode(entry.newPath)){
+                            def change = extractGherkinAdds(commit, entry)
+                            if(change != null) { codeChanges += change }
+                        }
+                        else if(Util.isStepDefinitionCode(entry.newPath)){
+                            def change = extractStepDefinitionAdds(commit, entry, parser)
+                            if(change != null) { codeChanges += change }
+                        }
+                        else{
+                            codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: 0..<result.readLines().size())
+                        }
+                        break
+                    case DiffEntry.ChangeType.DELETE: //the file size is already known
+                        def result = extractFileContent(parent, entry.oldPath)
+                        codeChanges += new CodeChange(filename: entry.oldPath, type: entry.changeType, lines: 0..<result.readLines().size())
+                        break
+                    case DiffEntry.ChangeType.MODIFY:
+                        if(Util.isGherkinCode(entry.newPath)) {
+                            def change = extractGherkinChanges(commit, parent, entry)
+                            if (change != null) { codeChanges += change }
+                        }
+                        else if(Util.isStepDefinitionCode(entry.newPath)){
+                            def change = extractStepDefinitionChanges(commit, parent, entry, parser)
+                            if (change != null) { codeChanges += change }
+                        }
+                        else{
+                            def lines = computeChanges(commit, entry.newPath)
+                            codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: lines)
+                        }
+                        break
+                    case DiffEntry.ChangeType.RENAME:
+                        log.info "<RENAME> old:${entry.oldPath}; new:${entry.newPath}"
+                    case DiffEntry.ChangeType.COPY:
+                        codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [])
                 }
             }
         return codeChanges
@@ -522,16 +491,6 @@ class GitRepository {
         def logs = git?.log()?.call()?.findAll{ it.name in hash }?.sort{ it.commitTime }
         git.close()
         logs
-    }
-
-    /***
-     * Searches all commits from a Git repository.
-     *
-     * @return a list of commits.
-     */
-    List<Commit> searchAllCommits(TestCodeAbstractParser parser){
-        def logs = searchAllRevCommits()
-        extractCommitsFromLogs(logs, parser)
     }
 
     /***

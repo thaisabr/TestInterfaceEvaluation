@@ -16,6 +16,9 @@ class TaskInterface {
     Set<String> referencedPages
     /******************************************************************************************************************/
 
+    Set matchStepErrors
+    Set compilationErrors
+
     TaskInterface() {
         this.classes = [] as Set
         this.methods = [] as Set
@@ -24,6 +27,8 @@ class TaskInterface {
         this.accessedProperties = [] as Set
         this.calledPageMethods = [] as Set
         this.referencedPages = [] as Set
+        this.matchStepErrors = [] as Set
+        this.compilationErrors = [] as Set
     }
 
     @Override

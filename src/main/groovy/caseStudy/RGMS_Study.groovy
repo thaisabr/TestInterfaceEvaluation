@@ -5,12 +5,12 @@ import evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
 import taskAnalyser.DoneTask
 import taskAnalyser.TodoTask
-import util.Util
+import util.ConstantData
 
 @Slf4j
 class RGMS_Study {
 
-    static CSVWriter writer = new CSVWriter(new FileWriter(Util.DEFAULT_EVALUATION_FILE))
+    static CSVWriter writer = new CSVWriter(new FileWriter(ConstantData.DEFAULT_EVALUATION_FILE))
 
     static analyseTask(DoneTask done, TodoTask todo){
         def ireal = done?.computeRealInterface()

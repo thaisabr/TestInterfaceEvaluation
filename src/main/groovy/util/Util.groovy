@@ -1,7 +1,6 @@
 package util
 
 import commitAnalyser.CodeChange
-import gherkin.GherkinDialectProvider
 import org.springframework.util.ClassUtils
 import util.exception.InvalidLanguageException
 
@@ -9,25 +8,7 @@ import java.util.regex.Matcher
 
 class Util {
 
-    protected static final FILE_SEPARATOR_REGEX = /(\\|\/)/
-    protected static final NEW_LINE_REGEX = /\r\n|\n/
-
-    protected static final String NON_PRIMITIVE_ARRAY_PREFIX = "[L"
-    protected static final String FEATURE_FILENAME_EXTENSION = ".feature"
-    protected static final String JAR_FILENAME_EXTENSION = ".jar"
-    protected static final String GROOVY_EXTENSION = ".groovy"
-    protected static final String JAVA_EXTENSION = ".java"
-    protected static final String RUBY_EXTENSION = ".rb"
-
-    protected static final String GIT_EXTENSION = ".git"
-    protected static final String GITHUB_URL = "https://github.com/";
-
     protected static final String REPOSITORY_FOLDER_PATH
-    protected static final String TASKS_FILE
-    protected static final String DEFAULT_TASK_FILE = "tasks.csv"
-    protected static final String DEFAULT_EVALUATION_FOLDER = "output"
-    protected static final String DEFAULT_EVALUATION_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result.csv"
-    protected static final String DEFAULT_EVALUATION_ORGANIZED_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result-organized.csv"
     protected static final String GHERKIN_FILES_RELATIVE_PATH
     protected static final String STEPS_FILES_RELATIVE_PATH
     protected static final String UNIT_TEST_FILES_RELATIVE_PATH
@@ -35,19 +16,14 @@ class Util {
     protected static final String VIEWS_FILES_RELATIVE_PATH
     protected static final String VALID_EXTENSION
     protected static final List<String> VALID_VIEW_FILES
-
-    protected static final List<String> STEP_KEYWORDS = new GherkinDialectProvider().defaultDialect.stepKeywords.unique()*.trim()
-    protected static final List<String> STEP_KEYWORDS_PT = new GherkinDialectProvider().getDialect("pt",null).stepKeywords.unique()*.trim()
-
     protected static final LanguageOption CODE_LANGUAGE
-
-    protected static final String PROPERTIES_FILE_NAME = "configuration.properties"
     protected static final Properties properties
-
     protected static List<String> excludedPath
     protected static List<String> excludedExtensions
     protected static List<String> excludedFolders
     protected static regex_testCode
+
+    public static final String TASKS_FILE
 
     static {
         properties = new Properties()
@@ -58,28 +34,28 @@ class Util {
         excludedFolders = excludedPath - excludedExtensions
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
         TASKS_FILE = configureTasksFilePath()
-        GHERKIN_FILES_RELATIVE_PATH = (properties.'spgroup.gherkin.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+        GHERKIN_FILES_RELATIVE_PATH = (properties.'spgroup.gherkin.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        STEPS_FILES_RELATIVE_PATH = (properties.'spgroup.steps.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+        STEPS_FILES_RELATIVE_PATH = (properties.'spgroup.steps.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        UNIT_TEST_FILES_RELATIVE_PATH = (properties.'spgroup.rspec.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+        UNIT_TEST_FILES_RELATIVE_PATH = (properties.'spgroup.rspec.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        PRODUCTION_FILES_RELATIVE_PATH = (properties.'spgroup.production.files.relative.path').replaceAll(FILE_SEPARATOR_REGEX,
+        PRODUCTION_FILES_RELATIVE_PATH = (properties.'spgroup.production.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
         VIEWS_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "views"
         CODE_LANGUAGE = (properties.'spgroup.language').trim().toUpperCase() as LanguageOption
 
         switch(CODE_LANGUAGE){
             case LanguageOption.RUBY:
-                VALID_EXTENSION = RUBY_EXTENSION
+                VALID_EXTENSION = ConstantData.RUBY_EXTENSION
                 VALID_VIEW_FILES = [".html", ".html.haml", ".html.erb", ".html.slim"]
                 break
             case LanguageOption.GROOVY:
-                VALID_EXTENSION = GROOVY_EXTENSION
+                VALID_EXTENSION = ConstantData.GROOVY_EXTENSION
                 VALID_VIEW_FILES = []
                 break
             case LanguageOption.JAVA:
-                VALID_EXTENSION = JAVA_EXTENSION
+                VALID_EXTENSION = ConstantData.JAVA_EXTENSION
                 VALID_VIEW_FILES = []
                 break
         }
@@ -87,20 +63,20 @@ class Util {
 
     private static loadProperties(){
         ClassLoader loader = Thread.currentThread().getContextClassLoader()
-        InputStream is = loader.getResourceAsStream(PROPERTIES_FILE_NAME)
+        InputStream is = loader.getResourceAsStream(ConstantData.PROPERTIES_FILE_NAME)
         properties.load(is)
     }
 
     private static configureTasksFilePath(){
         String value = properties.'spgroup.task.file.path'
-        if(value!=null && !value.isEmpty()) return value.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        else return DEFAULT_TASK_FILE
+        if(value!=null && !value.isEmpty()) return value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        else return ConstantData.DEFAULT_TASK_FILE
     }
 
     private static configureRepositoryFolderPath(){
         String value = properties.'spgroup.task.repositories.path'
         if(value!=null && !value.isEmpty()){
-            value = value.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+            value = value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
             if(!value.endsWith(File.separator)) value += File.separator
         }
         else value = "repositories${File.separator}"
@@ -109,7 +85,7 @@ class Util {
 
     private static configureExcludedPath(){
         excludedPath = (properties.'spgroup.task.interface.path.toignore').split(",")*.replaceAll(" ", "")
-        return excludedPath*.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        return excludedPath*.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
     }
 
     private static configureTestCodeRegex(){
@@ -127,16 +103,16 @@ class Util {
         }
 
         if(File.separator == "\\"){
-            return regex_testCode.replaceAll(FILE_SEPARATOR_REGEX,
+            return regex_testCode.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                     Matcher.quoteReplacement(File.separator)+Matcher.quoteReplacement(File.separator))
         }
         else {
-            return regex_testCode.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+            return regex_testCode.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         }
     }
 
     static String configureGitRepositoryName(String url){
-        String name = url - GITHUB_URL - GIT_EXTENSION
+        String name = url - ConstantData.GITHUB_URL - ConstantData.GIT_EXTENSION
         return name.replaceAll("/", "_")
     }
 
@@ -154,7 +130,7 @@ class Util {
     static boolean isProductionCode(String path){
         if(path == null || path == "") false
         else if( (VALID_VIEW_FILES+VALID_EXTENSION).any{ path.endsWith(it)} &&
-                path ==~ /.*$PRODUCTION_FILES_RELATIVE_PATH$FILE_SEPARATOR_REGEX.*/ ) true
+                path ==~ /.*$PRODUCTION_FILES_RELATIVE_PATH$RegexUtil.FILE_SEPARATOR_REGEX.*/ ) true
         else false
     }
 
@@ -167,7 +143,7 @@ class Util {
     static Collection<String> findAllProductionFiles(Collection<String> files){
         files?.findAll{ file ->
             (VALID_VIEW_FILES+VALID_EXTENSION).any{file.endsWith(it)} &&
-                    file ==~ /.*$PRODUCTION_FILES_RELATIVE_PATH$FILE_SEPARATOR_REGEX.*/
+                    file ==~ /.*$PRODUCTION_FILES_RELATIVE_PATH$RegexUtil.FILE_SEPARATOR_REGEX.*/
         }
     }
 
@@ -180,7 +156,7 @@ class Util {
     static List<CodeChange> findAllProductionFilesFromCodeChanges(List<CodeChange> changes){
         changes?.findAll{ change ->
             (VALID_VIEW_FILES+VALID_EXTENSION).any{ change.filename.endsWith(it)} &&
-                    change.filename ==~ /.*$PRODUCTION_FILES_RELATIVE_PATH$FILE_SEPARATOR_REGEX.*/
+                    change.filename ==~ /.*$PRODUCTION_FILES_RELATIVE_PATH$RegexUtil.FILE_SEPARATOR_REGEX.*/
         }
     }
 
@@ -232,7 +208,7 @@ class Util {
 
     static boolean isGherkinCode(String path){
         if(path == null || path == "") false
-        else if(path.endsWith(FEATURE_FILENAME_EXTENSION)) true
+        else if(path.endsWith(ConstantData.FEATURE_FILENAME_EXTENSION)) true
         else false
     }
 
@@ -256,13 +232,13 @@ class Util {
         def files = findFilesFromDirectory(directory)
         switch (CODE_LANGUAGE){
             case LanguageOption.JAVA:
-                files = files.findAll{it.contains(JAVA_EXTENSION)}
+                files = files.findAll{it.contains(ConstantData.JAVA_EXTENSION)}
                 break
             case LanguageOption.GROOVY:
-                files = files.findAll{it.contains(GROOVY_EXTENSION)}
+                files = files.findAll{it.contains(ConstantData.GROOVY_EXTENSION)}
                 break
             case LanguageOption.RUBY:
-                files = files.findAll{it.contains(RUBY_EXTENSION)}
+                files = files.findAll{it.contains(ConstantData.RUBY_EXTENSION)}
                 break
             default: throw new InvalidLanguageException()
         }
@@ -272,13 +248,13 @@ class Util {
     static String stepFileExtension(){
         switch (CODE_LANGUAGE){
             case LanguageOption.JAVA:
-                return JAVA_EXTENSION
+                return ConstantData.JAVA_EXTENSION
                 break
             case LanguageOption.GROOVY:
-                return GROOVY_EXTENSION
+                return ConstantData.GROOVY_EXTENSION
                 break
             case LanguageOption.RUBY:
-                return RUBY_EXTENSION
+                return ConstantData.RUBY_EXTENSION
                 break
             default: throw new InvalidLanguageException()
         }
@@ -292,11 +268,11 @@ class Util {
 
         f?.eachDirRecurse{ dir ->
             dir.listFiles().each{
-                if(it.isFile()) files += it.absolutePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+                if(it.isFile()) files += it.absolutePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
             }
         }
         f?.eachFile{
-            if(it.isFile()) files += it.absolutePath.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+            if(it.isFile()) files += it.absolutePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         }
         files
     }
@@ -314,12 +290,12 @@ class Util {
 
     static findJarFilesFromDirectory(String directory){
         def files = findFilesFromDirectory(directory)
-        files.findAll{it.contains(JAR_FILENAME_EXTENSION)}
+        files.findAll{it.contains(ConstantData.JAR_FILENAME_EXTENSION)}
     }
 
     private static getClassPath(String className, String extension, Collection<String> projectFiles){
         def name = ClassUtils.convertClassNameToResourcePath(className)+extension
-        name = name.replaceAll(FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        name = name.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         projectFiles?.find{ it.endsWith(File.separator+name) }
     }
 

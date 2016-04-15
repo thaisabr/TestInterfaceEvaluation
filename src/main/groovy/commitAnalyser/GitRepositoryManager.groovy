@@ -1,14 +1,13 @@
 package commitAnalyser
 
-import util.Util
-
+import util.ConstantData
 
 class GitRepositoryManager {
 
     static List<GitRepository> repositories = []
 
     static GitRepository getRepository(String url){
-        def repository = repositories.find{ (it.url - Util.GIT_EXTENSION).equals(url) }
+        def repository = repositories.find{ (it.url - ConstantData.GIT_EXTENSION).equals(url) }
         if(!repository){
             repository = new GitRepository(url)
             repositories += repository

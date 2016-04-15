@@ -4,7 +4,7 @@ import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.expr.StaticMethodCallExpression
 import org.codehaus.groovy.control.SourceUnit
 import testCodeAnalyser.StepRegex
-import util.Util
+import util.ConstantData
 
 class GroovyStepRegexVisitor extends ClassCodeVisitorSupport {
 
@@ -25,7 +25,7 @@ class GroovyStepRegexVisitor extends ClassCodeVisitorSupport {
     @Override
     public void visitStaticMethodCallExpression(StaticMethodCallExpression call){
         super.visitStaticMethodCallExpression(call)
-        if (call.methodAsString in Util.STEP_KEYWORDS) {
+        if (call.methodAsString in ConstantData.STEP_KEYWORDS) {
             regexs += new StepRegex(path: path, value:call.arguments[0].text, line: call.lineNumber)
        }
     }

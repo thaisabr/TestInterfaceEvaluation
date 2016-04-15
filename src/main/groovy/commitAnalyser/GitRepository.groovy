@@ -25,6 +25,8 @@ import taskAnalyser.UnitFile
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
 import testCodeAnalyser.ruby.RubyTestCodeParser
+import util.ConstantData
+import util.RegexUtil
 import util.Util
 
 import java.util.regex.Matcher
@@ -43,7 +45,7 @@ class GitRepository {
     static int counter = 0 //used to compute branch name
 
     GitRepository(String url){
-        this.url = url + Util.GIT_EXTENSION
+        this.url = url + ConstantData.GIT_EXTENSION
         this.name = Util.configureGitRepositoryName(url)
         this.localPath = Util.REPOSITORY_FOLDER_PATH + name
         cloneRepository()
@@ -89,8 +91,8 @@ class GitRepository {
 
         List<DiffEntry> result = []
         diffs.each{
-            it.oldPath = it.oldPath.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-            it.newPath = it.newPath.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+            it.oldPath = it.oldPath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+            it.newPath = it.newPath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
             result += it
         }
 
@@ -117,8 +119,8 @@ class GitRepository {
 
         List<DiffEntry> result = []
         diffs.each{
-            it.oldPath = it.oldPath.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-            it.newPath = it.newPath.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+            it.oldPath = it.oldPath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+            it.newPath = it.newPath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
             result += it
         }
 
@@ -359,7 +361,7 @@ class GitRepository {
     private String extractFileContent(RevCommit commit, String filename) {
         def result = ""
         def git = Git.open(new File(localPath))
-        filename = filename.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
+        filename = filename.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
         RevWalk revWalk = new RevWalk(git.repository)
         TreeWalk treeWalk = generateTreeWalk(commit?.tree, filename)
         ObjectId objectId = treeWalk.getObjectId(0)
@@ -440,7 +442,7 @@ class GitRepository {
             //identifies changed step files
             List<StepDefinitionFile> stepChanges = testFiles?.findAll{ it.stepFile}*.stepFile
 
-            commits += new Commit(hash:c.name, message:c.fullMessage.replaceAll(Util.NEW_LINE_REGEX," "),
+            commits += new Commit(hash:c.name, message:c.fullMessage.replaceAll(RegexUtil.NEW_LINE_REGEX," "),
                     author:c.authorIdent.name, date:c.commitTime, productionChanges: prodFiles,
                     testChanges: testFiles, codeChanges: codeChanges, gherkinChanges:gherkinChanges,
                     unitChanges:unitChanges, stepChanges:stepChanges)
@@ -454,7 +456,7 @@ class GitRepository {
         def git = Git.open(new File(localPath))
         BlameCommand blamer = new BlameCommand(git.repository)
         blamer.setStartCommit(ObjectId.fromString(commit.name))
-        blamer.setFilePath(filename.replaceAll(Util.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/")))
+        blamer.setFilePath(filename.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/")))
         BlameResult blameResult = blamer.call()
 
         List<String> fileContent = extractFileContent(commit, filename)?.readLines()

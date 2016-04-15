@@ -3,7 +3,7 @@ package testCodeAnalyser.ruby
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.util.NoopVisitor
 import taskAnalyser.StepDefinition
-import util.Util
+import util.ConstantData
 
 /***
  * Visits source code files looking for step definitions. It is used when a commit changed a step definition without
@@ -24,7 +24,7 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
     @Override
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
-        if(iVisited.name in Util.STEP_KEYWORDS){
+        if(iVisited.name in ConstantData.STEP_KEYWORDS){
             RubyStepRegexVisitor regexVisitor = new RubyStepRegexVisitor(path)
             iVisited.accept(regexVisitor)
             if(!regexVisitor.regexs.empty){

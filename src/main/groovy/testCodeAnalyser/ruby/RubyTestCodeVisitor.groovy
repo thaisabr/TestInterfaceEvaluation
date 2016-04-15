@@ -3,7 +3,7 @@ package testCodeAnalyser.ruby
 import groovy.util.logging.Slf4j
 import org.jrubyparser.ast.HashNode
 import org.jrubyparser.ast.InstAsgnNode
-import  org.jrubyparser.ast.Node
+import org.jrubyparser.ast.Node
 import org.jrubyparser.ast.ArrayNode
 import org.jrubyparser.ast.CallNode
 import org.jrubyparser.ast.CaseNode
@@ -28,6 +28,7 @@ import org.jrubyparser.ast.VCallNode
 import org.jrubyparser.util.NoopVisitor
 import taskAnalyser.TaskInterface
 import testCodeAnalyser.TestCodeVisitor
+import util.ConstantData
 import util.Util
 import util.ruby.RubyUtil
 
@@ -393,7 +394,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                 registryStepCall(iVisited)
                 break
             default: //helper methods for visit can match such a condition
-                if(!(iVisited.name in Util.STEP_KEYWORDS) && !(iVisited.name in  Util.STEP_KEYWORDS_PT) ){
+                if(!(iVisited.name in ConstantData.STEP_KEYWORDS) && !(iVisited.name in  ConstantData.STEP_KEYWORDS_PT) ){
                     registryMethodCallFromSelf(iVisited)
                 }
         }

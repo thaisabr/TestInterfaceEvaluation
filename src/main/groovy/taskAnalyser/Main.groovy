@@ -1,41 +1,18 @@
 package taskAnalyser
 
 import groovy.util.logging.Slf4j
-import util.OutputManager
+import util.ConstantData
 import util.Util
 
 @Slf4j
 class Main {
 
-    static analyseMultipleProjects(){
-        def cvsFiles = Util.findFilesFromDirectory("tasks")
-        cvsFiles?.each{
-            log.info "<  Analysing tasks from '$it'  >"
-            TaskAnalyser.analyseGherkinInterface(it) //TaskAnalyser.analyseInterface(it)
-        }
-
-        cvsFiles = Util.findFilesFromDirectory("output")?.findAll{ it.endsWith(".csv") }
-        cvsFiles?.each{
-            log.info "<  Organizing tasks from '$it'  >"
-            OutputManager.organizeResult(it)
-        }
-
-        cvsFiles = Util.findFilesFromDirectory("output")?.findAll{ it.endsWith("-organized.csv") }
-        cvsFiles?.each{
-            log.info "<  Analysing similarity among tasks from '$it'  >"
-            OutputManager.analyseSimilarity(it)
-        }
-    }
-
-    static analyseProject(){
-        TaskAnalyser.analyseGherkinInterface() //TaskAnalyser.analyseInterface()
-        OutputManager.organizeResult()
-        OutputManager.analyseSimilarity()
-    }
-
     public static void main(String[] args){
-        //analyseMultipleProjects()
-        analyseProject()
+
+        TaskAnalyser.analyseAllForProject(Util.TASKS_FILE)
+
+        TaskAnalyser.analyseAllForMultipleProjects(ConstantData.DEFAULT_TASKS_FOLDER)
+
     }
 
 }

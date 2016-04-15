@@ -1,110 +1,84 @@
 package taskAnalyser
 
-import au.com.bytecode.opencsv.CSVWriter
-import evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
+import util.ConstantData
 import util.Util
 
 @Slf4j
 class TaskAnalyser {
 
-    private static searchForGherkinTasks = { tasks ->
-        tasks.findAll{ !it.changedGherkinFiles.empty }
-    }
-
-    private static searchForAcceptanceTestTasks = { tasks ->
-        tasks.findAll{ !it.changedGherkinFiles.empty || !it.changedStepDefinitions.empty }
-    }
-
-    private static computeTaskData(List<DoneTask> tasks, Closure searchRelevantTasks){
+    private static computeTaskData(List<DoneTask> tasks){
         log.info "Number of tasks: ${tasks.size()}"
+        def stepCounter = 0
         def gherkinCounter = 0
         def result = []
-        def relevantTasks = searchRelevantTasks(tasks)
 
-        relevantTasks?.each{ task ->
+        tasks?.each{ task ->
             def interfaces = task.computeInterfaces()
             def itest = interfaces.itest
             def stepCalls = itest.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
             def methods = itest.methods?.findAll{ it.type == "Object"}?.unique()
+            def methodsIdentity = ""
+            if(!methods.empty) methodsIdentity = methods*.name
+            if(!task.changedStepDefinitions.empty) stepCounter++
             if(!task.changedGherkinFiles.empty) gherkinCounter++
 
-            if(!methods.empty) {
-                result += [task:task, itest:itest, ireal:interfaces.ireal, methods:methods*.name,
-                           stepCalls:stepCalls, text:interfaces.itext]
-            }
-            else {
-                result += [task:task, itest:itest, ireal:interfaces.ireal, methods:"",
-                           stepCalls:stepCalls, text:interfaces.itext]
-            }
+            result += [task:task, itest:itest, ireal:interfaces.ireal, methods:methodsIdentity, stepCalls:stepCalls,
+                       text:interfaces.itext]
         }
 
-        log.info "Number of tasks that contains acceptance tests: ${relevantTasks.size()}"
+        log.info "Number of tasks that contains step definitions: $stepCounter"
         log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
-        [tasks:relevantTasks, testCounter:gherkinCounter, data:result]
+
+        [stepCounter:stepCounter, gherkinCounter:gherkinCounter, data:result]
     }
 
-    private static analyseTasksWithGherkinTest(List<DoneTask> tasks){
-        computeTaskData(tasks, searchForGherkinTasks)
+    private static generateResultForProject(String allTasksFile, String evaluationFile){
+        def result1 = DataManager.extractProductionAndTestTasks(allTasksFile)
+        def result2 = computeTaskData(result1.relevantTasks)
+        DataManager.saveAllResult(evaluationFile, result1.allTasksQuantity, result1.relevantTasks.size(), result2.stepCounter,
+                result2.gherkinCounter, result2.data)
     }
 
-    private static analyseTasksWithAcceptanceTest(List<DoneTask> tasks){
-        computeTaskData(tasks, searchForAcceptanceTestTasks)
-    }
+    static analyseAllForProject(String allTasksFile){
+        log.info "<  Analysing tasks from '$allTasksFile'  >"
+        File file = new File(allTasksFile)
+        def evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
+        def organizedFile = evaluationFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.ORGANIZED_FILE_SUFIX
+        def filteredFile = evaluationFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.FILTERED_FILE_SUFIX
+        def similarityFile = evaluationFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.SIMILARITY_FILE_SUFIX
+        generateResultForProject(allTasksFile, evaluationFile)
+        log.info "The results were saved!"
 
-    private static exportResult(def allTasksCounter, def tasksCounter,  def taskInterfaces){
-        exportResult(Util.DEFAULT_EVALUATION_FILE, allTasksCounter, tasksCounter, taskInterfaces)
-    }
+        log.info "<  Organizing tasks from '$evaluationFile'  >"
+        DataManager.organizeResultForSimilarityAnalysis(evaluationFile, organizedFile, filteredFile)
+        log.info "The results were saved!"
 
-    private static exportResult(def filename, def allTasksCounter, def tasksCounter, def taskData){
-        CSVWriter writer = new CSVWriter(new FileWriter(filename))
-        writer.writeNext("Number of tasks: $allTasksCounter")
-        writer.writeNext("Number of tasks that changed Gherkin files: $tasksCounter")
-        writer.writeNext("Number of tasks that contains acceptance tests: ${taskData?.size()}")
-        String[] header = ["Task","Date","#Devs","Commit_Message","ITest","IReal","Precision","Recall", "Methods_Unknown_Type", "#Step_Call", "IText"]
-        writer.writeNext(header)
-
-        taskData?.each{ entry ->
-            def precision = TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)
-            def recall = TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)
-            def dates =  entry?.task?.commits*.date?.flatten()?.sort()
-            if(dates) dates = dates.collect{ new Date(it*1000).format('dd-MM-yyyy') }.unique()
-            else dates = []
-            def devs = entry?.task?.commits*.author?.flatten()?.unique()?.size()
-            def msgs = entry?.task?.commits*.message?.flatten()
-            String[] line = [entry.task.id, dates, devs, msgs, entry.itest, entry.ireal, precision, recall,
-                             entry.methods, entry.stepCalls, entry.text]
-            writer.writeNext(line)
-        }
-
-        writer.close()
+        log.info "<  Analysing similarity among tasks from '$filteredFile'  >"
+        DataManager.analyseSimilarity(filteredFile, similarityFile)
         log.info "The results were saved!"
     }
 
-    static analyseGherkinInterface(){
-        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV()
-        def result = analyseTasksWithGherkinTest(tasks)
-        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), result.testCounter, result.data)
+    static analyseAllForMultipleProjects(def folder){
+        def cvsFiles = Util.findFilesFromDirectory(folder).findAll{ it.endsWith(ConstantData.CSV_FILE_EXTENSION)}
+        cvsFiles?.each{
+            analyseAllForProject(it)
+        }
     }
 
-    static analyseGherkinInterface(String filename){
-        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV(filename)
-        def result = analyseTasksWithGherkinTest(tasks)
-        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), result.testCounter, result.data)
+    static analysePrecisionAndRecallForProject(String allTasksFile){
+        File file = new File(allTasksFile)
+        def evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
+        def organizedFile = evaluationFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.ORGANIZED_FILE_SUFIX
+        generateResultForProject(allTasksFile, evaluationFile)
+        DataManager.organizeResult(evaluationFile, organizedFile)
     }
 
-    static analyseInterface(){
-        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV()
-        def result = analyseTasksWithAcceptanceTest(tasks)
-        exportResult(Util.DEFAULT_EVALUATION_FILE, tasks.size(), result.testCounter, result.data)
-    }
-
-    static analyseInterface(String filename){
-        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV(filename)
-        def result = analyseTasksWithAcceptanceTest(tasks)
-        File file = new File(filename)
-        def outputFile = Util.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
-        exportResult(outputFile, tasks.size(), result.testCounter, result.data)
+    static analysePrecisionAndRecallForMultipleProjects(String folder){
+        def cvsFiles = Util.findFilesFromDirectory(folder).findAll{ it.endsWith(ConstantData.CSV_FILE_EXTENSION)}
+        cvsFiles?.each{
+            analysePrecisionAndRecallForProject(it)
+        }
     }
 
 }

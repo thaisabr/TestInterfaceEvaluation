@@ -2,7 +2,7 @@ package testCodeAnalyser.ruby.unitTest
 
 import taskAnalyser.DoneTask
 import taskAnalyser.TaskInterface
-import taskAnalyser.TaskSearchManager
+import taskAnalyser.DataManager
 
 
 class Main_UnitTestInterface {
@@ -16,7 +16,7 @@ class Main_UnitTestInterface {
 
     public static void main(String[] args){
         /********************************************* RUBY ***********************************************************/
-        List<DoneTask> tasks = TaskSearchManager.extractProductionAndTestTasksFromCSV()
+        List<DoneTask> tasks = DataManager.extractProductionAndTestTasks()
         println "number of tasks: ${tasks.size()}"
 
         /* RUBY: TEST INTERFACE BASED ON ACCEPTANCE TEST CODE */

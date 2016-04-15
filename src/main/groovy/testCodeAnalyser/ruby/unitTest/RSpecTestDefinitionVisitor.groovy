@@ -5,7 +5,7 @@ import org.jrubyparser.ast.ConstNode
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.ast.StrNode
 import org.jrubyparser.util.NoopVisitor
-
+import util.ConstantData
 import util.Util
 
 class RSpecTestDefinitionVisitor extends NoopVisitor {
@@ -28,7 +28,7 @@ class RSpecTestDefinitionVisitor extends NoopVisitor {
             def index2 = this.path.indexOf("_spec")
 
             if(index1!=-1 && index2!=-1){
-                def name = this.path.substring(index1+1,index2)+Util.RUBY_EXTENSION
+                def name = this.path.substring(index1+1,index2)+ConstantData.RUBY_EXTENSION
                 //def name = File.separator+value.name.toLowerCase()+Util.RUBY_EXTENSION
                 def path = Util.findAllProductionFiles(projectFiles).find{ it.endsWith(name) }
                 productionClass = [name:value.name, path:path]

@@ -1,4 +1,4 @@
-package taskAnalyser
+package taskAnalyser.task
 
 import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition

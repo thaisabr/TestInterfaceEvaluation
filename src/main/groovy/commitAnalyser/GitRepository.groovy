@@ -4,7 +4,7 @@ import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
 import org.eclipse.jgit.treewalk.AbstractTreeIterator
 import org.eclipse.jgit.treewalk.CanonicalTreeParser
-import taskAnalyser.GherkinFile
+import taskAnalyser.task.GherkinFile
 import org.eclipse.jgit.api.BlameCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.blame.BlameResult
@@ -19,9 +19,9 @@ import org.eclipse.jgit.revwalk.RevTree
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.PathFilter
-import taskAnalyser.StepDefinition
-import taskAnalyser.StepDefinitionFile
-import taskAnalyser.UnitFile
+import taskAnalyser.task.StepDefinition
+import taskAnalyser.task.StepDefinitionFile
+import taskAnalyser.task.UnitFile
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
 import testCodeAnalyser.ruby.RubyTestCodeParser

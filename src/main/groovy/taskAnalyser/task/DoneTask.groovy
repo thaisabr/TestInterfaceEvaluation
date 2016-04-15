@@ -1,4 +1,4 @@
-package taskAnalyser
+package taskAnalyser.task
 
 import commitAnalyser.Commit
 import groovy.time.TimeCategory

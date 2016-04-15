@@ -4,8 +4,8 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.Phases
 import org.codehaus.groovy.control.SourceUnit
-import taskAnalyser.StepDefinition
-import taskAnalyser.UnitFile
+import taskAnalyser.task.StepDefinition
+import taskAnalyser.task.UnitFile
 import testCodeAnalyser.StepRegex
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.TestCodeVisitor

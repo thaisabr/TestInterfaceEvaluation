@@ -1,4 +1,4 @@
-package taskAnalyser
+package taskAnalyser.task
 
 /***
  * Represents a changed unit test file.

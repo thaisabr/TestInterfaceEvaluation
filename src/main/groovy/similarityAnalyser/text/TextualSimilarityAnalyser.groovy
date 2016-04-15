@@ -7,7 +7,7 @@ import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Terms
 import org.apache.lucene.index.TermsEnum
 import org.apache.lucene.util.BytesRef
-import taskAnalyser.Task
+import taskAnalyser.task.Task
 
 class TextualSimilarityAnalyser {
     IndexManager indexManager

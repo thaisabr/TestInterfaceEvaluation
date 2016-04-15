@@ -5,7 +5,7 @@ import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.expr.*
 import org.codehaus.groovy.control.SourceUnit
-import taskAnalyser.TaskInterface
+import taskAnalyser.task.TaskInterface
 import testCodeAnalyser.TestCodeVisitor
 import util.Util
 import util.groovy.GroovyUtil

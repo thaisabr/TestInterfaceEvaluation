@@ -5,8 +5,8 @@ import gherkin.ParserException
 import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
 import org.eclipse.jgit.revwalk.RevCommit
-import taskAnalyser.GherkinFile
-import taskAnalyser.StepDefinition
+import taskAnalyser.task.GherkinFile
+import taskAnalyser.task.StepDefinition
 
 
 class GherkinManager {

@@ -3,8 +3,8 @@ package caseStudy
 import au.com.bytecode.opencsv.CSVWriter
 import evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
-import taskAnalyser.DoneTask
-import taskAnalyser.TodoTask
+import taskAnalyser.task.DoneTask
+import taskAnalyser.task.TodoTask
 import util.ConstantData
 
 @Slf4j

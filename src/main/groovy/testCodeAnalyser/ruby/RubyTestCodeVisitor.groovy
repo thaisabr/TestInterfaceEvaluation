@@ -26,7 +26,7 @@ import org.jrubyparser.ast.StrNode
 import org.jrubyparser.ast.SymbolNode
 import org.jrubyparser.ast.VCallNode
 import org.jrubyparser.util.NoopVisitor
-import taskAnalyser.TaskInterface
+import taskAnalyser.task.TaskInterface
 import testCodeAnalyser.TestCodeVisitor
 import util.ConstantData
 import util.Util

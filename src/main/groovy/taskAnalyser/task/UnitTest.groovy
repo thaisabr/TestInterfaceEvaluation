@@ -1,4 +1,4 @@
-package taskAnalyser
+package taskAnalyser.task
 
 /***
  * Represents a generic unit test. Different unit test frameworks model such a test in different ways.

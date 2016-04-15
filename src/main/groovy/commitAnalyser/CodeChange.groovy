@@ -1,7 +1,7 @@
 package commitAnalyser
 
-import taskAnalyser.GherkinFile
-import taskAnalyser.StepDefinitionFile
+import taskAnalyser.task.GherkinFile
+import taskAnalyser.task.StepDefinitionFile
 
 /***
  * Represents a code change by a commit.

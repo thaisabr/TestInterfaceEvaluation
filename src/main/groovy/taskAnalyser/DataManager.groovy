@@ -8,6 +8,7 @@ import evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
 import similarityAnalyser.test.TestSimilarityAnalyser
 import similarityAnalyser.text.TextualSimilarityAnalyser
+import taskAnalyser.task.DoneTask
 import util.ConstantData
 import util.Util
 

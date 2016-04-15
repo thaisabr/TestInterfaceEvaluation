@@ -1,6 +1,7 @@
 package taskAnalyser
 
 import groovy.util.logging.Slf4j
+import taskAnalyser.task.DoneTask
 import util.ConstantData
 import util.Util
 

@@ -1,4 +1,4 @@
-package taskAnalyser
+package taskAnalyser.task
 
 import gherkin.Parser
 import gherkin.ast.Feature

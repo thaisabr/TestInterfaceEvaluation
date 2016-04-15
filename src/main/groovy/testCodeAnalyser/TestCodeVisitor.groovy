@@ -1,6 +1,6 @@
 package testCodeAnalyser
 
-import taskAnalyser.TaskInterface
+import taskAnalyser.task.TaskInterface
 
 
 interface TestCodeVisitor {

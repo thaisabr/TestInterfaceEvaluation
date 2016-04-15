@@ -2,8 +2,8 @@ package commitAnalyser
 
 import gherkin.ParserException
 import org.eclipse.jgit.revwalk.RevCommit
-import taskAnalyser.StepDefinition
-import taskAnalyser.StepDefinitionFile
+import taskAnalyser.task.StepDefinition
+import taskAnalyser.task.StepDefinitionFile
 import testCodeAnalyser.TestCodeAbstractParser
 
 

@@ -2,7 +2,7 @@ package testCodeAnalyser.ruby
 
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.util.NoopVisitor
-import taskAnalyser.StepDefinition
+import taskAnalyser.task.StepDefinition
 import util.ConstantData
 
 /***

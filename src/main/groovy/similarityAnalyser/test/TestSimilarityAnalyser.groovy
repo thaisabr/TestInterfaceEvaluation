@@ -2,7 +2,7 @@ package similarityAnalyser.test
 
 import org.apache.commons.math3.linear.ArrayRealVector
 import org.apache.commons.math3.linear.RealVector
-import taskAnalyser.TaskInterface
+import taskAnalyser.task.TaskInterface
 
 class TestSimilarityAnalyser {
 

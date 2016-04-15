@@ -1,6 +1,6 @@
 package evaluation
 
-import taskAnalyser.TaskInterface
+import taskAnalyser.task.TaskInterface
 
 class TaskInterfaceEvaluator {
 

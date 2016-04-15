@@ -1,4 +1,4 @@
-package taskAnalyser
+package taskAnalyser.task
 
 import commitAnalyser.GitRepository
 import commitAnalyser.GitRepositoryManager

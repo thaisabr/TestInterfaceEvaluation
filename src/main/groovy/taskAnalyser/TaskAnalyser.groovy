@@ -44,9 +44,11 @@ class TaskAnalyser {
         log.info "<  Analysing tasks from '$allTasksFile'  >"
         File file = new File(allTasksFile)
         def evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
-        def organizedFile = evaluationFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.ORGANIZED_FILE_SUFIX
-        def filteredFile = evaluationFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.FILTERED_FILE_SUFIX
-        def similarityFile = evaluationFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.SIMILARITY_FILE_SUFIX
+        def name = evaluationFile - ConstantData.CSV_FILE_EXTENSION
+        def organizedFile = name + ConstantData.ORGANIZED_FILE_SUFIX
+        def filteredFile = name + ConstantData.FILTERED_FILE_SUFIX
+        def similarityFile = name + ConstantData.SIMILARITY_FILE_SUFIX
+        def similarityOrganizedFile = name + ConstantData.SIMILARITY_ORGANIZED_FILE_SUFIX
         generateResultForProject(allTasksFile, evaluationFile)
         log.info "The results were saved!"
 
@@ -56,6 +58,10 @@ class TaskAnalyser {
 
         log.info "<  Analysing similarity among tasks from '$filteredFile'  >"
         DataManager.analyseSimilarity(filteredFile, similarityFile)
+        log.info "The results were saved!"
+
+        log.info "<  Organizing tasks from '$similarityFile'  >"
+        DataManager.organizeSimilarityResult(similarityFile, similarityOrganizedFile)
         log.info "The results were saved!"
     }
 

@@ -14,6 +14,7 @@ class ConstantData {
     public static final String ORGANIZED_FILE_SUFIX = "-organized.csv"
     public static final String FILTERED_FILE_SUFIX = "-filtered.csv"
     public static final String SIMILARITY_FILE_SUFIX = "-similarity.csv"
+    public static final String SIMILARITY_ORGANIZED_FILE_SUFIX = "-similarityOrganized.csv"
 
     public static final String NON_PRIMITIVE_ARRAY_PREFIX = "[L"
     public static final String CSV_FILE_EXTENSION = ".csv"

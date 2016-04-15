@@ -128,7 +128,6 @@ class DataManager {
     }
 
     private static organizeAllResult(String evaluationFile, String organizedFile, String similarityFile, boolean similarityAnalysis){
-        log.info "Organizing results..."
         if(!evaluationFile || evaluationFile.empty) return
         List<String[]> entries = readAllResult(evaluationFile)
         if(entries.size() <= 4) return
@@ -148,13 +147,17 @@ class DataManager {
         def validTasks = entries - noTest
         def emptyITest = validTasks.findAll{ it[14].empty }
         def others = validTasks - emptyITest
+        def zeroPrecisionAndRecall = others.findAll{ it[16] == "0.0" && it[17] == "0.0" }
 
         writer.writeNext("Number of valid tasks (ones that have acceptance test and no empty IReal): ${validTasks.size()}")
         writer.writeNext("Number of tasks that have acceptance test and empty ITest: ${emptyITest.size()}")
         writer.writeNext("Number of tasks that have test and no empty ITest: ${others.size()}")
+        writer.writeNext("Number of tasks that have no empty ITest and precision e recall 0.0: ${zeroPrecisionAndRecall.size()}")
+
         writer.writeNext(resultHeader2)
         writeResult(emptyITest, writer)
-        writeResult(others, writer)
+        writeResult(zeroPrecisionAndRecall, writer)
+        writeResult(others-zeroPrecisionAndRecall, writer)
         writer.close()
 
         if(similarityAnalysis) {
@@ -233,9 +236,7 @@ class DataManager {
         organizeAllResult(evaluationFile, organizedFile, similarityFile, true)
     }
 
-
     static analyseSimilarity(String filteredFile, String similarityFile){
-        log.info "Checking similarity among tasks..."
         if(!filteredFile || filteredFile.empty) return
         List<String[]> entries = readAllResult(filteredFile)
         if(entries.size() <= 4) return
@@ -282,6 +283,30 @@ class DataManager {
         }
 
         writer.writeAll(lines)
+        writer.close()
+    }
+
+    static organizeSimilarityResult(String similarityFile, String organizedFile){
+        if(!similarityFile || similarityFile.empty) return
+        List<String[]> entries = readAllResult(similarityFile)
+        if(entries.size() <= 2) return
+
+        CSVWriter writer = new CSVWriter(new FileWriter(organizedFile))
+        writer.writeNext(entries.get(0))
+        String[] resultHeader1 = entries.get(1).findAll{!it.allWhitespace}
+        entries = entries.subList(2, entries.size())
+
+        //Positions: 2-text; 3-test; 4-real
+        def zeroReal = entries.findAll{ it[4] == "0.0" }.sort{ it[3] as BigDecimal }
+        entries = entries - zeroReal
+        def oneReal = entries.findAll{ it[4] == "1.0"}.sort{ -(it[3] as BigDecimal) }
+        entries = entries - oneReal
+        def others = entries.sort{ -(it[4] as BigDecimal) }.sort{ -(it[3] as BigDecimal) }
+
+        writer.writeNext(resultHeader1)
+        writer.writeAll(zeroReal)
+        writer.writeAll(oneReal)
+        writer.writeAll(others)
         writer.close()
     }
 

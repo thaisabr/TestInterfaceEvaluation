@@ -36,8 +36,7 @@ class StepDefinitionManager {
         def newStepDefinitions = parseStepDefinitionFile(path, content, commit.name, parser)
 
         if(newStepDefinitions && !newStepDefinitions.isEmpty()){
-            changedStepDefFile = new StepDefinitionFile(commitHash:commit.name, path:path,
-                    changedStepDefinitions:newStepDefinitions)
+            changedStepDefFile = new StepDefinitionFile(path:path, changedStepDefinitions:newStepDefinitions)
         }
         changedStepDefFile
     }

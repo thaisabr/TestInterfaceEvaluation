@@ -8,5 +8,6 @@ interface TestCodeVisitor {
     TaskInterface getTaskInterface()
     void setLastVisitedFile(String path)
     def getCalledSteps()
+    MethodToAnalyse getStepDefinitionMethod()
 
 }

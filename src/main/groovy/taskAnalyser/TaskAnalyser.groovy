@@ -16,15 +16,14 @@ class TaskAnalyser {
 
         tasks?.each{ task ->
             def interfaces = task.computeInterfaces()
-            def itest = interfaces.itest
-            def stepCalls = itest.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
-            def methods = itest.methods?.findAll{ it.type == "Object"}?.unique()
+            def stepCalls = interfaces.itest.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
+            def methods = interfaces.itest.methods?.findAll{ it.type == "Object"}?.unique()
             def methodsIdentity = ""
             if(!methods.empty) methodsIdentity = methods*.name
             if(!task.changedStepDefinitions.empty) stepCounter++
             if(!task.changedGherkinFiles.empty) gherkinCounter++
 
-            result += [task:task, itest:itest, ireal:interfaces.ireal, methods:methodsIdentity, stepCalls:stepCalls,
+            result += [task:task, itest:interfaces.itest, ireal:interfaces.ireal, methods:methodsIdentity, stepCalls:stepCalls,
                        text:interfaces.itext]
         }
 
@@ -42,7 +41,6 @@ class TaskAnalyser {
     }
 
     static analyseAllForProject(String allTasksFile){
-        log.info "<  Analysing tasks from '$allTasksFile'  >"
         File file = new File(allTasksFile)
         def evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
         def name = evaluationFile - ConstantData.CSV_FILE_EXTENSION
@@ -50,6 +48,8 @@ class TaskAnalyser {
         def filteredFile = name + ConstantData.FILTERED_FILE_SUFIX
         def similarityFile = name + ConstantData.SIMILARITY_FILE_SUFIX
         def similarityOrganizedFile = name + ConstantData.SIMILARITY_ORGANIZED_FILE_SUFIX
+
+        log.info "<  Analysing tasks from '$allTasksFile'  >"
         generateResultForProject(allTasksFile, evaluationFile)
         log.info "The results were saved!"
 

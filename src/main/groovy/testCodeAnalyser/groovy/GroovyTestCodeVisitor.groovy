@@ -6,6 +6,7 @@ import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.expr.*
 import org.codehaus.groovy.control.SourceUnit
 import taskAnalyser.task.TaskInterface
+import testCodeAnalyser.MethodToAnalyse
 import testCodeAnalyser.TestCodeVisitor
 import util.Util
 import util.groovy.GroovyUtil
@@ -166,6 +167,11 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
             def className = expression.objectExpression.type.name
             taskInterface.accessedProperties += [name:expression.propertyAsString, type:className, file:path]
         }
+    }
+
+    @Override
+    MethodToAnalyse getStepDefinitionMethod() {
+        return null
     }
 
 }

@@ -1,13 +1,15 @@
 package testCodeAnalyser
 
-import gherkin.ast.Background
-import gherkin.ast.ScenarioDefinition
+import gherkin.ast.Scenario
+import gherkin.ast.ScenarioOutline
+import gherkin.ast.Step
 import groovy.util.logging.Slf4j
-import taskAnalyser.GherkinFile
-import taskAnalyser.StepDefinition
-import taskAnalyser.StepDefinitionFile
-import taskAnalyser.TaskInterface
-import taskAnalyser.UnitFile
+import taskAnalyser.task.GherkinFile
+import taskAnalyser.task.StepDefinition
+import taskAnalyser.task.StepDefinitionFile
+import taskAnalyser.task.TaskInterface
+import taskAnalyser.task.UnitFile
+import util.RegexUtil
 import util.Util
 
 
@@ -25,6 +27,10 @@ abstract class TestCodeAbstractParser {
     Set methods
     List<String> projectFiles
     List<String> viewFiles
+    static final ARGS_REGEX = /(["'])(?:(?=(\\?))\2.)*?\1/
+
+    protected Set compilationErrors
+    Set matchStepErrors
 
     /***
      * Initializes fields used to link step declaration and code.
@@ -38,26 +44,63 @@ abstract class TestCodeAbstractParser {
         methods = [] as Set
         projectFiles = []
         viewFiles = []
+        compilationErrors = [] as Set
+        matchStepErrors = [] as Set
+    }
+
+    private organizeMatchStepErrors(){
+        def result = [] as Set
+        def files = matchStepErrors*.path.unique()
+        files.each{ file ->
+            def index = file.indexOf(repositoryPath)
+            def name = index>=0 ? file.substring(index)-(repositoryPath+File.separator) : file
+            def lines = matchStepErrors.findAll{ it.path==file }*.line
+            result += [path:name, lines: lines.unique().sort()]
+        }
+        result
+    }
+
+    private organizeCompilationErrors(){
+        def result = [] as Set
+        def files = compilationErrors*.path.unique()
+        files.each{ file ->
+            def index = file.indexOf(repositoryPath)
+            def name = index>=0 ? file.substring(index)-(repositoryPath+File.separator) : file
+            def msgs = compilationErrors.findAll{ it.path==file }*.msg
+            result += [path:name, msgs: msgs.unique()]
+        }
+        result
     }
 
     /***
      * Matches step declaration and code
      */
-    private List<StepCode> extractStepCode(List<GherkinFile> gherkinFiles){
+    private List<StepCode> extractAcceptanceTest(List<GherkinFile> gherkinFiles){
         List<AcceptanceTest> acceptanceTests = []
         gherkinFiles?.each { gherkinFile ->
-            /* finds step code for changed scenario definitions from a Gherkin file */
+            /* finds step code of background from a Gherkin file */
+            List<StepCode> backgroundCode = []
+            if(gherkinFile.feature.background) {
+                backgroundCode = findCodeForSteps(gherkinFile.feature.background.steps, gherkinFile.path)
+            }
+
+            /* finds step code of changed scenario definitions from a Gherkin file */
             gherkinFile?.changedScenarioDefinitions?.each { definition ->
-                def test = findStepCode(definition, gherkinFile.feature.background, gherkinFile.path)
-                if(test) acceptanceTests += test
+                def test = configureAcceptanceTest(definition, gherkinFile.path)
+                if(test) {
+                    if(!backgroundCode.empty){
+                        test.stepCodes = (test.stepCodes + backgroundCode).unique()
+                    }
+                    acceptanceTests += test
+                }
             }
         }
-        acceptanceTests?.each { log.info it.toString() }
 
-        return acceptanceTests*.stepCodes?.flatten()?.unique()
+        acceptanceTests?.each { log.info it.toString() }
+        acceptanceTests
     }
 
-    private configureProperties(){
+    def configureProperties(){
         projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         configureRegexList() // Updates regex list used to match step definition and step code
         configureMethodsList()
@@ -72,41 +115,86 @@ abstract class TestCodeAbstractParser {
 
     private configureMethodsList(){
         methods = []
-        def filesForSearchMethods = Util.findFilesFromDirectoryByLanguage(repositoryPath+File.separator+Util.PRODUCTION_FILES_RELATIVE_PATH)
-        filesForSearchMethods += Util.findFilesFromDirectoryByLanguage(repositoryPath+File.separator+Util.GHERKIN_FILES_RELATIVE_PATH)
-        filesForSearchMethods += Util.findFilesFromDirectoryByLanguage(repositoryPath+File.separator+Util.UNIT_TEST_FILES_RELATIVE_PATH)
-        filesForSearchMethods += Util.findFilesFromDirectoryByLanguage(repositoryPath+File.separator+"lib")
+        def filesForSearchMethods = []
+        Util.VALID_FOLDERS.each{ folder ->
+            filesForSearchMethods += Util.findFilesFromDirectoryByLanguage(repositoryPath + File.separator + folder)
+        }
         filesForSearchMethods.each{ methods += doExtractMethodDefinitions(it) }
     }
 
-    private identifyMethodsPerFileToVisitByStepCalls(def stepCalls){
-        def files = []
+    private List<FileToAnalyse> identifyMethodsPerFileToVisitByStepCalls(List<StepCall> stepCalls){
+        List<FileToAnalyse> files = []
         stepCalls?.unique{ it.text }?.each{ stepCall ->
-            def stepCode = findStepCode(stepCall.text, stepCall.path, stepCall.line)
-            if(stepCode) files += stepCode
+            List<FileToAnalyse> stepCode = findStepCode(stepCall, true)
+            if(stepCode && !stepCode.empty) files += stepCode
         }
-        identifyMethodsPerFile(files)
+        identifyMethodsPerFile(files) //talvez seja desnecessário (checar com exemplo em que files tenha mais de um valor)
     }
 
-    private static identifyMethodsPerFile(def map1){
-        def result = []
-        def files = map1*.path?.unique()
+    List<FileToAnalyse> findStepCode(StepCall call, boolean extractArgs) {
+        def calledSteps = []  //path, line, args
+        def stepsCode = [] //keywords path, lines
+        List<FileToAnalyse> result = []
+
+        /* find step declaration */
+        def stepCodeMatch = regexList?.findAll{ call.text ==~ it.value }
+        if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
+            def args = []
+            if(extractArgs) args = extractArgsFromStepText(call.text, stepCodeMatch.get(0).value)
+
+            if(stepCodeMatch.size()==1) {
+                stepCodeMatch = stepCodeMatch.get(0)
+                calledSteps += [path: stepCodeMatch.path, line: stepCodeMatch.line, args: args]
+            } else {
+                log.warn "There are many implementations for step code (findStepCode(stepText,path,line)): ${call.text}; " +
+                        "${call.path} (${call.line})"
+                stepCodeMatch?.each{
+                    log.warn it.toString()
+                    calledSteps += [path: it.path, line:it.line, args: args]
+                }
+            }
+        } else {
+            log.warn "Step code was not found (findStepCode(stepText,path,line)): ${call.text}; ${call.path} (${call.line})"
+            matchStepErrors += [path:call.path, line:call.line]
+        }
+
+        /* organizes step declarations in files */
+        def files = (calledSteps*.path)?.flatten()?.unique()
         files?.each{ file ->
-            def entries = map1?.findAll{ it.path == file }
-            if(entries) result += [path:file, lines:entries*.lines?.flatten()?.unique()?.sort()]
+            def codes = calledSteps.findAll{ it.path == file }
+            if(codes){
+                def methodsToAnalyse = []
+                codes.each{ code ->
+                    methodsToAnalyse += new MethodToAnalyse(line: code.line, args: code.args)
+                }
+                result += new FileToAnalyse(path: file, methods:methodsToAnalyse.unique())
+            }
         }
         result
     }
 
-    private static updateStepFiles(def oldFiles, def newFiles){
-        def result = []
-        newFiles?.each{ stepFile ->
-            def visited = oldFiles?.findAll{ it.path == stepFile.path }
-            if(!visited) result += stepFile
+    private static identifyMethodsPerFile(List<FileToAnalyse> filesToAnalyse){
+        List<FileToAnalyse> result = []
+        def files = filesToAnalyse*.path?.unique()
+        files?.each{ file ->
+            def entries = filesToAnalyse?.findAll{ it.path == file }
+            if(entries) {
+                def methodsToAnalyse = entries*.methods.flatten()
+                result += new FileToAnalyse(path: file, methods:methodsToAnalyse)
+            }
+        }
+        result
+    }
+
+    private static updateStepFiles(List<FileToAnalyse> oldFiles, List<FileToAnalyse> newFiles){
+        List<FileToAnalyse> result = []
+        newFiles?.each{ newFile ->
+            def visited = oldFiles?.findAll{ it.path == newFile.path }
+            if(!visited) result += newFile
             else{
-                def lines = visited*.lines?.flatten()
-                def difflines = stepFile.lines - lines
-                if(!difflines.empty) result += [path: stepFile.path, lines:difflines]
+                def visitedMethods= visited*.methods.flatten()
+                def newMethods = newFile.methods - visitedMethods
+                if(!newMethods.empty) result += new FileToAnalyse(path: newFile.path, methods: newMethods)
             }
         }
         result
@@ -118,25 +206,29 @@ abstract class TestCodeAbstractParser {
      * @param stepCodes list of related stepCodes
      * @return a list of path (step code path) and lines (start line of step codes) pairs
      */
-    static identifyMethodsPerFileToVisit(List<StepCode> stepCodes){
-        def result = []
+    static List<FileToAnalyse> identifyMethodsPerFileToVisit(List<StepCode> stepCodes){
+        List<FileToAnalyse> result = []
         def files = (stepCodes*.codePath)?.flatten()?.unique()
         files?.each{ file ->
             def codes = stepCodes.findAll{ it.codePath == file }
-            if(codes){
-                result += [path: file, lines: (codes*.line)?.flatten()?.unique()?.sort()]
+            List<MethodToAnalyse> methods = []
+            codes?.each{
+                methods += new MethodToAnalyse(line: it.line, args:it.args)
             }
+            if(!methods.empty) result += new FileToAnalyse(path: file, methods: methods.unique())
+
         }
         result
     }
 
-    static collapseFilesToVisit(def map1, def map2){
-        def sum = map1+map2
-        def result = []
-        def files = (map1*.path + map2*.path)?.unique()
+    static List<FileToAnalyse> collapseFilesToVisit(List<FileToAnalyse> files1, List<FileToAnalyse> files2){
+        List<FileToAnalyse> result = []
+        def sum = files1+files2
+        def files = sum*.path.unique()
         files?.each{ file ->
-            def entries = sum?.findAll{ it.path == file }
-            result += [path:file, lines:entries*.lines?.flatten()?.unique()?.sort()]
+            def entries = sum.findAll{ it.path == file }
+            def methodsToAnalyse = entries*.methods.flatten().unique()
+            result += new FileToAnalyse(path:file, methods:methodsToAnalyse)
         }
         result
     }
@@ -150,8 +242,8 @@ abstract class TestCodeAbstractParser {
      * @return a list of methods grouped by path.
      */
     static listFilesToVisit(def lastCalledMethods, def allVisitedFiles){
-        def methods = listTestMethodsToVisit(lastCalledMethods)
-
+        def validCalledMethods = lastCalledMethods.findAll{ it.file!=null }
+        def methods = listTestMethodsToVisit(validCalledMethods)
         def filesToVisit = []
         methods.each{ file ->
             def match = allVisitedFiles?.find{ it.path == file.path }
@@ -192,41 +284,36 @@ abstract class TestCodeAbstractParser {
         return result
     }
 
-    def findStepCode(String stepText, String path, int line) {
-        def calledSteps = [] //keywords path, line
-        def stepsCode = [] //keywords path, lines
+    static List<String> extractStepArgs(Step step, String regex){
+        List<String> args = (step.text =~ ARGS_REGEX).collect{ it.getAt(0).toString().trim().replaceAll(/(["'])/,"") }
+        if(!args) args = []
+        args
+    }
 
-        for(def i=0; i<Util.STEP_KEYWORDS.size(); i++){
-            def keyword = Util.STEP_KEYWORDS.get(i)
-            if(stepText.startsWith(keyword)){
-                stepText = stepText.replaceFirst(keyword,"").trim()
-                break
+    static List<String> extractArgsFromStepText(String text, String regex){
+        List<String> args = []
+        def matcher = (text =~ /${regex}/)
+        if(matcher){
+            def counter = matcher.groupCount()
+            for(int i=1; i<=counter; i++){
+                def arg = matcher[0][i]
+                if(arg) args += arg
             }
         }
+        args
+    }
 
-        def stepCodeMatch = regexList?.findAll{ stepText ==~ it.value }
-        if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
-            if(stepCodeMatch.size()==1) {
-                stepCodeMatch = stepCodeMatch.get(0)
-                calledSteps += [path: stepCodeMatch.path, line:stepCodeMatch.line]
-            } else {
-                log.warn "There are many implementations for step code (findStepCode(stepText,path,line)): $stepText; $path ($line})"
-                stepCodeMatch?.each{ log.warn it.toString() }
-            }
-        } else {
-            log.warn "Step code was not found (findStepCode(stepText,path,line)): $stepText; $path ($line)"
-        }
-
-        def files = (calledSteps*.path)?.flatten()?.unique()
-        files?.each{ file ->
-            def codes = calledSteps.findAll{ it.path == file }
-            if(codes){
-                stepsCode += [path: file, lines: (codes*.line)?.flatten()?.unique()?.sort()]
+    static List<String> extractArgsFromStepText(String text){
+        List<String> args = []
+        def matcher = (text =~ RegexUtil.SCENARIO_OUTLINE_ARGS_REGEX)
+        if(matcher){
+            def counter = matcher.groupCount()
+            for(int i=1; i<=counter; i++){
+                def arg = matcher[0][i]
+                if(arg) args += arg
             }
         }
-
-        if(stepsCode.empty) null
-        else stepsCode
+        args
     }
 
     /***
@@ -237,103 +324,110 @@ abstract class TestCodeAbstractParser {
      * @param scenarioDefinitionPath path of Gherkin file that contains the scenario definition
      * @return AcceptanceTest object that represents a match between scenario definition and implementation.
      */
-    AcceptanceTest findStepCode(ScenarioDefinition scenarioDefinition, Background background, String scenarioDefinitionPath) {
-        def argsRegex = /(["'])(?:(?=(\\?))\2.)*?\1/
-        List<StepCode> codes = []
-        def steps = []
-        if(background && !background.steps.empty) {
-            steps += background.steps
-        }
-        if(scenarioDefinition && !scenarioDefinition.steps.empty) steps += scenarioDefinition.steps
-
-        steps.each { step ->
-            def stepCodeMatch = regexList?.findAll{ step.text ==~ it.value }
-            if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
-                def args = (step.text =~ argsRegex).collect{ it.getAt(0).toString().trim().replaceAll(/(["'])/,"") }
-                if(stepCodeMatch.size()==1) {
-                    stepCodeMatch = stepCodeMatch.get(0)
-                    codes += new StepCode(step: step, codePath: stepCodeMatch.path, line: stepCodeMatch.line, args:args)
-                } else {
-                    log.warn "There are many implementations for step code: ${step.text}; $scenarioDefinitionPath (${step.location.line})"
-                    stepCodeMatch?.each{
-                        log.warn it.toString()
-                        if(it.value!=".*" && it.value!=".+") codes += new StepCode(step: step, codePath: it.path, line: it.line, args:args)
-                    }
-                }
-            } else {
-                log.warn "Step code was not found: ${step.text}; $scenarioDefinitionPath (${step.location.line})"
-            }
-        }
-
-        if(codes.isEmpty()){
-            return null
-        }
-        else{
-            return new AcceptanceTest(gherkinFilePath:scenarioDefinitionPath, scenarioDefinition:scenarioDefinition, stepCodes:codes)
-        }
+    AcceptanceTest configureAcceptanceTest(Scenario scenarioDefinition, String scenarioDefinitionPath) {
+        AcceptanceTest test = null
+        List<StepCode> codes = findCodeForSteps(scenarioDefinition.steps, scenarioDefinitionPath)
+        if(!codes?.empty) test = new AcceptanceTest(gherkinFilePath:scenarioDefinitionPath, scenarioDefinition:scenarioDefinition, stepCodes:codes)
+        test
     }
 
-    def formatFilesToVisit(List<StepDefinitionFile> stepFiles){
-        def result = []
-        stepFiles?.each{ file ->
-            def partialResult = []
-            file.changedStepDefinitions?.each{ step ->
-                def stepCodeMatch = regexList?.findAll{ step.regex == it.value }
-                if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
-                    if(stepCodeMatch.size()==1) {
-                        stepCodeMatch = stepCodeMatch.get(0)
-                        partialResult += [path: stepCodeMatch.path, line: stepCodeMatch.line]
-                    } else {
-                        log.warn "There are many implementations for step code: ${step.value}; ${step.path} (${step.line})"
-                        stepCodeMatch?.each{
-                            log.warn it.toString()
-                            if(it.value!=".*" && it.value!=".+") partialResult += [path: it.path, line: it.line]
+    AcceptanceTest configureAcceptanceTest(ScenarioOutline scenarioDefinition, String scenarioDefinitionPath) {
+        AcceptanceTest test = null
+        List<Step> stepsToAnalyse = []
+        List<String> argName = scenarioDefinition.examples.tableHeader*.cells.flatten()*.value
+        scenarioDefinition.steps.each{ step ->
+            if( !(step.text.contains("<") && step.text.contains(">")) ){
+                stepsToAnalyse += step
+            }
+            else{
+                def argsInLine = scenarioDefinition.examples.tableBody.get(0).cells.value
+                argsInLine.each { argsLine ->
+                    def transformedText = new String(step.text)
+                    for (int i = 0; i < argName.size(); i++) {
+                        def searchExpression = "<${argName.get(i)}>"
+                        if (transformedText.contains(searchExpression)) {
+                            transformedText = transformedText.replaceFirst(searchExpression, argsLine.get(i))
                         }
                     }
-                } else {
-                    log.warn "Step code was not found: ${step.value}; ${step.path} (${step.line})"
+                    stepsToAnalyse += new Step(step.location, step.keyword, transformedText, step.argument)
                 }
             }
-            if(!partialResult.empty){
-                result += [path: partialResult?.first()?.path, lines: partialResult*.line?.unique()?.sort()]
+        }
+
+        List<StepCode> codes = findCodeForSteps(stepsToAnalyse, scenarioDefinitionPath)
+        if(!codes?.empty) test = new AcceptanceTest(gherkinFilePath:scenarioDefinitionPath, scenarioDefinition:scenarioDefinition, stepCodes:codes)
+        test
+    }
+
+    List<StepCode> findCodeForStep(def step, String path, boolean extractArgs){
+        List<StepCode> code = []
+        def stepCodeMatch = regexList?.findAll{ step.text ==~ it.value }
+        if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
+            def args = []
+            if(extractArgs) args = extractArgsFromStepText(step.text, stepCodeMatch.get(0).value)
+            if(stepCodeMatch.size()==1) {
+                stepCodeMatch = stepCodeMatch.get(0)
+                code += new StepCode(step: step, codePath: stepCodeMatch.path, line: stepCodeMatch.line, args:args)
+            } else {
+                log.warn "There are many implementations for step code: ${step.text}; $path (${step.location.line})"
+                stepCodeMatch?.each{
+                    log.warn it.toString()
+                    if(it.value!=".*" && it.value!=".+") code += new StepCode(step: step, codePath: it.path, line: it.line, args:args)
+                }
             }
+        } else {
+            log.warn "Step code was not found: ${step.text}; $path (${step.location.line})"
+            matchStepErrors += [path:path, line:step.location.line]
+        }
+        code
+    }
+
+    List<StepCode> findCodeForSteps(List steps, String path){
+        List<StepCode> codes = []
+        steps?.each { step ->
+            def code = findCodeForStep(step, path, true)
+            if(code && !code.empty) codes += code
+        }
+        codes
+    }
+
+    def findCodeForStepIndependentFromAcceptanceTest(StepDefinition step){
+        def result = []
+        def stepCodeMatch = regexList?.findAll{ step.regex == it.value }
+        if(stepCodeMatch && stepCodeMatch.size()>0){ //step code was found
+            if(stepCodeMatch.size()==1) {
+                stepCodeMatch = stepCodeMatch.get(0)
+                result += [path: stepCodeMatch.path, line: stepCodeMatch.line]
+            } else {
+                log.warn "There are many implementations for step code: ${step.value}; ${step.path} (${step.line})"
+                stepCodeMatch?.each{
+                    log.warn it.toString()
+                    if(it.value!=".*" && it.value!=".+") result += [path: it.path, line: it.line]
+                }
+            }
+        } else {
+            log.warn "Step code was not found: ${step.value}; ${step.path} (${step.line})"
+            matchStepErrors += [path:step.path, line:step.line]
         }
         result
     }
 
-    TaskInterface computeInterfaceForDoneTaskByUnitTest(List<UnitFile> unitFiles){
-        def interfaces = []
-
-        unitFiles.each { file ->
-            /* first level: To identify method calls from unit test body. */
-            TestCodeVisitor testCodeVisitor = parseUnitBody(file)
-
-            /* second level: To visit methods until there is no more method calls of methods defined in test code. */
-            def visitedFiles = []
-            def filesToVisit = listFilesToVisit(testCodeVisitor.taskInterface.methods, visitedFiles)
-
-            while (!filesToVisit.isEmpty()) {
-                /* copies methods from task interface */
-                def backupCalledMethods = testCodeVisitor.taskInterface.methods
-
-                /* visits each file */
-                filesToVisit.each { f -> visitFile(f, testCodeVisitor) }
-
-                /* computes methods to visit based on visit history */
-                visitedFiles = updateVisitedFiles(visitedFiles, filesToVisit)
-                def lastCalledMethods = testCodeVisitor.taskInterface.methods - backupCalledMethods
-                filesToVisit = listFilesToVisit(lastCalledMethods, visitedFiles)
+    def findCodeForStepsIndependentFromAcceptanceTest(List<StepDefinitionFile> stepFiles){
+        List<FileToAnalyse> result = []
+        stepFiles?.each{ file ->
+            def partialResult = []
+            file.changedStepDefinitions?.each{ step ->
+                def code = findCodeForStepIndependentFromAcceptanceTest(step) //path, line
+                if(code && !code.empty) partialResult += code
             }
-
-            /* searches for view files */
-            findAllPages(testCodeVisitor)
-
-            /* updates task interface */
-            interfaces += testCodeVisitor.taskInterface
+            if(!partialResult.empty){
+                def resumedResult = [path: partialResult?.first()?.path, lines: partialResult*.line?.unique()?.sort()]
+                def methodsToAnalyse = []
+                resumedResult.lines.each{ methodsToAnalyse += new MethodToAnalyse(line:it, args:[]) }
+                result += new FileToAnalyse(path: resumedResult.path, methods:methodsToAnalyse)
+            }
         }
-
-        /* collapses step code interfaces to define the interface for the whole task */
-        TaskInterface.colapseInterfaces(interfaces)
+        result
     }
 
     /***
@@ -344,10 +438,11 @@ abstract class TestCodeAbstractParser {
      */
     TaskInterface computeInterfaceForDoneTask(List<GherkinFile> gherkinFiles, List<StepDefinitionFile> stepFiles){
         configureProperties()
-        List<StepCode> stepCodes1 = extractStepCode(gherkinFiles)
-        def files1 = identifyMethodsPerFileToVisit(stepCodes1)
-        def files2 = formatFilesToVisit(stepFiles)
-        def filesToAnalyse = collapseFilesToVisit(files1, files2)
+        List<AcceptanceTest> acceptanceTests = extractAcceptanceTest(gherkinFiles)
+        List<StepCode> stepCodes1 = acceptanceTests*.stepCodes?.flatten()?.unique()
+        List<FileToAnalyse> files1 = identifyMethodsPerFileToVisit(stepCodes1)
+        List<FileToAnalyse> files2 = findCodeForStepsIndependentFromAcceptanceTest(stepFiles)
+        List<FileToAnalyse> filesToAnalyse = collapseFilesToVisit(files1, files2)
         computeInterface(filesToAnalyse)
     }
 
@@ -358,37 +453,37 @@ abstract class TestCodeAbstractParser {
      * @return task interface
      */
     TaskInterface computeInterfaceForTodoTask(List<GherkinFile> gherkinFiles){
-        List<StepCode> stepCodes = extractStepCode(gherkinFiles)
-
-        // Identifies files to parse. The files are identified by path and lines of interest.
-        def filesToAnalyse = identifyMethodsPerFileToVisit(stepCodes)
-
+        List<AcceptanceTest> acceptanceTests = extractAcceptanceTest(gherkinFiles)
+        List<StepCode> stepCodes = acceptanceTests*.stepCodes?.flatten()?.unique()
+        List<FileToAnalyse> filesToAnalyse = identifyMethodsPerFileToVisit(stepCodes)
         computeInterface(filesToAnalyse)
     }
 
-    private TaskInterface computeInterface(def filesToAnalyse){
+    private TaskInterface computeInterface(List<FileToAnalyse> filesToAnalyse){
         def interfaces = []
-        def calledSteps = []
+        List<StepCall> calledSteps = [] //keys:text, path, line
 
-        filesToAnalyse?.eachWithIndex{ stepCode, index ->
+        filesToAnalyse?.eachWithIndex{ stepDefFile, index ->
             /* first level: To identify method calls from step body. */
-            TestCodeVisitor testCodeVisitor = parseStepBody(stepCode)
+            TestCodeVisitor testCodeVisitor = parseStepBody(stepDefFile) //aqui é que vai usar args
 
             /* second level: To visit methods until there is no more method calls of methods defined in test code. */
             def visitedFiles = []
-            def filesToVisit = listFilesToVisit(testCodeVisitor.taskInterface.methods, visitedFiles)
+            def filesToParse = listFilesToVisit(testCodeVisitor.taskInterface.methods, visitedFiles)
 
-            while (!filesToVisit.isEmpty()) {
+            while (!filesToParse.empty) {
                 /* copies methods from task interface */
                 def backupCalledMethods = testCodeVisitor.taskInterface.methods
 
                 /* visits each file */
-                filesToVisit.each { f -> visitFile(f, testCodeVisitor) }
+                filesToParse.each { f ->
+                    visitFile(f, testCodeVisitor)
+                }
 
                 /* computes methods to visit based on visit history */
-                visitedFiles = updateVisitedFiles(visitedFiles, filesToVisit)
+                visitedFiles = updateVisitedFiles(visitedFiles, filesToParse)
                 def lastCalledMethods = testCodeVisitor.taskInterface.methods - backupCalledMethods
-                filesToVisit = listFilesToVisit(lastCalledMethods, visitedFiles)
+                filesToParse = listFilesToVisit(lastCalledMethods, visitedFiles)
             }
 
             /* updates called steps */
@@ -401,13 +496,16 @@ abstract class TestCodeAbstractParser {
             interfaces += testCodeVisitor.taskInterface
         }
 
-        /* identifies more step definitions to analyseInterface */
-        def newStepsToAnalyse = identifyMethodsPerFileToVisitByStepCalls(calledSteps)
+        /* identifies more step definitions to analyse */
+        List<FileToAnalyse> newStepsToAnalyse = identifyMethodsPerFileToVisitByStepCalls(calledSteps)
         newStepsToAnalyse = updateStepFiles(filesToAnalyse, newStepsToAnalyse)
         if(!newStepsToAnalyse.empty) interfaces += computeInterface(newStepsToAnalyse)
 
         /* collapses step code interfaces to define the interface for the whole task */
-        TaskInterface.colapseInterfaces(interfaces)
+        def itest = TaskInterface.colapseInterfaces(interfaces)
+        itest.matchStepErrors = organizeMatchStepErrors()
+        itest.compilationErrors = organizeCompilationErrors()
+        itest
     }
 
     /***
@@ -446,7 +544,7 @@ abstract class TestCodeAbstractParser {
      * @param file List of map objects that identifies files by 'path' and 'lines'.
      * @return visitor to visit method bodies
      */
-    abstract TestCodeVisitor parseStepBody(def file) //keys: path, lines
+    abstract TestCodeVisitor parseStepBody(FileToAnalyse file) //keys: path, lines
 
     /***
      * Visits selected method bodies from a source code file searching for other method calls. The result is stored as a
@@ -463,5 +561,9 @@ abstract class TestCodeAbstractParser {
      * @return
      */
     abstract TestCodeVisitor parseUnitBody(UnitFile file)
+
+    abstract UnitFile doExtractUnitTest(String path, String content, List<Integer> changedLines)
+
+    abstract String getClassForFile(String path)
 
 }

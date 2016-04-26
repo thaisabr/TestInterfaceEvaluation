@@ -121,8 +121,7 @@ class GherkinManager {
         def newScenarioDefinitions = newFeature?.scenarioDefinitions
 
         if(newScenarioDefinitions && !newScenarioDefinitions.isEmpty()){
-            changedGherkinFile = new GherkinFile(commitHash:commit.name, path:path,
-                    feature:newFeature, changedScenarioDefinitions:newScenarioDefinitions)
+            changedGherkinFile = new GherkinFile(path:path, feature:newFeature, changedScenarioDefinitions:newScenarioDefinitions)
             extractTextFromGherkin(newFeature, newScenarioDefinitions, content, changedGherkinFile)
         }
         changedGherkinFile

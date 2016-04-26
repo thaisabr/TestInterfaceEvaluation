@@ -15,11 +15,13 @@ class RSpecTestDefinitionVisitor extends NoopVisitor {
     def productionClass //keywords: name, path
     Set tests //keywords: name, path, lines
     String path
+    String content
 
-    RSpecTestDefinitionVisitor(String localPath, String path){
+    RSpecTestDefinitionVisitor(String path, String content, String repositoryPath){
         this.tests = []
-        this.projectFiles = Util.findFilesFromDirectoryByLanguage(localPath)
         this.path = path
+        this.content = content
+        this.projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
     }
 
     private configureProductionClass(def value){
@@ -29,7 +31,6 @@ class RSpecTestDefinitionVisitor extends NoopVisitor {
 
             if(index1!=-1 && index2!=-1){
                 def name = this.path.substring(index1+1,index2)+ConstantData.RUBY_EXTENSION
-                //def name = File.separator+value.name.toLowerCase()+Util.RUBY_EXTENSION
                 def path = Util.findAllProductionFiles(projectFiles).find{ it.endsWith(name) }
                 productionClass = [name:value.name, path:path]
             }
@@ -41,12 +42,12 @@ class RSpecTestDefinitionVisitor extends NoopVisitor {
 
     Set getTests(){
         def result = tests.sort{ it.lines.size() }
-        if(!result.isEmpty()) {
+        if(!result.empty) {
             def outterDescribe = tests.last()
             configureProductionClass(outterDescribe)
             result.remove(outterDescribe) //the one that englobes all others
         }
-        return result
+        result
     }
 
     @Override

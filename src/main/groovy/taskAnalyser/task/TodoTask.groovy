@@ -43,8 +43,7 @@ class TodoTask extends Task {
                 reader.close()
                 def scenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line in scenario.lines }
                 if(scenarioDefinitions){
-                    gherkinFiles += new GherkinFile(commitHash:null, path:scenario.path,
-                            feature:feature, changedScenarioDefinitions:scenarioDefinitions)
+                    gherkinFiles += new GherkinFile(path:scenario.path, feature:feature, changedScenarioDefinitions:scenarioDefinitions)
                 }
 
             } catch(FileNotFoundException ex){

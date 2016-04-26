@@ -32,6 +32,6 @@ class StepCode {
     @Override
     String toString() {
         def location = codePath - Util.getRepositoriesCanonicalPath()
-        return "${step.text} >>> $location (${line})"
+        "${step.text}; location: $location ($line); args: $args"
     }
 }

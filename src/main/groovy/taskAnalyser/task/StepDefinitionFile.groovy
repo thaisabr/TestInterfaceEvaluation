@@ -1,9 +1,9 @@
 package taskAnalyser.task
 
+import commitAnalyser.CodeChange
 
-class StepDefinitionFile {
+class StepDefinitionFile implements CodeChange {
 
-    String commitHash
     String path
     List<StepDefinition> changedStepDefinitions  = []
 

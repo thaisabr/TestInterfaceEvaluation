@@ -21,7 +21,7 @@ abstract class Task {
         this.id = id
         if(isRemote){
             this.gitRepository = GitRepositoryManager.getRepository(rootDirectory)
-            configureTestCodeParser(gitRepository.localPath)
+            configureTestCodeParser(gitRepository?.localPath)
         }
         else{
             configureTestCodeParser(rootDirectory)

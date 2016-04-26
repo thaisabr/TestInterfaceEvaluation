@@ -3,14 +3,14 @@ package util.ruby
 import util.ConstantData
 import util.RegexUtil
 import util.Util
-
 import java.util.regex.Matcher
 
 class RubyUtil extends Util {
 
-    static final String ROUTES_FILE = File.separator+"config"+File.separator+"routes.rb"
-    static final String ROUTES_ID = "ROUTES"
-    static final String ROUTE_SUFIX = "_path"
+    public static final String ROUTES_FILE = File.separator+"config"+File.separator+"routes.rb"
+    public static final String ROUTES_ID = "ROUTES"
+    public static final String ROUTE_SUFIX = "_path"
+    public static final EXCLUDED_PATH_METHODS = ["current_path"]
 
     /***
      * Provides the file path of a Ruby class or module.
@@ -75,4 +75,8 @@ class RubyUtil extends Util {
         underscoreToCamelCase(underscore)
     }
 
+    static boolean isRouteMethod(String name){
+        if( !(name in EXCLUDED_PATH_METHODS) && name.endsWith(ROUTE_SUFIX) ) true
+        else false
+    }
 }

@@ -4,7 +4,6 @@ import commitAnalyser.Commit
 import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 import util.Util
-import util.ruby.RubyUtil
 
 /***
  * Represents a done task, that is, a task that contains production and test code. The code is published in a public
@@ -17,14 +16,14 @@ class DoneTask extends Task {
     String repositoryIndex
     List<Commit> commits
     List<GherkinFile> changedGherkinFiles
-    List<UnitFile> changedUnitFiles
     List<StepDefinitionFile> changedStepDefinitions
+    List<UnitFile> changedUnitFiles
 
     DoneTask(String repositoryUrl, String id, List<String> shas){
         super(repositoryUrl, true, id)
         changedGherkinFiles = []
-        changedUnitFiles = []
         changedStepDefinitions = []
+        changedUnitFiles = []
 
         // retrieves commits code
         commits = gitRepository.searchCommitsBySha(testCodeParser, *shas)
@@ -42,8 +41,8 @@ class DoneTask extends Task {
         super(repositoryUrl, true, id)
         this.repositoryIndex = repositoryIndex
         changedGherkinFiles = []
-        changedUnitFiles = []
         changedStepDefinitions = []
+        changedUnitFiles = []
 
         // retrieves commits code
         this.commits = gitRepository.searchCommitsBySha(testCodeParser, *(commits*.hash))
@@ -113,101 +112,33 @@ class DoneTask extends Task {
     }
 
     private TaskInterface identifyProductionChangedFiles(){
-        def allFiles = Util.findFilesFromDirectory(gitRepository.localPath).collect{
+        /* Identifies all project files */
+        def currentFiles = Util.findFilesFromDirectory(gitRepository.localPath).collect {
             it - (Util.getRepositoriesCanonicalPath()+gitRepository.name+File.separator)
         }
 
-        def allChanges = commits?.sort{it.date}*.codeChanges?.flatten()
-        def files = [] as Set
-        def filenames = allChanges*.filename?.unique()
-        filenames.each{ file ->
-            def changes = allChanges.findAll{ it.filename == file }
-            if(changes?.last()?.filename in allFiles) files += file
-        }
-        organizeProductionFiles(files)
+        /* Identifies all changed files by task */
+        def filenames = commits*.coreChanges*.path?.flatten()?.unique()?.sort()
+
+        /* Identifies all changed files that exist when the task was finished. It is necessary because a task might
+        remove a file and other (concurrent) task might add it back.*/
+        def validFiles = filenames.findAll{ it in currentFiles }
+
+        /* Constructs task interface object */
+        organizeProductionFiles(validFiles)
     }
 
-    private TaskInterface organizeProductionFiles(def files){
+    private TaskInterface organizeProductionFiles(def productionFiles){
         def taskInterface = new TaskInterface()
-        def productionFiles = Util.findAllProductionFiles(files)
         productionFiles.each{ file ->
             def path = gitRepository.name+File.separator+file
             if(path.contains(Util.VIEWS_FILES_RELATIVE_PATH)){
                 def index = path.lastIndexOf(File.separator)
                 taskInterface.classes += [name:path.substring(index+1), file:path]
             } else {
-                taskInterface.classes += [name:RubyUtil.getClassName(path), file:path]
+                taskInterface.classes += [name: testCodeParser.getClassForFile(path), file:path]
             }
         }
-        taskInterface
-    }
-
-    /***
-     * Computes task interface based in unit test code.
-     * It can be seen as a future refinement for task interface.
-     * @return task interface
-     */
-    @Deprecated
-    TaskInterface computeUnitTestBasedInterface(){
-        log.info "TASK ID: $id"
-        def interfaces = []
-
-        /* identifies changed unit test files */
-        List<Commit> commitsChangedRspecFile = commits.findAll{ !it.unitChanges.isEmpty() }
-
-        commitsChangedRspecFile?.each{ commit ->
-            /* resets repository to the state of the commit to extract changes */
-            gitRepository.reset(commit.hash)
-
-            /* translates changed lines in unit test files to changed unit tests */
-            List<UnitFile> changes = gitRepository.identifyChangedUnitTestContent(commit)
-
-            if(!changes.isEmpty()){
-                changedUnitFiles += changes
-
-                /* computes task interface based on the production code exercised by tests */
-                interfaces += testCodeParser.computeInterfaceForDoneTaskByUnitTest(changes)
-            }
-            else{
-                log.info "No changes in unit test!\n"
-            }
-        }
-
-        /* resets repository to last version */
-        gitRepository.reset()
-
-        /* collapses step code interfaces to define the interface for the whole task */
-        TaskInterface.colapseInterfaces(interfaces)
-    }
-
-    /***
-     * (TO VALIDATE)
-     * Computes task interface based in unit test code.
-     * It can be seen as a future refinement for task interface.
-     * Changes interpretation are based in the checkout of the last commit of the task. It could introduce error and
-     * after validation it should be removed.
-     * @return task interface
-     */
-    @Deprecated
-    TaskInterface computeUnitTestBasedInterfaceVersion2(){
-        log.info "TASK ID: $id; LAST COMMIT: ${commits?.last()?.hash}"
-        TaskInterface taskInterface = new TaskInterface()
-
-        /* identifies changed unit test files */
-        List<Commit> commitsChangedRspecFile = commits.findAll{ !it.unitChanges.isEmpty() }
-
-        if(!commitsChangedRspecFile.isEmpty()){
-            /* resets repository to the state of the last commit to extract changes */
-            gitRepository.reset(commits?.last()?.hash)
-            changedUnitFiles = gitRepository.identifyChangedUnitTestContent(commitsChangedRspecFile)
-
-            /* computes task interface based on the production code exercised by tests */
-            taskInterface = testCodeParser.computeInterfaceForDoneTaskByUnitTest(changedUnitFiles)
-
-            /* resets repository to last version */
-            gitRepository.reset()
-        }
-
         taskInterface
     }
 
@@ -250,6 +181,12 @@ class DoneTask extends Task {
     @Override
     String computeTextBasedInterface() {
         def text = ""
+
+        if(!commits || commits.empty) {
+            log.warn "TASK ID: $id; NO COMMITS!"
+            return text
+        }
+
         if(!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
             // resets repository to the state of the last commit to extract changes
             gitRepository.reset(commits?.last()?.hash)
@@ -265,11 +202,21 @@ class DoneTask extends Task {
 
     TaskInterface computeRealInterface(){
         def taskInterface = new TaskInterface()
-        if(commits && !commits.empty){
-            gitRepository.reset(commits?.last()?.hash)
-            taskInterface = identifyProductionChangedFiles()
-            gitRepository.reset()
+
+        if(!commits || commits.empty) {
+            log.warn "TASK ID: $id; NO COMMITS!"
+            return taskInterface
         }
+
+        // resets repository to the state of the last commit to extract changes
+        gitRepository.reset(commits?.last()?.hash)
+
+        //computes real interface
+        taskInterface = identifyProductionChangedFiles()
+
+        // resets repository to last version
+        gitRepository.reset()
+
         taskInterface
     }
 
@@ -334,6 +281,10 @@ class DoneTask extends Task {
         def values = changedStepDefinitions*.changedStepDefinitions*.size().flatten()
         if(values.empty) 0
         else values.sum()
+    }
+
+    def getRenamedFiles(){
+        commits*.renameChanges?.flatten()?.unique()?.sort()
     }
 
 }

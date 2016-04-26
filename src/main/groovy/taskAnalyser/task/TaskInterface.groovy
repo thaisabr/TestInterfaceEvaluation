@@ -12,7 +12,7 @@ class TaskInterface {
     Set accessedProperties //accessed fields and constants, for example: "foo.bar"
 
     /******************************************** used by web-based tests *********************************************/
-    Set calledPageMethods //help to identify referenced pages (GSP files); methods "to" and "at"; keys:[name, arg, file]
+    Set calledPageMethods //keys:[file, name, args] //help to identify referenced pages (GSP files); methods "to" and "at";
     Set<String> referencedPages
     /******************************************************************************************************************/
 
@@ -60,10 +60,10 @@ class TaskInterface {
      */
     Set<String> findAllFiles(){
         //production classes
-        def classes =  (classes?.findAll{ it.file && !Util.isTestCode(it.file) })*.file
+        def classes =  (classes?.findAll{ Util.isCoreCode(it.file) })*.file
 
         //production methods
-        def methodFiles = methods?.findAll{ it.type && !Util.isTestCode(it.file) }*.file
+        def methodFiles = methods?.findAll{ it.type!=null && !it.type.empty && Util.isCoreCode(it.file) }*.file
 
         //production files
         def files = ((classes+methodFiles+referencedPages) as Set)?.sort()

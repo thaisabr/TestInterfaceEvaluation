@@ -6,6 +6,7 @@ import org.codehaus.groovy.control.Phases
 import org.codehaus.groovy.control.SourceUnit
 import taskAnalyser.task.StepDefinition
 import taskAnalyser.task.UnitFile
+import testCodeAnalyser.FileToAnalyse
 import testCodeAnalyser.StepRegex
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.TestCodeVisitor
@@ -101,10 +102,10 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
      * @param file List of map objects that identifies files by 'path' and 'lines'.
      * @return visitor to visit method bodies
      */
-    TestCodeVisitor parseStepBody(def file){
+    TestCodeVisitor parseStepBody(FileToAnalyse file){
         def ast = generateAst(file.path)
         def visitor = new GroovyTestCodeVisitor(repositoryPath, file.path)
-        def testCodeVisitor = new GroovyStepsFileVisitor(file.lines, visitor)
+        def testCodeVisitor = new GroovyStepsFileVisitor(file.methods, visitor)
         ast.classes.get(0).visitContents(testCodeVisitor)
         visitor
     }
@@ -141,4 +142,13 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
         return null
     }
 
+    @Override
+    UnitFile doExtractUnitTest(String path, String content, List<Integer> changedLines) {
+        return null
+    }
+
+    @Override
+    String getClassForFile(String path) {
+        return null
+    }
 }

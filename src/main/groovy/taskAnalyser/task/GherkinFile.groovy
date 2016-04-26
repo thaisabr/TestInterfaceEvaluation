@@ -1,20 +1,13 @@
 package taskAnalyser.task
 
+import commitAnalyser.CodeChange
 import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
-import gherkin.ast.ScenarioOutline
-import groovy.util.logging.Slf4j
 
 /***
  * Represents a changed Gherkin File.
  */
-@Slf4j
-class GherkinFile {
-
-    /***
-     * Identifies the commit responsible for the code change
-     */
-    String commitHash
+class GherkinFile implements CodeChange {
 
     /***
     * Gherkin file path (local path)
@@ -37,15 +30,22 @@ class GherkinFile {
      * Textual information to compute text based interfaces for tasks.
      */
     List<String> changedScenarioDefinitionsText = []
+
+    /***
+     * Textual information about feature and background. They are common for all scenario definition in a Gherkin file.
+     */
     String baseText
 
     @Override
     String toString() {
-        def text = "Gherkin file: ${path}\nFeature: ${feature.name}\nBackground (line ${feature.background.location.line}):${feature.background.name}\n"
-        feature.background.steps.each{
-            text += "${it.keyword}: ${it.text}\n"
+        def text = "Gherkin file: ${path}\nFeature: ${feature.name}\n"
+        if(feature.background){
+            text += "Background (line ${feature.background.location.line}):${feature.background.name}\n"
+            feature.background.steps.each{
+                text += "${it.keyword}: ${it.text}\n"
+            }
         }
-        text += "\nChanged scenario definitions:\n"
+        text += "Changed scenario definitions:\n"
         changedScenarioDefinitions.each{ definition ->
             text += "${definition.keyword} (line ${definition.location.line}): ${definition.name}\n"
         }
@@ -55,46 +55,5 @@ class GherkinFile {
     def getText(){
         baseText + "\n" + (changedScenarioDefinitionsText.join("\n"))
     }
-
-    /*
-    String extractBackgroundArgs(){
-        def text = ""
-        def args = []
-        if(feature.background) {
-            feature.background.steps.each { step ->
-                text += "${step.keyword}: ${step.text}"
-                step.argument.rows.each{ row ->
-                    args += row.cells.value
-                }
-            }
-        }
-        if(!text.empty) [text:text, args:args]
-        else []
-    }
-
-
-    static extractArgs(ScenarioDefinition definition){
-        def text = ""
-        def args = []
-        definition?.steps?.each{ step ->
-            text = "${step.keyword}: ${step.text}"
-            if(step.argument) {
-                step.argument.rows.each{ row ->
-                    args += row.cells.value
-                }
-            }
-        }
-        if(!text.empty) [text:text, args:args]
-        else []
-    }
-
-    static extractArgs(ScenarioOutline scenario){
-        def args = []
-        scenario.examples.each { example ->
-            args += example.tableHeader.cells*.value
-            args += example.tableBody.cells*.value
-        }
-        args
-    }*/
 
 }

@@ -1,14 +1,11 @@
 package taskAnalyser.task
 
+import commitAnalyser.CodeChange
+
 /***
  * Represents a changed unit test file.
  */
-class UnitFile {
-
-    /***
-     * Identifies the commit responsible for the code change
-     */
-    String commitHash
+class UnitFile implements CodeChange {
 
     /***
      * Gherkin file path (local path)

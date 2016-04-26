@@ -18,21 +18,15 @@ import util.ruby.RubyUtil
 class RubyPageVisitor extends NoopVisitor {
 
     Set<String> pages
-    List<String> viewFiles
     String methodName
+    List<String> args
     def returnNodes //keys: line, value
 
-    public RubyPageVisitor(List<String> viewFiles){
+    public RubyPageVisitor(String name, List<String> args){
         this.pages = [] as Set
-        this.viewFiles = viewFiles
-        returnNodes = []
-    }
-
-    public RubyPageVisitor(List<String> viewFiles, String name){
-        this.pages = [] as Set
-        this.viewFiles = viewFiles
-        methodName = name
-        returnNodes = []
+        this.methodName = name
+        this.args = args
+        this.returnNodes = []
     }
 
     private extractViewPathFromNode(MethodDefNode iVisited){

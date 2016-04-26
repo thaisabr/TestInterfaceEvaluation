@@ -10,7 +10,6 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.blame.BlameResult
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffFormatter
-import org.eclipse.jgit.diff.RawTextComparator
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.ObjectLoader
 import org.eclipse.jgit.lib.ObjectReader
@@ -23,8 +22,6 @@ import taskAnalyser.task.StepDefinition
 import taskAnalyser.task.StepDefinitionFile
 import taskAnalyser.task.UnitFile
 import testCodeAnalyser.TestCodeAbstractParser
-import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
-import testCodeAnalyser.ruby.RubyTestCodeParser
 import util.ConstantData
 import util.RegexUtil
 import util.Util
@@ -42,7 +39,6 @@ class GitRepository {
     String localPath
     String lastCommit //used only to reset the repository for the original state after checkout command
 
-    static int counter = 0 //used to compute branch name
 
     GitRepository(String url){
         this.url = url + ConstantData.GIT_EXTENSION
@@ -93,9 +89,7 @@ class GitRepository {
             result += it
         }
 
-        return result.findAll{ file ->
-            (Util.isValidCode(file.newPath) || Util.isValidCode(file.oldPath))
-        }
+        result.findAll{ file -> (Util.isValidCode(file.newPath) || Util.isValidCode(file.oldPath)) }
     }
 
     /***
@@ -121,19 +115,18 @@ class GitRepository {
         formatter.release()
     }
 
-    private CodeChange extractStepDefinitionChanges(RevCommit commit, RevCommit parent, DiffEntry entry,
+    private StepDefinitionFile extractStepDefinitionChanges(RevCommit commit, RevCommit parent, DiffEntry entry,
                                                     TestCodeAbstractParser parser){
-        CodeChange codeChange = null
-
+        StepDefinitionFile changedStepFile = null
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newStepDefinitions = StepDefinitionManager.parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
+        def newDefs = StepDefinitionManager.parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
         def oldVersion = extractFileContent(parent, entry.oldPath)
-        def oldStepDefinitions = StepDefinitionManager.parseStepDefinitionFile( entry.oldPath, oldVersion, parent.name, parser)
+        def oldDefs = StepDefinitionManager.parseStepDefinitionFile( entry.oldPath, oldVersion, parent.name, parser)
 
         //searches for changed or removed step definitions
         List<StepDefinition> changedStepDefinitions = []
-        oldStepDefinitions?.each{ stepDef ->
-            def foundStepDef = newStepDefinitions?.find{ it.value == stepDef.value }
+        oldDefs?.each{ stepDef ->
+            def foundStepDef = newDefs?.find{ it.value == stepDef.value }
             if(foundStepDef && foundStepDef.value && foundStepDef.value != ""){
                 if (stepDef.size() == foundStepDef.size()){ //step definition might be changed
                     def stepDefEquals = GherkinManager.equals(foundStepDef, stepDef)
@@ -145,55 +138,54 @@ class GitRepository {
         }
 
         //searches for added step definitions
-        newStepDefinitions?.each{ newStepDef ->
-            def foundStepDef = oldStepDefinitions?.find{ it.value == newStepDef.value }
+        newDefs?.each{ newStepDef ->
+            def foundStepDef = oldDefs?.find{ it.value == newStepDef.value }
             if(!foundStepDef || !foundStepDef.value || foundStepDef.value == ""){//it was not found because it is new
                 changedStepDefinitions += newStepDef
             }
         }
 
         if(!changedStepDefinitions.isEmpty()){
-            StepDefinitionFile changedStepFile = new StepDefinitionFile(commitHash:commit.name, path:entry.newPath,
-                    changedStepDefinitions:changedStepDefinitions)
-            codeChange = new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [],
-                    stepFile: changedStepFile)
+            changedStepFile = new StepDefinitionFile(path:entry.newPath, changedStepDefinitions:changedStepDefinitions)
         }
 
-        codeChange
+        changedStepFile
     }
 
     /***
      * Identifies step definitions at added step definition files.
      * It is used only when dealing with done tasks.
      */
-    private CodeChange extractStepDefinitionAdds(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser){
-        CodeChange codeChange = null
+    private StepDefinitionFile extractStepDefinitionAdds(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser){
+        StepDefinitionFile changedStepFile = null
         def newVersion = extractFileContent(commit, entry.newPath)
         def newStepDefinitions = StepDefinitionManager.parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
 
         if(newStepDefinitions && !newStepDefinitions.isEmpty()){
-            StepDefinitionFile changedStepFile = new StepDefinitionFile(commitHash:commit.name, path:entry.newPath,
-                    changedStepDefinitions:newStepDefinitions)
-            codeChange = new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [],
-                    stepFile: changedStepFile)
+            changedStepFile = new StepDefinitionFile(path:entry.newPath, changedStepDefinitions:newStepDefinitions)
         }
 
-        codeChange
+        changedStepFile
+    }
+
+    private UnitFile extractUnitChanges(RevCommit commit,String path, List<Integer> lines, TestCodeAbstractParser parser){
+        def newVersion = extractFileContent(commit, path)
+        UnitTestManager.parseUnitFile(path, newVersion, lines, parser)
     }
 
     /***
      * Identifies changed scenarios definitions at gherkin files (features).
      * It is used only when dealing with done tasks.
      */
-    private CodeChange extractGherkinChanges(RevCommit commit, RevCommit parent, DiffEntry entry){
-        CodeChange codeChange = null
+    private GherkinFile extractGherkinChanges(RevCommit commit, RevCommit parent, DiffEntry entry){
+        GherkinFile changedGherkinFile = null
 
         def newVersion = extractFileContent(commit, entry.newPath)
         def newFeature = GherkinManager.parseGherkinFile(newVersion, entry.newPath, commit.name)
         def oldVersion = extractFileContent(parent, entry.oldPath)
         def oldFeature = GherkinManager.parseGherkinFile(oldVersion, entry.oldPath, parent.name)
 
-        if(!newFeature || !oldFeature) return codeChange
+        if(!newFeature || !oldFeature) return changedGherkinFile
 
         def newScenarioDefinitions = newFeature?.scenarioDefinitions
         def oldScenarioDefinitions = oldFeature?.scenarioDefinitions
@@ -221,35 +213,55 @@ class GitRepository {
         }
 
         if(!changedScenarioDefinitions.isEmpty()){
-            GherkinFile changedGherkinFile = new GherkinFile(commitHash:commit.name, path:entry.newPath,
-                    feature:newFeature, changedScenarioDefinitions:changedScenarioDefinitions)
+            changedGherkinFile = new GherkinFile(path:entry.newPath, feature:newFeature, changedScenarioDefinitions:changedScenarioDefinitions)
             GherkinManager.extractTextFromGherkin(newFeature, changedScenarioDefinitions, newVersion, changedGherkinFile)
-            codeChange = new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [],
-                    gherkinFile: changedGherkinFile)
         }
 
-        codeChange
+        changedGherkinFile
     }
 
     /***
      * Identifies scenarios definitions at added gherkin files (features).
      * It is used only when dealing with done tasks.
      */
-    private CodeChange extractGherkinAdds(RevCommit commit, DiffEntry entry){
-        CodeChange codeChange = null
+    private GherkinFile extractGherkinAdds(RevCommit commit, DiffEntry entry){
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newFeature = GherkinManager.parseGherkinFile(newVersion, entry.newPath, commit.name)
-        def newScenarioDefinitions = newFeature?.scenarioDefinitions
+        GherkinManager.extractGherkinAdds(commit, newVersion, entry.newPath)
+    }
 
-        if(newScenarioDefinitions && !newScenarioDefinitions.isEmpty()){
-            GherkinFile changedGherkinFile = new GherkinFile(commitHash:commit.name, path:entry.newPath,
-                    feature:newFeature, changedScenarioDefinitions:newScenarioDefinitions)
-            GherkinManager.extractTextFromGherkin(newFeature, newScenarioDefinitions, newVersion, changedGherkinFile)
-            codeChange = new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [],
-                    gherkinFile: changedGherkinFile)
+    private CodeChange configureAddChange(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser){
+        CodeChange change
+        if(Util.isGherkinCode(entry.newPath))
+            change = extractGherkinAdds(commit, entry)
+        else if(Util.isStepDefinitionCode(entry.newPath))
+            change = extractStepDefinitionAdds(commit, entry, parser)
+        else {
+            def result = extractFileContent(commit, entry.newPath)
+            def lines = 0..<result.readLines().size()
+            if(Util.isUnitTestCode(entry.newPath)){
+                //change = extractUnitChanges(commit, entry.newPath, lines, parser)
+            }
+            else change = new CoreChange(path: entry.newPath, type: entry.changeType, lines: lines)
         }
+        change
+    }
 
-        codeChange
+    private CodeChange configureModifyChange(RevCommit commit, RevCommit parent, DiffEntry entry, TestCodeAbstractParser parser){
+        CodeChange change
+        if(Util.isGherkinCode(entry.newPath))
+            change = extractGherkinChanges(commit, parent, entry)
+        else if(Util.isStepDefinitionCode(entry.newPath))
+            change = extractStepDefinitionChanges(commit, parent, entry, parser)
+        else {
+            def lines = computeChanges(commit, entry.newPath)
+            if(Util.isUnitTestCode(entry.newPath)){
+                //change = extractUnitChanges(commit, entry.newPath, lines, parser)
+            }
+            else {
+                change = new CoreChange(path: entry.newPath, type: entry.changeType, lines: lines)
+            }
+        }
+        change
     }
 
     /***
@@ -262,58 +274,27 @@ class GitRepository {
         List<CodeChange> codeChanges = []
             diffs?.each{ entry ->
                 switch (entry.changeType) {
-                    case DiffEntry.ChangeType.ADD: //it is necessary to know the file size because all lines were changed
-                        def result = extractFileContent(commit, entry.newPath)
-                        if(Util.isGherkinCode(entry.newPath)){
-                            def change = extractGherkinAdds(commit, entry)
-                            if(change != null) { codeChanges += change }
-                        }
-                        else if(Util.isStepDefinitionCode(entry.newPath)){
-                            def change = extractStepDefinitionAdds(commit, entry, parser)
-                            if(change != null) { codeChanges += change }
-                        }
-                        else{
-                            codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: 0..<result.readLines().size())
-                        }
-                        break
-                    case DiffEntry.ChangeType.DELETE: //the file size is already known
-                        def result = extractFileContent(parent, entry.oldPath)
-                        codeChanges += new CodeChange(filename: entry.oldPath, type: entry.changeType, lines: 0..<result.readLines().size())
+                    case DiffEntry.ChangeType.ADD: //it is necessary to know file size because all lines were changed
+                        def change = configureAddChange(commit, entry, parser)
+                        if(change != null) { codeChanges += change }
                         break
                     case DiffEntry.ChangeType.MODIFY:
-                        if(Util.isGherkinCode(entry.newPath)) {
-                            def change = extractGherkinChanges(commit, parent, entry)
-                            if (change != null) { codeChanges += change }
-                        }
-                        else if(Util.isStepDefinitionCode(entry.newPath)){
-                            def change = extractStepDefinitionChanges(commit, parent, entry, parser)
-                            if (change != null) { codeChanges += change }
-                        }
-                        else{
-                            def lines = computeChanges(commit, entry.newPath)
-                            codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: lines)
+                        def change = configureModifyChange(commit, parent, entry, parser)
+                        if(change != null) { codeChanges += change }
+                        break
+                    case DiffEntry.ChangeType.DELETE: //the file size is already known
+                        if(Util.isCoreCode(entry.oldPath)){
+                            def result = extractFileContent(parent, entry.oldPath)
+                            codeChanges += new CoreChange(path:entry.oldPath, type:entry.changeType, lines:0..<result.readLines().size())
                         }
                         break
                     case DiffEntry.ChangeType.RENAME:
-                        log.info "<RENAME> old:${entry.oldPath}; new:${entry.newPath}"
-                    case DiffEntry.ChangeType.COPY:
-                        codeChanges += new CodeChange(filename: entry.newPath, type: entry.changeType, lines: [])
+                        codeChanges += new RenamingChange(path:entry.newPath, oldPath:entry.oldPath)
+                        break
                 }
             }
-        return codeChanges
-    }
 
-    /***
-     * Retrieves a commit.
-     *
-     * @param sha the commit's identification.
-     * @return the commit.
-     */
-    private RevCommit extractCommit(String sha){
-        def git = Git.open(new File(localPath))
-        def result = git.log().call().find{ it.name == sha }
-        git.close()
-        result
+        codeChanges
     }
 
     private TreeWalk generateTreeWalk(RevTree tree, String filename){
@@ -399,24 +380,25 @@ class GitRepository {
         def commits = []
         logs?.each{ c ->
             List<CodeChange> codeChanges = extractAllCodeChangesFromCommit(c, parser)
-            List<CodeChange> prodFiles = Util.findAllProductionFilesFromCodeChanges(codeChanges)
-            List<CodeChange> testFiles = Util.findAllTestFilesFromCodeChanges(codeChanges)
+            List<CoreChange> prodFiles = codeChanges.findAll{ it instanceof CoreChange } as List<CoreChange>
 
             // identifies changed gherkin files and scenario definitions
-            List<GherkinFile> gherkinChanges = testFiles?.findAll{ it.gherkinFile }*.gherkinFile
-
-            // identifies changed rspec files
-            List<CodeChange> unitChanges = testFiles?.findAll{ it.filename.contains(Util.UNIT_TEST_FILES_RELATIVE_PATH+File.separator) }
+            List<GherkinFile> gherkinChanges = codeChanges?.findAll{ it instanceof GherkinFile } as List<GherkinFile>
 
             //identifies changed step files
-            List<StepDefinitionFile> stepChanges = testFiles?.findAll{ it.stepFile}*.stepFile
+            List<StepDefinitionFile> stepChanges = codeChanges?.findAll{it instanceof StepDefinitionFile } as List<StepDefinitionFile>
+
+            // identifies changed rspec files
+            //List<UnitFile> unitChanges = codeChanges?.findAll{ it instanceof UnitFile } as List<UnitFile>
+            List<UnitFile> unitChanges = []
+
+            List<RenamingChange> renameChanges = codeChanges?.findAll{ it instanceof RenamingChange } as List<RenamingChange>
 
             commits += new Commit(hash:c.name, message:c.fullMessage.replaceAll(RegexUtil.NEW_LINE_REGEX," "),
-                    author:c.authorIdent.name, date:c.commitTime, productionChanges: prodFiles,
-                    testChanges: testFiles, codeChanges: codeChanges, gherkinChanges:gherkinChanges,
-                    unitChanges:unitChanges, stepChanges:stepChanges)
+                    author:c.authorIdent.name, date:c.commitTime, coreChanges:prodFiles, gherkinChanges:gherkinChanges,
+                    unitChanges:unitChanges, stepChanges:stepChanges, renameChanges:renameChanges)
         }
-        return commits
+        commits
     }
 
     /* PROBLEM: Deal with removed lines. */
@@ -454,23 +436,24 @@ class GitRepository {
         tw.setRecursive(true)
         tw.addTree(commit.tree)
         while(tw.next()){
-            if(Util.isValidCode(tw.pathString)) {
-                def result = extractFileContent(commit, tw.pathString)
-                if( Util.isGherkinCode(tw.pathString) ){
-                    def change = GherkinManager.extractGherkinAdds(commit, result, tw.pathString)
-                    if(change != null) {
-                        codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: [],
-                                gherkinFile: change)
-                    }
-                } else if(Util.isStepDefinitionCode(tw.pathString)){
-                    def change = StepDefinitionManager.extractStepDefinitionAdds(commit, result, tw.pathString, parser)
-                    if(change != null) {
-                        codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: [],
-                                stepFile: change)
-                    }
-                }
-                else{
-                    codeChanges += new CodeChange(filename: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: 0..<result?.readLines()?.size())
+            if(!Util.isValidCode(tw.pathString)) continue
+
+            def result = extractFileContent(commit, tw.pathString)
+
+            if( Util.isGherkinCode(tw.pathString) ){
+                def change = GherkinManager.extractGherkinAdds(commit, result, tw.pathString)
+                if(change != null) codeChanges += change
+            }
+            else if(Util.isStepDefinitionCode(tw.pathString)){
+                def change = StepDefinitionManager.extractStepDefinitionAdds(commit, result, tw.pathString, parser)
+                if(change != null) codeChanges += change
+            }
+            else {
+                def lines = 0..<result.readLines().size()
+                if(Util.isUnitTestCode(tw.pathString)){
+                    //codeChanges += extractUnitChanges(commit, tw.pathString, lines, parser)
+                } else {
+                    codeChanges += new CoreChange(path:tw.pathString, type:DiffEntry.ChangeType.ADD, lines: 0..<lines)
                 }
             }
         }
@@ -521,95 +504,6 @@ class GitRepository {
         def git = Git.open(new File(localPath))
         git.checkout().setName(lastCommit).setStartPoint(lastCommit).call()
         git.close()
-    }
-
-    /***
-     * Interprets changed lines in unit test files.
-     * It is used only when dealing with done tasks.
-     *
-     * @param commit commit that caused changes in unit test files
-     * @return list of changed unit test files
-     */
-    @Deprecated
-    List<UnitFile> identifyChangedUnitTestContent(Commit commit){
-        def changedUnitFiles = []
-        //println "All changed unit test files: ${commit.unitChanges*.filename}"
-
-        log.info "Commit: ${commit.hash}"
-        commit.unitChanges.each{ change ->
-            def path = localPath + File.separator + change.filename
-            log.info "Change path: $path"
-            try{
-                def visitor = new RSpecTestDefinitionVisitor(localPath, path)
-                def node = RubyTestCodeParser.generateAst(path)
-                node?.accept(visitor)
-                if(visitor.tests.isEmpty()){
-                    log.info "The unit file does not contain any test definition!"
-                }
-                else{
-                    def changedTests = visitor.tests.findAll{ it.lines.intersect(change.lines) }
-                    if(changedTests){
-                        /*println "All changed unit tests: "
-                        changedTests.each{ println it }*/
-
-                        def unitFile = new UnitFile(commitHash:commit.hash, path:path, tests:changedTests, productionClass:visitor.productionClass)
-                        changedUnitFiles += unitFile
-                    }
-                    else{
-                        log.info "No unit test was changed or the changed one was not found!"
-                    }
-                }
-            } catch(FileNotFoundException ex){
-                log.warn "Problem to parse unit test file: ${ex.message}. Reason: The commit deleted it."
-            }
-        }
-
-        return changedUnitFiles
-    }
-
-    /***
-     * (TO VALIDATE)
-     * Changes interpretation are based in the checkout of the last commit of the task. It is used only when dealing with done tasks.
-     * It could introduce error and after validation it should be removed.
-     *
-     * @param commits commits that caused changes in unit test files
-     * @return list of changed unit test files
-     */
-    @Deprecated
-    List<UnitFile> identifyChangedUnitTestContent(List<Commit> commits){
-        def changedUnitFiles = []
-        //println "All changed unit test files: ${commit.unitChanges*.filename}"
-
-        commits.each { commit ->
-            log.info "Commit: ${commit.hash}"
-            commit.unitChanges.each { change ->
-                def path = localPath + File.separator + change.filename
-                log.info "Change path: $path"
-                try {
-                    def visitor = new RSpecTestDefinitionVisitor(localPath, path)
-                    def node = RubyTestCodeParser.generateAst(path)
-                    node?.accept(visitor)
-                    if (visitor.tests.isEmpty()) {
-                        log.info "The unit file does not contain any test definition!"
-                    } else {
-                        def changedTests = visitor.tests.findAll { it.lines.intersect(change.lines) }
-                        if (changedTests) {
-                            /*println "All changed unit tests: "
-                            changedTests.each{ println it }*/
-
-                            def unitFile = new UnitFile(commitHash: commit.hash, path: path, tests: changedTests, productionClass: visitor.productionClass)
-                            changedUnitFiles += unitFile
-                        } else {
-                            log.info "No unit test was changed or the changed one was not found!"
-                        }
-                    }
-                } catch (FileNotFoundException ex) {
-                    log.warn "Problem to parse unit test file: ${ex.message}. Reason: The commit deleted it."
-                }
-            }
-        }
-
-        return changedUnitFiles
     }
 
 }

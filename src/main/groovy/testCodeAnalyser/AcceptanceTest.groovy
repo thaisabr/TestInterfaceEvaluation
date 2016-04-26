@@ -1,11 +1,12 @@
 package testCodeAnalyser
 
 import gherkin.ast.ScenarioDefinition
-import util.Util
+import groovy.util.logging.Slf4j
 
 /***
  * Represents a match result among a Gherkin scenario definition and its implementation code.
  */
+@Slf4j
 class AcceptanceTest {
 
     String gherkinFilePath
@@ -16,12 +17,16 @@ class AcceptanceTest {
     String toString() {
         def text = "<Acceptance test>\n"
         text += "Location: $gherkinFilePath\n"
-        text += "Scenario definition: (${scenarioDefinition.location.line-1}) ${scenarioDefinition.name}\n"
-        text += "Steps code: \n"
+        text += "${scenarioDefinition.keyword}: (${scenarioDefinition.location.line}) ${scenarioDefinition.name}\n"
+        text += "Steps:\n"
+        scenarioDefinition.steps.each{ step ->
+            text += "(${step.location.line}) ${step.keyword} ${step.text}\n"
+        }
+        text += "Steps code:\n"
         stepCodes.each{ step ->
-            def location =  step.codePath - Util.getRepositoriesCanonicalPath()
-            text += "(${step.line}) $location\n"
+            text += step.toString() + "\n"
         }
         return text
     }
+
 }

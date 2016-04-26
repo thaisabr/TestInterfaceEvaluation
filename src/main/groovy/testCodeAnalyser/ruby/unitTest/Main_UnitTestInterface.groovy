@@ -1,7 +1,7 @@
 package testCodeAnalyser.ruby.unitTest
 
-import taskAnalyser.DoneTask
-import taskAnalyser.TaskInterface
+import taskAnalyser.task.DoneTask
+import taskAnalyser.task.TaskInterface
 import taskAnalyser.DataManager
 
 
@@ -15,11 +15,11 @@ class Main_UnitTestInterface {
     }
 
     public static void main(String[] args){
-        /********************************************* RUBY ***********************************************************/
+        /********************************************* RUBY ***********************************************************
         List<DoneTask> tasks = DataManager.extractProductionAndTestTasks()
         println "number of tasks: ${tasks.size()}"
 
-        /* RUBY: TEST INTERFACE BASED ON ACCEPTANCE TEST CODE */
+        /* RUBY: TEST INTERFACE BASED ON ACCEPTANCE TEST CODE *
         def gherkinCounter = 0
         def nonEmptyInterfaces = []
         tasks.each{ task ->
@@ -33,7 +33,7 @@ class Main_UnitTestInterface {
         println "number of non empty task interfaces: ${nonEmptyInterfaces.size()}"
         printInterfaces(nonEmptyInterfaces)
 
-        /* RUBY: TEST INTERFACE BASED ON UNIT TEST CODE - VERSION 1 */
+        /* RUBY: TEST INTERFACE BASED ON UNIT TEST CODE - VERSION 1 *
         def unitCounter = 0
         def nonEmptyUnitTestInterfaces = []
         tasks.each{ task ->
@@ -47,7 +47,7 @@ class Main_UnitTestInterface {
         println "number of non empty task interfaces: ${nonEmptyUnitTestInterfaces.size()}"
         printInterfaces(nonEmptyUnitTestInterfaces)
 
-        /* RUBY: TEST INTERFACE BASED ON UNIT TEST CODE - VERSION 2 */
+        /* RUBY: TEST INTERFACE BASED ON UNIT TEST CODE - VERSION 2 *
         unitCounter = 0
         nonEmptyUnitTestInterfaces = []
         tasks.each{ task ->
@@ -61,7 +61,7 @@ class Main_UnitTestInterface {
         println "number of non empty task interfaces: ${nonEmptyUnitTestInterfaces.size()}"
         printInterfaces(nonEmptyUnitTestInterfaces)
 
-        /* RUBY: JOIN TEST INTERFACES (ACCEPTANCE TEST AND UNIT TEST) */
+        /* RUBY: JOIN TEST INTERFACES (ACCEPTANCE TEST AND UNIT TEST) *
         def combinedInterfaces = []
         nonEmptyInterfaces.each{ acceptanceInterface ->
             def entry = nonEmptyUnitTestInterfaces.find{ it.task.id == acceptanceInterface.task.id}
@@ -71,7 +71,7 @@ class Main_UnitTestInterface {
             }
         }
         println "number of tasks with acceptance and unit test based interfaces: ${combinedInterfaces.size()}"
-        printInterfaces(combinedInterfaces)
+        printInterfaces(combinedInterfaces)*/
 
     }
 

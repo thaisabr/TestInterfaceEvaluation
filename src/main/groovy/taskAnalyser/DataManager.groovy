@@ -6,6 +6,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 import commitAnalyser.Commit
 import evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
+import org.eclipse.jgit.diff.DiffEntry
 import similarityAnalyser.test.TestSimilarityAnalyser
 import similarityAnalyser.text.TextualSimilarityAnalyser
 import taskAnalyser.task.DoneTask
@@ -14,6 +15,15 @@ import util.Util
 
 @Slf4j
 class DataManager {
+
+    static final String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests", "#StepDef",
+                                    "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
+                                    "#AST_Errors", "Renamed_Files", "Deleted_Files", "ITest", "IReal", "Precision", "Recall"]
+    static final int RECALL_INDEX = HEADER.size()-1
+    static final int PRECISION_INDEX = RECALL_INDEX-1
+    static final int IREAL_INDEX = PRECISION_INDEX-1
+    static final int ITEST_INDEX = IREAL_INDEX-1
+
 
     private static computePairs(def set){
         def result = [] as Set
@@ -45,10 +55,7 @@ class DataManager {
         writer.writeNext(text)
         text = ["Tasks that have changed Gherkin files", gherkinTasks]
         writer.writeNext(text)
-        String[] header = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests", "#StepDef",
-                           "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
-                           "#AST_Errors", "ITest", "IReal", "Precision", "Recall"] //18 elements
-        writer.writeNext(header)
+        writer.writeNext(HEADER)
     }
 
     private static writeITextFile(def filename, def entry){
@@ -95,11 +102,18 @@ class DataManager {
         [text: compilationErrors, quantity:compErrorsQuantity]
     }
 
+    private static extractRemovedFiles(def entry){
+        def changes = entry.task.commits*.coreChanges?.flatten()?.findAll{ it.type == DiffEntry.ChangeType.DELETE }
+        def result = changes?.collect{ entry.task.gitRepository.name + File.separator+it.path }?.unique()?.sort()
+        if (result?.empty) result = ""
+        result
+    }
+
     private static writeResult(List<String[]> entries, def writer){
         entries.each{ entry ->
             def itest = "no", ireal = "no"
-            if(entry[15].empty) ireal = "yes"
-            if(entry[14].empty) itest = "yes"
+            if(entry[IREAL_INDEX].empty) ireal = "yes"
+            if(entry[ITEST_INDEX].empty) itest = "yes"
             String[] headers = entry + [itest, ireal]
             writer.writeNext(headers)
         }
@@ -146,15 +160,15 @@ class DataManager {
         String[] resultHeader2 = resultHeader1 + ["Empty_ITest", "Empty_IReal"]
         entries = entries.subList(5,entries.size())
 
-        def emptyIReal = entries.findAll{ it[15].empty }
+        def emptyIReal = entries.findAll{ it[IREAL_INDEX].empty }
         entries = entries - emptyIReal
         def hasGherkinTest = entries.findAll{ (it[6] as int)>0 }
         def hasStepTest = entries.findAll{ (it[7] as int)>0 }
         def noTest = entries - (hasGherkinTest+hasStepTest).unique()
         def validTasks = entries - noTest
-        def emptyITest = validTasks.findAll{ it[14].empty }
+        def emptyITest = validTasks.findAll{ it[ITEST_INDEX].empty }
         def others = validTasks - emptyITest
-        def zeroPrecisionAndRecall = others.findAll{ it[16] == "0.0" && it[17] == "0.0" }
+        def zeroPrecisionAndRecall = others.findAll{ it[PRECISION_INDEX] == "0.0" && it[RECALL_INDEX] == "0.0" }
 
         String[] text = ["Valid tasks (ones that have acceptance test and no empty IReal)", validTasks.size()]
         writer.writeNext(text)
@@ -165,9 +179,9 @@ class DataManager {
         text = ["Tasks that have no empty ITest and precision e recall 0.0", zeroPrecisionAndRecall.size()]
         writer.writeNext(text)
 
-        double[] precisionValues = entries.collect{ it[16] as double }
+        double[] precisionValues = entries.collect{ it[PRECISION_INDEX] as double }
         def itestStatistics = new DescriptiveStatistics(precisionValues)
-        double[] recallValues = entries.collect{ it[17] as double }
+        double[] recallValues = entries.collect{ it[RECALL_INDEX] as double }
         def irealStatistics = new DescriptiveStatistics(recallValues)
 
         text = ["Precision mean", itestStatistics.mean]
@@ -190,7 +204,7 @@ class DataManager {
         writer.close()
 
         if(similarityAnalysis) {
-            def tasks = entries.findAll{ !it[15].empty && (it[6] as int)>0 }
+            def tasks = entries.findAll{ !it[IREAL_INDEX].empty && (it[6] as int)>0 }
             saveResultForSimilarityAnalysis(similarityFile, resultHeader1, tasks)
         }
 
@@ -206,13 +220,18 @@ class DataManager {
         List<String[]> entries = readInputCSV(filename)
         List<String[]> relevantEntries = entries.findAll{ !it[4].equals("[]") && !it[5].equals("[]") }
         List<DoneTask> tasks = []
-        relevantEntries.each { entry ->
-            if(entry[2].size()>4){
-                List<Commit> commits = []
-                def hashes = entry[3].tokenize(',[]')*.trim()
-                hashes.each { commits += new Commit(hash: it) }
-                tasks += new DoneTask(entry[0], entry[1], entry[2], commits)
+        try{
+            relevantEntries.each { entry ->
+                if(entry[2].size()>4){
+                    List<Commit> commits = []
+                    def hashes = entry[3].tokenize(',[]')*.trim()
+                    hashes.each { commits += new Commit(hash: it) }
+                    tasks += new DoneTask(entry[0], entry[1], entry[2], commits)
+                }
             }
+        } catch(Exception ex){
+            log.error "Error while cloning Git repository. Details: ${ex.message}."
+            return [relevantTasks: [], allTasksQuantity:0]
         }
         [relevantTasks:tasks, allTasksQuantity:entries.size()]
     }
@@ -234,10 +253,13 @@ class DataManager {
             def msgs = extractMessages(entry)
             def stepErrors = extractStepErrors(entry)
             def compilationErrors = extractCompilationErrors(entry)
+            def renames = entry.task.renamedFiles
+            def removes = extractRemovedFiles(entry)
+            if(renames.empty) renames = ""
             String[] line = [entry.task.id, dates, entry.task.days, entry.task.commitsQuantity, msgs, devs,
                              entry.task.gherkinTestQuantity, entry.task.stepDefQuantity, entry.methods, entry.stepCalls,
                              stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
-                             entry.itest, entry.ireal, precision, recall]
+                             renames, removes, entry.itest, entry.ireal, precision, recall]
             writer.writeNext(line)
             writeITextFile(filename, entry) //dealing with long textual description of a task
         }
@@ -283,8 +305,8 @@ class DataManager {
         taskPairs?.each { item ->
             def task = item.task
             def taskText = extractTaskText(filteredFile, task[0])
-            def itest1 = task[14].split(", ") as List
-            def ireal1 = task[15].split(", ") as List
+            def itest1 = task[ITEST_INDEX].split(", ") as List
+            def ireal1 = task[IREAL_INDEX].split(", ") as List
 
             item.pairs?.each { other ->
                 log.info "Similarity between tasks ${task[0]} and ${other[0]}"
@@ -294,8 +316,8 @@ class DataManager {
                 def textSimilarity = textualSimilarityAnalyser.calculateSimilarity(taskText, otherText)
                 log.info "Textual similarity result: $textSimilarity"
 
-                def itest2 = other[14].split(", ") as List
-                def ireal2 = other[15].split(", ") as List
+                def itest2 = other[ITEST_INDEX].split(", ") as List
+                def ireal2 = other[IREAL_INDEX].split(", ") as List
                 def testSimilarity = TestSimilarityAnalyser.calculateSimilarityByJaccard(itest1, itest2)
                 def cosine = TestSimilarityAnalyser.calculateSimilarityByCosine(itest1, itest2)
                 log.info "Test similarity (jaccard index): $testSimilarity"

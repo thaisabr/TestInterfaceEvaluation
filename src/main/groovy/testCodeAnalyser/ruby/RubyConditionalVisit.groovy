@@ -1,15 +1,17 @@
 package testCodeAnalyser.ruby
 
 import org.jrubyparser.ast.ArrayNode
+import org.jrubyparser.ast.CallNode
 import org.jrubyparser.ast.DStrNode
 import org.jrubyparser.ast.DefnNode
 import org.jrubyparser.ast.DefsNode
-import org.jrubyparser.ast.INameNode
+import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.ast.IfNode
 import org.jrubyparser.ast.MethodDefNode
 import org.jrubyparser.ast.NewlineNode
 import org.jrubyparser.ast.RegexpNode
 import org.jrubyparser.ast.StrNode
+import org.jrubyparser.ast.VCallNode
 import org.jrubyparser.ast.WhenNode
 import org.jrubyparser.util.NoopVisitor
 
@@ -33,11 +35,19 @@ class RubyConditionalVisit extends NoopVisitor {
 
     }
 
-    private static extractIfResult(Node node){
+    private static extractIfResult(org.jrubyparser.ast.Node node){
         null //we cannot deal with a result that is neither a string or method call
     }
 
-    private static extractIfResult(INameNode node){
+    private static extractIfResult(VCallNode node){
+        [name: node.name, isMethod:true]
+    }
+
+    private static extractIfResult(CallNode node){
+        [name: node.name, isMethod:true]
+    }
+
+    private static extractIfResult(FCallNode node){
         [name: node.name, isMethod:true]
     }
 
@@ -71,18 +81,18 @@ class RubyConditionalVisit extends NoopVisitor {
         [exp: node.value]
     }
 
+    private static boolean isOfInterest(org.jrubyparser.ast.Node node){
+        if(node instanceof StrNode || node instanceof DStrNode || node instanceof VCallNode ||
+        node instanceof CallNode || node instanceof FCallNode) return true
+        else return false
+    }
+
     private static extractResultNodesFromWhen(WhenNode iVisited){
         def result = []
-        def r1 = iVisited.body.childNodes().findAll{
-            it instanceof StrNode || it instanceof DStrNode || it instanceof INameNode
-        }
+        def r1 = iVisited.body.childNodes().findAll{ isOfInterest(it) }
         if(!r1.empty) result += r1
-        def r2 = iVisited.body.childNodes().findAll{ it instanceof NewlineNode}*.childNodes()?.flatten()?.findAll{
-            it instanceof StrNode || it instanceof DStrNode || it instanceof INameNode
-        }
-        if(!r2.empty){
-            result += r2
-        }
+        def r2 = iVisited.body.childNodes().findAll{ it instanceof NewlineNode}*.childNodes()?.flatten()?.findAll{ isOfInterest(it) }
+        if(!r2.empty) result += r2
         result
     }
 

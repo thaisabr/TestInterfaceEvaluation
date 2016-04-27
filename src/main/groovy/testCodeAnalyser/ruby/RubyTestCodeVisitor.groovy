@@ -2,7 +2,6 @@ package testCodeAnalyser.ruby
 
 import groovy.util.logging.Slf4j
 import org.jrubyparser.ast.HashNode
-import org.jrubyparser.ast.INameNode
 import org.jrubyparser.ast.InstAsgnNode
 import org.jrubyparser.ast.Node
 import org.jrubyparser.ast.ArrayNode
@@ -278,9 +277,21 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         log.info "param is a dynamic variable: ${node.name}"
     }
 
-    /* If the argument is a method call that returns a literal, we understand the view was found.
-       Otherwise, it is not possible to extract it and find the view. */ //uso INameNode para identificar chamadas de método, mas na realidade isso pode pegar bem mais coisa!
-    private registryVisitCall(INameNode node){
+    /* If the argument is a method call (VCallNode, CallNode, FCallNode) that returns a literal, we understand the view was found.
+       Otherwise, it is not possible to extract it and find the view. */
+    private registryVisitCall(VCallNode node){
+        registryMethodCallVisitArg(node.name)
+    }
+
+    /* If the argument is a method call (VCallNode, CallNode, FCallNode) that returns a literal, we understand the view was found.
+       Otherwise, it is not possible to extract it and find the view. */
+    private registryVisitCall(CallNode node){
+        registryMethodCallVisitArg(node.name)
+    }
+
+    /* If the argument is a method call (VCallNode, CallNode, FCallNode) that returns a literal, we understand the view was found.
+       Otherwise, it is not possible to extract it and find the view. */
+    private registryVisitCall(FCallNode node){
         registryMethodCallVisitArg(node.name)
     }
 
@@ -428,9 +439,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                 case "expect": //alternative for should and should_not
                     analyseExpectCall(iVisited)
                     break
-                /*case "many_steps": //another way to call steps (check if is really used)
-                    log.info "many_steps call!"
-                    break*/
                 case "steps": //when a step calls another step
                 case "step":
                     registryStepCall(iVisited)

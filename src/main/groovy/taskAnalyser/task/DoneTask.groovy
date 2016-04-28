@@ -165,15 +165,19 @@ class DoneTask extends Task {
         log.info "COMMITS CHANGED GERKIN FILE: ${this.commits?.findAll{it.gherkinChanges && !it.gherkinChanges.isEmpty()}*.hash}"
         log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll{it.stepChanges && !it.stepChanges.isEmpty()}*.hash}"
 
-        if(!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
-            // resets repository to the state of the last commit to extract changes
-            gitRepository.reset(commits?.last()?.hash)
+        try{
+            if(!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
+                // resets repository to the state of the last commit to extract changes
+                gitRepository.reset(commits?.last()?.hash)
 
-            // computes task interface based on the production code exercised by tests
-            taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions)
+                // computes task interface based on the production code exercised by tests
+                taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions)
 
-            // resets repository to last version
-            gitRepository.reset()
+                // resets repository to last version
+                gitRepository.reset()
+            }
+        } catch(Exception ex){
+            log.error ex.message
         }
 
         taskInterface
@@ -188,15 +192,19 @@ class DoneTask extends Task {
             return text
         }
 
-        if(!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
-            // resets repository to the state of the last commit to extract changes
-            gitRepository.reset(commits?.last()?.hash)
+        try{
+            if(!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
+                // resets repository to the state of the last commit to extract changes
+                gitRepository.reset(commits?.last()?.hash)
 
-            //computes task text based in gherkin scenarios
-            text = super.computeTextBasedInterface()
+                //computes task text based in gherkin scenarios
+                text = super.computeTextBasedInterface()
 
-            // resets repository to last version
-            gitRepository.reset()
+                // resets repository to last version
+                gitRepository.reset()
+            }
+        } catch(Exception ex){
+            log.error ex.message
         }
         text
     }
@@ -209,14 +217,16 @@ class DoneTask extends Task {
             return taskInterface
         }
 
-        // resets repository to the state of the last commit to extract changes
-        gitRepository.reset(commits?.last()?.hash)
-
-        //computes real interface
-        taskInterface = identifyProductionChangedFiles()
-
-        // resets repository to last version
-        gitRepository.reset()
+        try{
+            // resets repository to the state of the last commit to extract changes
+            gitRepository.reset(commits?.last()?.hash)
+            //computes real interface
+            taskInterface = identifyProductionChangedFiles()
+            // resets repository to last version
+            gitRepository.reset()
+        } catch(Exception ex){
+            log.error ex.message
+        }
 
         taskInterface
     }
@@ -237,20 +247,24 @@ class DoneTask extends Task {
         log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll{it.stepChanges && !it.stepChanges.isEmpty()}*.hash}"
 
         if(!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
-            // resets repository to the state of the last commit to extract changes
-            gitRepository.reset(commits?.last()?.hash)
+            try{
+                // resets repository to the state of the last commit to extract changes
+                gitRepository.reset(commits?.last()?.hash)
 
-            // computes task interface based on the production code exercised by tests
-            itest = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions)
+                // computes task interface based on the production code exercised by tests
+                itest = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions)
 
-            //computes task text based in gherkin scenarios
-            itext = super.computeTextBasedInterface()
+                //computes task text based in gherkin scenarios
+                itext = super.computeTextBasedInterface()
 
-            //computes real interface
-            ireal = identifyProductionChangedFiles()
+                //computes real interface
+                ireal = identifyProductionChangedFiles()
 
-            // resets repository to last version
-            gitRepository.reset()
+                // resets repository to last version
+                gitRepository.reset()
+            } catch(Exception ex){
+                log.error ex.message
+            }
         }
 
         [itest:itest, itext:itext, ireal:ireal]

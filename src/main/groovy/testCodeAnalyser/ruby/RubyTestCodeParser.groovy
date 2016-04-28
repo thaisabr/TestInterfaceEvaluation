@@ -157,11 +157,9 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         }
         else { //it was used an auxiliary method; the view path must be extracted
             def failed = false
-            if(!f.args.empty){
-                //tem argumento, vai tentar extrair o exato retorno do método
-                //se não conseguir, atualiza failed para true
+            if(!f.args.empty){ //tries to extract a specific method return according to the argument; if it is not possible, failed is true
                 def valueExtracted = false
-                def pageVisitor = new RubyConditionalVisit(f.name, f.args)
+                def pageVisitor = new RubyConditionalVisitor(f.name, f.args)
                 generateAst(f.file)?.accept(pageVisitor)
 
                 if(pageVisitor.pages.empty && pageVisitor.auxiliaryMethods.empty) failed = true
@@ -181,7 +179,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                 }
                 if(!valueExtracted) failed = true
             }
-            if(f.args.empty || failed){ //se nao tem argumento ou nao foi possivel usar o argumento com sucesso, extrai todos os retornos possiveis
+            if(f.args.empty || failed){ //tries to extract all possible return values
                 //log.info "extracting all possible returns..."
                 def pageVisitor = new RubyPageVisitor(f.name, f.args)
                 generateAst(f.file)?.accept(pageVisitor) //extracts path from method

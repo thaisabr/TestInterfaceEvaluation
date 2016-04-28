@@ -230,7 +230,7 @@ class DataManager {
                 }
             }
         } catch(Exception ex){
-            log.error "Error while cloning Git repository. Details: ${ex.message}."
+            log.error ex.message
             return [relevantTasks: [], allTasksQuantity:0]
         }
         [relevantTasks:tasks, allTasksQuantity:entries.size()]

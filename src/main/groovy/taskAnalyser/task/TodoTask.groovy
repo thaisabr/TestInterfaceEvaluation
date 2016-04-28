@@ -4,6 +4,7 @@ import gherkin.Parser
 import gherkin.ast.Feature
 import groovy.util.logging.Slf4j
 import util.Util
+import util.exception.CloningRepositoryException
 
 /***
  * Represents a new task, that is, a task that contains test code but the production code is not done yet. The task is
@@ -22,7 +23,7 @@ class TodoTask extends Task {
      * @param scenarios a list of map objects that identifies a Gherkin file and its scenarios that
      *        are related to the task, by keywords 'path' and 'lines' respectively.
      */
-    TodoTask(String rootDirectory, boolean isRemote, String id, def scenarios){
+    TodoTask(String rootDirectory, boolean isRemote, String id, def scenarios) throws CloningRepositoryException {
         super(rootDirectory, isRemote, id)
 
         testCodeParser.configureProperties()

@@ -8,6 +8,7 @@ import testCodeAnalyser.java.JavaTestCodeParser
 import testCodeAnalyser.ruby.RubyTestCodeParser
 import util.LanguageOption
 import util.Util
+import util.exception.CloningRepositoryException
 import util.exception.InvalidLanguageException
 
 
@@ -17,7 +18,7 @@ abstract class Task {
     GitRepository gitRepository
     TestCodeAbstractParser testCodeParser
 
-    Task(String rootDirectory, boolean isRemote, String id){
+    Task(String rootDirectory, boolean isRemote, String id) throws CloningRepositoryException {
         this.id = id
         if(isRemote){
             this.gitRepository = GitRepositoryManager.getRepository(rootDirectory)

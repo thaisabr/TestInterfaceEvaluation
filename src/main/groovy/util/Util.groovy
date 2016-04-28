@@ -158,6 +158,18 @@ class Util {
         }
     }
 
+    static deleteFolder(String folder) {
+        def dir = new File(folder)
+        def files = dir.listFiles()
+        if(files != null) {
+            files.each{ f ->
+                if (f.isDirectory()) emptyFolder(f.getAbsolutePath())
+                else f.delete()
+            }
+        }
+        dir.deleteDir()
+    }
+
     static List<String> findFilesFromDirectoryByLanguage(String directory){
         def files = findFilesFromDirectory(directory)
         switch (CODE_LANGUAGE){

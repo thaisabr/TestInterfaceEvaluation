@@ -25,6 +25,7 @@ import testCodeAnalyser.TestCodeAbstractParser
 import util.ConstantData
 import util.RegexUtil
 import util.Util
+import util.exception.CloningRepositoryException
 
 import java.util.regex.Matcher
 
@@ -40,7 +41,7 @@ class GitRepository {
     String lastCommit //used only to reset the repository for the original state after checkout command
 
 
-    GitRepository(String url){
+    GitRepository(String url) throws CloningRepositoryException {
         this.url = url + ConstantData.GIT_EXTENSION
         this.name = Util.configureGitRepositoryName(url)
         this.localPath = Util.REPOSITORY_FOLDER_PATH + name
@@ -50,18 +51,23 @@ class GitRepository {
     /***
      * Clones a repository if it was not cloned yet.
      */
-    private cloneRepository(){
+    private cloneRepository() throws CloningRepositoryException {
         File dir = new File(localPath)
         File[] files = dir.listFiles()
-        if(files){
+        if(files && !files.empty){
             log.info "Already cloned from " + url + " to " + localPath
             lastCommit = searchAllRevCommits()?.last()?.name
         }
         else{
-            def result = Git.cloneRepository().setURI(url).setDirectory(dir).call()
-            lastCommit = result?.log()?.call()?.sort{ it.commitTime }?.last()?.name
-            result.close()
-            log.info "Cloned from " + url + " to " + localPath
+            try{
+                def result = Git.cloneRepository().setURI(url).setDirectory(dir).call()
+                lastCommit = result?.log()?.call()?.sort{ it.commitTime }?.last()?.name
+                result.close()
+                log.info "Cloned from " + url + " to " + localPath
+            } catch(Exception ex){
+                Util.deleteFolder(localPath)
+                throw new CloningRepositoryException(ex.message)
+            }
         }
     }
 

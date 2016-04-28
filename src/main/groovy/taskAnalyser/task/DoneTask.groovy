@@ -4,6 +4,7 @@ import commitAnalyser.Commit
 import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 import util.Util
+import util.exception.CloningRepositoryException
 
 /***
  * Represents a done task, that is, a task that contains production and test code. The code is published in a public
@@ -19,7 +20,7 @@ class DoneTask extends Task {
     List<StepDefinitionFile> changedStepDefinitions
     List<UnitFile> changedUnitFiles
 
-    DoneTask(String repositoryUrl, String id, List<String> shas){
+    DoneTask(String repositoryUrl, String id, List<String> shas) throws CloningRepositoryException {
         super(repositoryUrl, true, id)
         changedGherkinFiles = []
         changedStepDefinitions = []
@@ -37,7 +38,7 @@ class DoneTask extends Task {
         changedStepDefinitions = identifyChangedStepContent(commitsStepsChange)
     }
 
-    DoneTask(String repositoryIndex, String repositoryUrl, String id, List<Commit> commits) {
+    DoneTask(String repositoryIndex, String repositoryUrl, String id, List<Commit> commits) throws CloningRepositoryException {
         super(repositoryUrl, true, id)
         this.repositoryIndex = repositoryIndex
         changedGherkinFiles = []

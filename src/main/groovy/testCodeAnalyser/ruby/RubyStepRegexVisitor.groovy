@@ -1,9 +1,10 @@
 package testCodeAnalyser.ruby
 
+import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.ast.RegexpNode
 import org.jrubyparser.util.NoopVisitor
 import testCodeAnalyser.StepRegex
-
+import util.ConstantData
 import java.nio.charset.StandardCharsets
 
 /***
@@ -20,11 +21,19 @@ class RubyStepRegexVisitor extends NoopVisitor {
         regexs = []
     }
 
+    private static boolean isStepDefinitionNode(RegexpNode node){
+        if(node.grandParent instanceof FCallNode && node.grandParent.name in ConstantData.STEP_KEYWORDS
+                && node.grandParent.position.startLine == node.position.startLine) true
+        else false
+    }
+
     @Override
     Object visitRegexpNode(RegexpNode iVisited) {
         super.visitRegexpNode(iVisited)
-        regexs += new StepRegex(path: path, value:new String(iVisited.value.getBytes(), StandardCharsets.UTF_8),
-                line: iVisited.position.startLine)
+        if(isStepDefinitionNode(iVisited)){
+            regexs += new StepRegex(path: path, value:new String(iVisited.value.getBytes(), StandardCharsets.UTF_8),
+                    line: iVisited.position.startLine)
+        }
     }
 
 }

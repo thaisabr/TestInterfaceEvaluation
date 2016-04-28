@@ -54,7 +54,7 @@ class GitRepository {
     private cloneRepository() throws CloningRepositoryException {
         File dir = new File(localPath)
         File[] files = dir.listFiles()
-        if(files && !files.empty){
+        if(files && files.length>0){
             log.info "Already cloned from " + url + " to " + localPath
             lastCommit = searchAllRevCommits()?.last()?.name
         }

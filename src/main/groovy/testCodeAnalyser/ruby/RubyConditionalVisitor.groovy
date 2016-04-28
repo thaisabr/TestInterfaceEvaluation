@@ -18,7 +18,7 @@ import org.jrubyparser.util.NoopVisitor
 import java.nio.charset.StandardCharsets
 
 
-class RubyConditionalVisit extends NoopVisitor {
+class RubyConditionalVisitor extends NoopVisitor {
 
     Set<String> pages
     List auxiliaryMethods
@@ -26,11 +26,11 @@ class RubyConditionalVisit extends NoopVisitor {
     String arg
     Set<ConditionalExpression> expressions
 
-    public RubyConditionalVisit(String methodName, List<String> args){
+    RubyConditionalVisitor(String methodName, List<String> args){
         this.pages = [] as Set
         this.auxiliaryMethods = []
         this.methodName = methodName
-        this.arg = args?.first()
+        if(args && !args.empty) this.arg = args?.first()
         this.expressions = [] as Set
 
     }
@@ -104,10 +104,12 @@ class RubyConditionalVisit extends NoopVisitor {
             def matches = expressions.findAll{ it.line in lines }?.sort{ it.line}
 
             //checks if there is a specific return for the argument
-            def realMatches = matches.findAll{ arg ==~ /${it.expression}/ }
-            if(!realMatches.empty){
-                auxiliaryMethods = realMatches.findAll{ it.resultIsMethod }*.result
-                pages = realMatches.findAll{ !it.resultIsMethod }*.result
+            if(arg){
+                def realMatches = matches.findAll{ arg ==~ /${it.expression}/ }
+                if(!realMatches.empty){
+                    auxiliaryMethods = realMatches.findAll{ it.resultIsMethod }*.result
+                    pages = realMatches.findAll{ !it.resultIsMethod }*.result
+                }
             }
         }
     }

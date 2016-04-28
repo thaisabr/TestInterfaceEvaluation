@@ -245,6 +245,9 @@ class DataManager {
         CSVWriter writer = new CSVWriter(new FileWriter(filename))
         writeHeaderAllResult(writer, allTasksCounter, relevantTasksCounter, stepDefTasksCounter, gherkinTasksCounter)
 
+        def saveText = false
+        if(taskData && taskData.size()>1) saveText = true
+
         taskData?.each{ entry ->
             def precision = TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)
             def recall = TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)
@@ -261,7 +264,7 @@ class DataManager {
                              stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
                              renames, removes, entry.itest, entry.ireal, precision, recall]
             writer.writeNext(line)
-            writeITextFile(filename, entry) //dealing with long textual description of a task
+            if(saveText) writeITextFile(filename, entry) //dealing with long textual description of a task
         }
 
         writer.close()

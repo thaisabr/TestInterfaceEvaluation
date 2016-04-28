@@ -7,6 +7,7 @@ import org.codehaus.groovy.ast.expr.*
 import org.codehaus.groovy.control.SourceUnit
 import taskAnalyser.task.TaskInterface
 import testCodeAnalyser.MethodToAnalyse
+import testCodeAnalyser.StepCall
 import testCodeAnalyser.TestCodeVisitor
 import util.Util
 import util.groovy.GroovyUtil
@@ -18,13 +19,14 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     TaskInterface taskInterface
     List<String> projectFiles //valid files
     String lastVisitedFile
-    def calledSteps //it is used when a step definition calls another one. until the moment, it is not used in groovy code yet.
+    List<StepCall> calledSteps //it is used when a step definition calls another one. until the moment, it is not used in groovy code yet.
 
     public GroovyTestCodeVisitor(String repositoryPath, String currentFile){
         this.source = null
         this.projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         this.taskInterface = new TaskInterface()
         this.lastVisitedFile = currentFile
+        calledSteps = []
     }
 
     private registryMethodCall(MethodCallExpression call){

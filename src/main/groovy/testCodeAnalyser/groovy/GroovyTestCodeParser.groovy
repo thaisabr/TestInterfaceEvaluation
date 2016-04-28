@@ -1,5 +1,6 @@
 package testCodeAnalyser.groovy
 
+import groovy.util.logging.Slf4j
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.Phases
@@ -12,7 +13,7 @@ import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.TestCodeVisitor
 import util.Util
 
-
+@Slf4j
 class GroovyTestCodeParser extends TestCodeAbstractParser {
 
     static GroovyClassLoader classLoader

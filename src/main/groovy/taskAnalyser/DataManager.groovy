@@ -74,9 +74,9 @@ class DataManager {
         dates
     }
 
-    private static extractMessages(def entry){
-        def msgs = entry?.task?.commits*.message?.flatten()
-        if(msgs.size()>1000) msgs = msgs.toString().substring(0,999)+" [TOO_LONG]"
+    private static String extractMessages(def entry){
+        String msgs = entry?.task?.commits*.message?.flatten()?.toString()
+        if(msgs.length()>1000) msgs = msgs.toString().substring(0,999)+" [TOO_LONG]"
         msgs
     }
 
@@ -298,7 +298,7 @@ class DataManager {
         CSVWriter writer = new CSVWriter(new FileWriter(similarityFile))
         writer.writeNext(entries.get(0))
 
-        String[] resultHeader = ["Task_A", "Task_B", "Text", "Test", "Real" ]
+        String[] resultHeader = ["Task_A", "Task_B", "Text", "Test_Jaccard", "Real_Jaccard" , "Test_Cosine", "Real_Cosine"]
         writer.writeNext(resultHeader)
 
         def allTasks = entries.subList(2,entries.size())
@@ -321,17 +321,17 @@ class DataManager {
 
                 def itest2 = other[ITEST_INDEX].split(", ") as List
                 def ireal2 = other[IREAL_INDEX].split(", ") as List
-                def testSimilarity = TestSimilarityAnalyser.calculateSimilarityByJaccard(itest1, itest2)
-                def cosine = TestSimilarityAnalyser.calculateSimilarityByCosine(itest1, itest2)
-                log.info "Test similarity (jaccard index): $testSimilarity"
-                log.info "Test similarity (cosine): $cosine"
+                def testSimJaccard = TestSimilarityAnalyser.calculateSimilarityByJaccard(itest1, itest2)
+                def testSimCosine = TestSimilarityAnalyser.calculateSimilarityByCosine(itest1, itest2)
+                log.info "Test similarity (jaccard index): $testSimJaccard"
+                log.info "Test similarity (cosine): $testSimCosine"
 
-                def realSimilarity = TestSimilarityAnalyser.calculateSimilarityByJaccard(ireal1, ireal2)
-                cosine = TestSimilarityAnalyser.calculateSimilarityByCosine(ireal1, ireal2)
-                log.info "Real similarity (jaccard index): $realSimilarity"
-                log.info "Real similarity (cosine): $cosine"
+                def realSimJaccard = TestSimilarityAnalyser.calculateSimilarityByJaccard(ireal1, ireal2)
+                def realSimCosine = TestSimilarityAnalyser.calculateSimilarityByCosine(ireal1, ireal2)
+                log.info "Real similarity (jaccard index): $realSimJaccard"
+                log.info "Real similarity (cosine): $realSimCosine"
 
-                String[] line = [task[0], other[0], textSimilarity, testSimilarity, realSimilarity]
+                String[] line = [task[0], other[0], textSimilarity, testSimJaccard, realSimJaccard, testSimCosine, realSimCosine]
                 lines += line
             }
         }

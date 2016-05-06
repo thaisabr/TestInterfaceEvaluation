@@ -82,9 +82,8 @@ class RubyConditionalVisitor extends NoopVisitor {
     }
 
     private static boolean isOfInterest(org.jrubyparser.ast.Node node){
-        if(node instanceof StrNode || node instanceof DStrNode || node instanceof VCallNode ||
-        node instanceof CallNode || node instanceof FCallNode) return true
-        else return false
+        return node instanceof StrNode || node instanceof DStrNode || node instanceof VCallNode ||
+                node instanceof CallNode || node instanceof FCallNode
     }
 
     private static extractResultNodesFromWhen(WhenNode iVisited){
@@ -132,8 +131,9 @@ class RubyConditionalVisitor extends NoopVisitor {
         super.visitWhenNode(iVisited)
         def condition = extractStringFromWhenCondition(iVisited.expression)
         def resultNodes = extractResultNodesFromWhen(iVisited)
-        def result = resultNodes?.collect{ extractIfResult(it) }?.findAll{ it != null }?.last()
-        if(result){
+        def result = resultNodes?.collect{ extractIfResult(it) }?.findAll{ it != null }
+        if(result && !result.empty) {
+            result = result.last()
             expressions += new ConditionalExpression(line: iVisited.position.startLine, expression:condition.exp,
                     result:result.name, resultIsMethod: result.isMethod)
         }

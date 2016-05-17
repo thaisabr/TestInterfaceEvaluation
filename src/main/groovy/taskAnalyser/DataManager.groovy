@@ -18,7 +18,8 @@ class DataManager {
 
     static final String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests", "#StepDef",
                                     "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
-                                    "#AST_Errors", "Renamed_Files", "Deleted_Files", "ITest", "IReal", "Precision", "Recall"]
+                                    "#AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views", "#Views", "#ITest", "#IReal",
+                                    "ITest", "IReal", "Precision", "Recall"]
     static final int RECALL_INDEX = HEADER.size()-1
     static final int PRECISION_INDEX = RECALL_INDEX-1
     static final int IREAL_INDEX = PRECISION_INDEX-1
@@ -233,7 +234,7 @@ class DataManager {
             log.error ex.message
             return [relevantTasks: [], allTasksQuantity:0]
         }
-        [relevantTasks:tasks, allTasksQuantity:entries.size()]
+        [relevantTasks:tasks.sort{it.id}, allTasksQuantity:entries.size()]
     }
 
     static extractProductionAndTestTasks(){
@@ -249,6 +250,8 @@ class DataManager {
         if(taskData && taskData.size()>1) saveText = true
 
         taskData?.each{ entry ->
+            def itestSize = entry.itest.findAllFiles().size()
+            def irealSize = entry.ireal.findAllFiles().size()
             def precision = TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)
             def recall = TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)
             def dates =  extractDates(entry)
@@ -259,10 +262,12 @@ class DataManager {
             def renames = entry.task.renamedFiles
             def removes = extractRemovedFiles(entry)
             if(renames.empty) renames = ""
+            def views = entry.itest.notFoundViews
+            if(views.empty) views = ""
             String[] line = [entry.task.id, dates, entry.task.days, entry.task.commitsQuantity, msgs, devs,
                              entry.task.gherkinTestQuantity, entry.task.stepDefQuantity, entry.methods, entry.stepCalls,
                              stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
-                             renames, removes, entry.itest, entry.ireal, precision, recall]
+                             renames, removes, views, views.size(), itestSize, irealSize, entry.itest, entry.ireal, precision, recall]
             writer.writeNext(line)
             if(saveText) writeITextFile(filename, entry) //dealing with long textual description of a task
         }

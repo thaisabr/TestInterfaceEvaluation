@@ -22,7 +22,6 @@ class GherkinManager {
                 feature = parser.parse(content)
             } catch(ParserException ex){
                 GitRepository.log.warn "Problem to parse Gherkin file '$filename' (commit $sha). ${ex.class}: ${ex.message}."
-                GitRepository.log.warn content
             }
         }
         feature

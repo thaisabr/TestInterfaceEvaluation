@@ -22,7 +22,8 @@ class RubyStepRegexVisitor extends NoopVisitor {
     }
 
     private static boolean isStepDefinitionNode(RegexpNode node){
-        if(node.grandParent instanceof FCallNode && node.grandParent.name in ConstantData.STEP_KEYWORDS
+        def keywords = ConstantData.STEP_KEYWORDS + ConstantData.STEP_KEYWORDS_PT + ConstantData.STEP_KEYWORDS_DE
+        if(node.grandParent instanceof FCallNode && node.grandParent.name in keywords
                 && node.grandParent.position.startLine == node.position.startLine) true
         else false
     }
@@ -34,6 +35,7 @@ class RubyStepRegexVisitor extends NoopVisitor {
             regexs += new StepRegex(path: path, value:new String(iVisited.value.getBytes(), StandardCharsets.UTF_8),
                     line: iVisited.position.startLine)
         }
+        return iVisited
     }
 
 }

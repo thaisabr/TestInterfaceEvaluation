@@ -429,6 +429,13 @@ class GitRepository {
         return changedLines
     }
 
+    List<RevCommit> identifyCommitsInFile(String filename){
+        def git = Git.open(new File(localPath))
+        List<RevCommit> logs = git?.log()?.addPath(filename)?.call()?.sort{ it.commitTime }
+        git.close()
+        return logs
+    }
+
     List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent, TestCodeAbstractParser parser){
         def diffs = extractDiff(null, commit, parent)
         extractAllCodeChangeFromDiffs(commit, parent, diffs, parser)

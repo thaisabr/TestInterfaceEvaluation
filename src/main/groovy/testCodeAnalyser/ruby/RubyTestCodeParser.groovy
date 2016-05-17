@@ -12,8 +12,11 @@ import testCodeAnalyser.FileToAnalyse
 import testCodeAnalyser.StepRegex
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.TestCodeVisitor
+import testCodeAnalyser.ruby.routes.RubyConfigRoutesVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecFileVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
+import util.RegexUtil
+import util.Util
 import util.ruby.RubyUtil
 
 @Slf4j
@@ -21,10 +24,13 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     String routesFile
     def routes //name, file, value
+    List<String> modelFiles
 
     RubyTestCodeParser(String repositoryPath){
         super(repositoryPath)
         routesFile = repositoryPath+RubyUtil.ROUTES_FILE
+        def modelsDir = "${repositoryPath}${File.separator}${Util.PRODUCTION_FILES_RELATIVE_PATH}${File.separator}models"
+        modelFiles = Util.findFilesFromDirectoryByLanguage(modelsDir)
     }
 
     /***
@@ -137,22 +143,25 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     }
 
     private findAllRoutes(){
-        ConfigRoutesVisitor visitor = new ConfigRoutesVisitor(routesFile)
         def node = generateAst(routesFile)
-        node?.accept(visitor)
+        RubyConfigRoutesVisitor visitor = new RubyConfigRoutesVisitor(node, modelFiles)
         visitor?.routingMethods
     }
 
     private String extractValueFromRouteMethod(String name){
-        def route = routes?.find{ it.name == name }
-        if(route) return route.arg
-        else return name //if the route was not found, searches for path directly
+        def route = routes?.find{ it.name ==~ name || name ==~/${it.value}/ }
+        def result = name
+        if(route) {
+            if(route.arg && route.arg!="") result = route.arg
+            else if(route.value && route.value!="") result = route.value //com isso, o valor retornado por esse metodo pode ser uma regex
+        }
+        return result //if the route was not found, searches for path directly
     }
 
     private identifyRoutes(def f){ //f keywords: file, name, args
         def result = []
         if(f.file == RubyUtil.ROUTES_ID) { //search for route
-            //log.info "searching route by routes configuration: ${f.name}"
+            log.info "searching route by routes configuration: ${f.name}"
             result += extractValueFromRouteMethod(f.name)
         }
         else { //it was used an auxiliary method; the view path must be extracted
@@ -164,12 +173,14 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
                 if(pageVisitor.pages.empty && pageVisitor.auxiliaryMethods.empty) failed = true
                 else if(!pageVisitor.pages.empty) {
-                    //log.info "Pages: ${pageVisitor.pages}"
-                    result += pageVisitor.pages
-                    valueExtracted = true
+                    log.info "Pages: ${pageVisitor.pages}"
+                    pageVisitor.pages.each{ page ->
+                        result += extractValueFromRouteMethod(page)
+                        valueExtracted = true
+                    }
                 }
                 else if(!pageVisitor.auxiliaryMethods.empty){
-                    //log.info "Auxiliary methods: ${pageVisitor.auxiliaryMethods}"
+                    log.info "Auxiliary methods: ${pageVisitor.auxiliaryMethods}"
                     pageVisitor.auxiliaryMethods.each {
                         if(RubyUtil.isRouteMethod(it)){
                             result += extractValueFromRouteMethod(it-RubyUtil.ROUTE_SUFIX)
@@ -180,12 +191,12 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                 if(!valueExtracted) failed = true
             }
             if(f.args.empty || failed){ //tries to extract all possible return values
-                //log.info "extracting all possible returns..."
+                log.info "extracting all possible returns..."
                 def pageVisitor = new RubyPageVisitor(f.name, f.args)
                 generateAst(f.file)?.accept(pageVisitor) //extracts path from method
                 if(!pageVisitor.pages.empty) {
                     pageVisitor.pages.each { page ->
-                        def route = routes?.find{ it.name == page || it.value == page}
+                        def route = routes?.find{ page == it.name|| page ==~ /${it.value}/ }
                         if(route) {
                             result += route.arg
                         } else {
@@ -198,11 +209,11 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
         def finalResult = []
         result.each{ r ->
-            if(r == "/") {
+            if(r ==~ RegexUtil.FILE_SEPARATOR_REGEX) {
                 def newRoute = extractValueFromRouteMethod("root")
                 if(newRoute && newRoute!="root") r = newRoute
             }
-            else if(r.startsWith("/")){ //dealing with redirects (to validate)
+            else if(r.startsWith(File.separator)){ //dealing with redirects (to validate)
                 def newRoute = extractValueFromRouteMethod(r.substring(1))
                 if(newRoute && newRoute!=r.substring(1)) r = newRoute
             }
@@ -212,11 +223,31 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         finalResult
     }
 
+    private matchRouteAndView(TestCodeVisitor visitor, Set calledViews){
+        log.info "All pages to identify: $calledViews"
+        def founded = []
+        calledViews?.each{ page ->
+            def foundPages = RubyUtil.findViewPathForRailsProjects(page, viewFiles)
+            if(foundPages && !foundPages.empty) {
+                visitor?.taskInterface?.referencedPages += foundPages
+                founded += page
+            }
+        }
+
+        log.info "All founded views: ${visitor?.taskInterface?.referencedPages}"
+        def problematicViews = calledViews - founded
+        log.info "Not identified pages: $problematicViews"
+        notFoundViews += problematicViews
+    }
+
     @Override
     void findAllPages(TestCodeVisitor visitor) {
         def filesToVisit = visitor?.taskInterface?.calledPageMethods
-        if(!routes) routes = findAllRoutes()
-        //log.info "all routes: $routes"
+        if(!routes) {
+            routes = findAllRoutes()
+            log.info "All routes:"
+            routes.each{ log.info it.toString() }
+        }
 
         def result = [] as Set
         filesToVisit = filesToVisit.findAll{ it!= null } //it could be null if the test code references a class or file that does not exist
@@ -226,17 +257,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         }
 
         result = result.unique()
-        log.info "All pages to identify: $result"
-        def founded = []
-        result?.each{ page ->
-            def foundPages = RubyUtil.findViewPathForRailsProjects(page, viewFiles)
-            if(foundPages && !foundPages.empty) {
-                visitor?.taskInterface?.referencedPages += foundPages
-                founded += page
-            }
-        }
-        log.info "All founded views: ${visitor?.taskInterface?.referencedPages}"
-        log.info "Not identified pages: ${result - founded}"
+        matchRouteAndView(visitor, result)
     }
 
     @Override

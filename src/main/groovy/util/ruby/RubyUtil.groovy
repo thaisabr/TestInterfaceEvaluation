@@ -1,10 +1,13 @@
 package util.ruby
 
+import groovy.util.logging.Slf4j
 import util.ConstantData
 import util.RegexUtil
 import util.Util
 import java.util.regex.Matcher
+import java.util.regex.Pattern
 
+@Slf4j
 class RubyUtil extends Util {
 
     public static final String ROUTES_FILE = File.separator+"config"+File.separator+"routes.rb"
@@ -33,15 +36,13 @@ class RubyUtil extends Util {
     }
 
     static List<String> findViewPathForRailsProjects(String resourcePath, List projectFiles){
-        if(!resourcePath || resourcePath.empty || resourcePath.allWhitespace ) return ""
-
         def result = []
+        if(!resourcePath || resourcePath.empty || resourcePath.allWhitespace ) return result
         def viewFiles = projectFiles?.findAll{ file ->
             file.contains(VIEWS_FILES_RELATIVE_PATH) && VALID_VIEW_FILES.any{ file.endsWith(it) }
         }
         def name = resourcePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-
-        if(name.contains(".")){ //is a file
+        if(name.contains(".") && !name.contains("*")){ //is a file
             def match = viewFiles?.findAll{ it.contains(name) }
             if(match) result += match
         } else if(name.contains("#")){
@@ -49,11 +50,15 @@ class RubyUtil extends Util {
             def controller = name.substring(0, index)
             def action = name.substring(index+1,name.length())
             if(controller && action){
-                def match = viewFiles?.findAll{ it.contains(File.separator+controller+File.separator+action)}
+                def match = viewFiles?.findAll{ it.contains("views${File.separator}$controller${File.separator}$action")}
                 if(match && !match.empty) result += match
+                else{
+                    def matches = viewFiles?.findAll{ it.contains("views${File.separator}$controller") }
+                    if(matches && !matches.empty) result += matches
+                }
             }
-        } else { //is a directory
-            def matches = viewFiles?.findAll{ it.contains(name) }
+        } else if(name.contains(File.separator)){ //is a directory or a simple string or a regex
+            def matches = viewFiles?.findAll{ it ==~ /.*${Pattern.quote(name)}.*/ }
             if(matches && matches.size()>0){
                 if(matches.size() == 1) result = matches
                 else {
@@ -62,7 +67,11 @@ class RubyUtil extends Util {
                     else result = matches
                 }
             }
-        }
+        } else {
+            log.warn "The searched views is unxpected: $name"
+        }//or is an unknown string
+
+        log.info "(view) match for ${resourcePath}: ${result}"
         result
     }
 

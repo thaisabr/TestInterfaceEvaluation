@@ -28,5 +28,7 @@ class ConstantData {
 
     public static final List<String> STEP_KEYWORDS = new GherkinDialectProvider().defaultDialect.stepKeywords.unique()*.trim()
     public static final List<String> STEP_KEYWORDS_PT = new GherkinDialectProvider().getDialect("pt",null).stepKeywords.unique()*.trim()
+    public static final List<String> STEP_KEYWORDS_DE = new GherkinDialectProvider().getDialect("de",null).stepKeywords.unique()*.trim()
+
 
 }

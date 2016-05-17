@@ -83,7 +83,7 @@ class Util {
 
     static String configureGitRepositoryName(String url){
         String name = url - ConstantData.GITHUB_URL - ConstantData.GIT_EXTENSION
-        return name.replaceAll("/", "_")
+        return name.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
     }
 
     static String getRepositoriesCanonicalPath(){

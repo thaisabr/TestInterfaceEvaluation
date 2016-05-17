@@ -18,6 +18,7 @@ class TaskInterface {
 
     Set matchStepErrors
     Set compilationErrors
+    Set notFoundViews
 
     TaskInterface() {
         this.classes = [] as Set
@@ -29,6 +30,7 @@ class TaskInterface {
         this.referencedPages = [] as Set
         this.matchStepErrors = [] as Set
         this.compilationErrors = [] as Set
+        this.notFoundViews = [] as Set
     }
 
     @Override

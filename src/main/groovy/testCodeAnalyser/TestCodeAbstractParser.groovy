@@ -29,6 +29,7 @@ abstract class TestCodeAbstractParser {
     List<String> viewFiles
     static final ARGS_REGEX = /(["'])(?:(?=(\\?))\2.)*?\1/
 
+    protected Set notFoundViews
     protected Set compilationErrors
     Set matchStepErrors
 
@@ -44,8 +45,13 @@ abstract class TestCodeAbstractParser {
         methods = [] as Set
         projectFiles = []
         viewFiles = []
+        notFoundViews = [] as Set
         compilationErrors = [] as Set
         matchStepErrors = [] as Set
+    }
+
+    private organizeNotFoundViews(){
+        notFoundViews.sort()
     }
 
     private organizeMatchStepErrors(){
@@ -75,7 +81,7 @@ abstract class TestCodeAbstractParser {
     /***
      * Matches step declaration and code
      */
-    private List<StepCode> extractAcceptanceTest(List<GherkinFile> gherkinFiles){
+    private List<AcceptanceTest> extractAcceptanceTest(List<GherkinFile> gherkinFiles){
         List<AcceptanceTest> acceptanceTests = []
         gherkinFiles?.each { gherkinFile ->
             /* finds step code of background from a Gherkin file */
@@ -133,7 +139,6 @@ abstract class TestCodeAbstractParser {
 
     List<FileToAnalyse> findStepCode(StepCall call, boolean extractArgs) {
         def calledSteps = []  //path, line, args
-        def stepsCode = [] //keywords path, lines
         List<FileToAnalyse> result = []
 
         /* find step declaration */
@@ -154,7 +159,7 @@ abstract class TestCodeAbstractParser {
                 }
             }
         } else {
-            log.warn "Step code was not found (findStepCode(stepText,path,line)): ${call.text}; ${call.path} (${call.line})"
+            log.warn "Step code was not found: ${call.text}; ${call.path} (${call.line})"
             matchStepErrors += [path:call.path, line:call.line]
         }
 
@@ -372,7 +377,7 @@ abstract class TestCodeAbstractParser {
                 log.warn "There are many implementations for step code: ${step.text}; $path (${step.location.line})"
                 stepCodeMatch?.each{
                     log.warn it.toString()
-                    if(it.value!=".*" && it.value!=".+") code += new StepCode(step: step, codePath: it.path, line: it.line, args:args)
+                    code += new StepCode(step: step, codePath: it.path, line: it.line, args:args)
                 }
             }
         } else {
@@ -402,7 +407,7 @@ abstract class TestCodeAbstractParser {
                 log.warn "There are many implementations for step code: ${step.value}; ${step.path} (${step.line})"
                 stepCodeMatch?.each{
                     log.warn it.toString()
-                    if(it.value!=".*" && it.value!=".+") result += [path: it.path, line: it.line]
+                    result += [path: it.path, line: it.line]
                 }
             }
         } else {
@@ -443,6 +448,7 @@ abstract class TestCodeAbstractParser {
         List<FileToAnalyse> files1 = identifyMethodsPerFileToVisit(stepCodes1)
         List<FileToAnalyse> files2 = findCodeForStepsIndependentFromAcceptanceTest(stepFiles)
         List<FileToAnalyse> filesToAnalyse = collapseFilesToVisit(files1, files2)
+        filesToAnalyse.each{ log.info it.toString() }
         computeInterface(filesToAnalyse)
     }
 
@@ -460,10 +466,13 @@ abstract class TestCodeAbstractParser {
     }
 
     private TaskInterface computeInterface(List<FileToAnalyse> filesToAnalyse){
+        log.info "enter in computeInterface"
         def interfaces = []
         List<StepCall> calledSteps = [] //keys:text, path, line
 
         filesToAnalyse?.eachWithIndex{ stepDefFile, index ->
+            log.info "step definition file: ${stepDefFile.path}"
+
             /* first level: To identify method calls from step body. */
             TestCodeVisitor testCodeVisitor = parseStepBody(stepDefFile) //aqui é que vai usar args
 
@@ -477,6 +486,7 @@ abstract class TestCodeAbstractParser {
 
                 /* visits each file */
                 filesToParse.each { f ->
+                    log.info "next visit: $f"
                     visitFile(f, testCodeVisitor)
                 }
 
@@ -490,6 +500,8 @@ abstract class TestCodeAbstractParser {
             calledSteps += testCodeVisitor.calledSteps
 
             /* searches for view files */
+            log.info "calledPageMethods:"
+            testCodeVisitor?.taskInterface?.calledPageMethods?.each{ log.info it.toString() }
             findAllPages(testCodeVisitor)
 
             /* updates task interface */
@@ -499,12 +511,14 @@ abstract class TestCodeAbstractParser {
         /* identifies more step definitions to analyse */
         List<FileToAnalyse> newStepsToAnalyse = identifyMethodsPerFileToVisitByStepCalls(calledSteps)
         newStepsToAnalyse = updateStepFiles(filesToAnalyse, newStepsToAnalyse)
+        log.info "newStepsToAnalyse: $newStepsToAnalyse"
         if(!newStepsToAnalyse.empty) interfaces += computeInterface(newStepsToAnalyse)
 
         /* collapses step code interfaces to define the interface for the whole task */
         def itest = TaskInterface.colapseInterfaces(interfaces)
         itest.matchStepErrors = organizeMatchStepErrors()
         itest.compilationErrors = organizeCompilationErrors()
+        itest.notFoundViews = organizeNotFoundViews()
         itest
     }
 
@@ -555,11 +569,6 @@ abstract class TestCodeAbstractParser {
      */
     abstract visitFile(def file, TestCodeVisitor visitor)
 
-    /***
-     *
-     * @param file
-     * @return
-     */
     abstract TestCodeVisitor parseUnitBody(UnitFile file)
 
     abstract UnitFile doExtractUnitTest(String path, String content, List<Integer> changedLines)

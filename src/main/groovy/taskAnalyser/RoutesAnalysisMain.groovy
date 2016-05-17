@@ -1,15 +1,16 @@
 package taskAnalyser
 
 import au.com.bytecode.opencsv.CSVWriter
+import commitAnalyser.Commit
 import groovy.util.logging.Slf4j
-import taskAnalyser.task.DoneTask
+import taskAnalyser.task.RailsTask
 import util.ConstantData
 import util.Util
 
 @Slf4j
 class RoutesAnalysisMain {
 
-    static computeTaskData(List<DoneTask> tasks, String filename){
+    static computeTaskData(List<RailsTask> tasks, String filename){
         log.info "Tasks: ${tasks.size()}"
         List<String[]> result = []
 
@@ -20,12 +21,11 @@ class RoutesAnalysisMain {
             result += value
         }
 
-        log.info "Tasks with changes on routes: ${result.size()}"
         File file = new File(filename)
         def outputFile = ConstantData.DEFAULT_EVALUATION_FOLDER+File.separator+file.name-ConstantData.CSV_FILE_EXTENSION+
                 "_routes" + ConstantData.CSV_FILE_EXTENSION
         CSVWriter writer = new CSVWriter(new FileWriter(outputFile))
-        String[] text = ["Tasks with changes on routes:", result.size()]
+        String[] text = ["Tasks:", tasks.size()]
         writer.writeNext(text)
         text = ["TASK_ID", "CHANGE BY ITSELF", "CHANGE BY OTHERS"]
         writer.writeNext(text)
@@ -41,8 +41,25 @@ class RoutesAnalysisMain {
         }
     }
 
+    static extractProductionAndTestTasks(String filename){
+        List<String[]> entries = DataManager.readInputCSV(filename)
+        List<String[]> relevantEntries = entries.findAll{ !it[4].equals("[]") && !it[5].equals("[]") }
+        List<RailsTask> tasks = []
+
+        relevantEntries.each { entry ->
+            if(entry[2].size()>4){
+                List<Commit> commits = []
+                def hashes = entry[3].tokenize(',[]')*.trim()
+                hashes.each { commits += new Commit(hash: it) }
+                tasks += new RailsTask(entry[0], entry[1], entry[2], commits)
+            }
+        }
+
+        [relevantTasks:tasks.sort{it.id}, allTasksQuantity:entries.size()]
+    }
+
     public static void main(String[] args){
-        def result1 = DataManager.extractProductionAndTestTasks(Util.TASKS_FILE)
+        def result1 = extractProductionAndTestTasks(Util.TASKS_FILE)
         computeTaskData(result1.relevantTasks, Util.TASKS_FILE)
         //analyseAllForMultipleProjects(ConstantData.DEFAULT_TASKS_FOLDER)
     }

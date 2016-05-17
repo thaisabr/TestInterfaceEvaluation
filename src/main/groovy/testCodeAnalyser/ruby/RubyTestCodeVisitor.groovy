@@ -25,7 +25,6 @@ import org.jrubyparser.ast.SelfNode
 import org.jrubyparser.ast.StrNode
 import org.jrubyparser.ast.SymbolNode
 import org.jrubyparser.ast.VCallNode
-import org.jrubyparser.ast.WhenNode
 import org.jrubyparser.util.NoopVisitor
 import taskAnalyser.task.TaskInterface
 import testCodeAnalyser.MethodToAnalyse
@@ -166,10 +165,9 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         } else{
             log.info "param is (defined) method call: $name"
             def args = []
-            if(stepDefinitionMethod){
-                args = stepDefinitionMethod.args
-            }
-            methodsToVisit?.each { m -> taskInterface.calledPageMethods += [file: m.path, name: m.name, args:args] }
+            if(stepDefinitionMethod) args = stepDefinitionMethod.args
+            methodsToVisit?.each { m ->
+                taskInterface.calledPageMethods += [file: m.path, name: m.name, args:args] }
         }
     }
 
@@ -195,25 +193,13 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         name = extractPath(name)
         def index = name.indexOf("?")
         if(index>0) name = name.substring(0, index)//ignoring params
-
         /* if the dynamic content is not at the end of the string, the resultin url will be wrong. Example:
            visit "/portal/classes/#{clazz.id}/remove_offering?offering_id=#{offering.id}"
            Extracted url: /portal/classes//remove_offering  */
-        if(name.contains("//edit")){
-            def begin = name.indexOf("//edit")
-            def end = index + 7
-            def finalName = ""
-            if(index>0)  finalName = name.substring(0,begin) + "/edit" + name.substring(end)
-            if(!finalName.empty){
-                taskInterface.calledPageMethods += [file: RubyUtil.ROUTES_ID, name: name, args: []]
-                log.info "param is dynamic literal: $name"
-            }
-        }
-        else if(!name.contains("//")) {
-            taskInterface.calledPageMethods += [file: RubyUtil.ROUTES_ID, name: name, args: []]
-            log.info "param is dynamic literal: $name"
-        }
-        else log.warn "param is dynamic literal that cannot be correctly retrieved: $name"
+        name = name.replaceAll("//", "/id/")
+        taskInterface.calledPageMethods += [file: RubyUtil.ROUTES_ID, name: name, args: []]
+        log.info "param is dynamic literal: $name"
+
     }
 
     private analyseVisitCall(FCallNode iVisited){
@@ -229,16 +215,22 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         P.S.: The solution does not deal with the example, because it is not a step definition. */
     private registryVisitCall(LocalVarNode node){
         log.info "param is a local variable: ${node.name}"
-        if(stepDefinitionMethod){
-            def arg = stepDefinitionMethod.args?.last()
+        if(stepDefinitionMethod && !stepDefinitionMethod.args.empty){
+            def arg = stepDefinitionMethod.args.last()
             if(arg) {
-                log.info "vai usar argumento de step como string em visit call!"
                 registryVisitStringArg(arg)
             }
         }
     }
 
-    /* visit @contract */
+    /* Examples: visit @contract
+    *
+    * https://github.com/leihs/leihs/blob/13a145a3b6b97dfd1af2a52881a436a8b9a47bd9/features/step_definitions/examples/benutzerverwaltung_steps.rb
+    * Wenn(/^man versucht auf die Administrator Benutzererstellenansicht zu gehen$/) do
+        @path = edit_backend_user_path(User.first)
+        visit @path
+      end
+    * */
     private registryVisitCall(InstVarNode node){
         log.info "param is a instance variable: ${node.name}"
     }
@@ -259,7 +251,21 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     */
     private registryVisitCall(CaseNode node){
         log.info "param is a case node"
-        node.childNodes().findAll{ it instanceof WhenNode }
+        def args = []
+        if(stepDefinitionMethod) args = stepDefinitionMethod.args
+        RubyWhenNodeVisitor whenNodeVisitor = new RubyWhenNodeVisitor(args)
+        node.accept(whenNodeVisitor)
+
+        whenNodeVisitor.pages?.each{ page ->
+            taskInterface.calledPageMethods += [file: RubyUtil.ROUTES_ID, name: page, args: []]
+            log.info "Page in casenode: $page"
+        }
+
+        whenNodeVisitor.auxiliaryMethods.each { method ->
+            registryMethodCallVisitArg(method)
+            log.info "Method in casenode: ${method}"
+        }
+
     }
 
     /* Representing a simple String literal */
@@ -272,9 +278,20 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         registryVisitDynamicStringArg(node)
     }
 
-    /* dynamic variable (e.g. block scope local variable)*/
+    /* dynamic variable (e.g. block scope local variable)
+    * Example:
+        * When /^I visit the route (.+)$/ do |path|
+            visit path
+          end
+    * */
     private registryVisitCall(DVarNode node){
         log.info "param is a dynamic variable: ${node.name}"
+        if(stepDefinitionMethod && !stepDefinitionMethod.args.empty){
+            def arg = stepDefinitionMethod.args.last()
+            if(arg) {
+                registryVisitStringArg(arg)
+            }
+        }
     }
 
     /* If the argument is a method call (VCallNode, CallNode, FCallNode) that returns a literal, we understand the view was found.
@@ -444,9 +461,8 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     registryStepCall(iVisited)
                     break
                 default: //helper methods for visit can match such a condition
-                    if(!(iVisited.name in ConstantData.STEP_KEYWORDS) && !(iVisited.name in  ConstantData.STEP_KEYWORDS_PT) ){
-                        registryMethodCallFromSelf(iVisited)
-                    }
+                    def keywords = ConstantData.STEP_KEYWORDS + ConstantData.STEP_KEYWORDS_PT + ConstantData.STEP_KEYWORDS_DE
+                    if(!(iVisited.name in keywords)) registryMethodCallFromSelf(iVisited)
             }
         }
         iVisited

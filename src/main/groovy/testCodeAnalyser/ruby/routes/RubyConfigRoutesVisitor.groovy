@@ -80,7 +80,7 @@ class RubyConfigRoutesVisitor {
     }
 
     private registryRootRoute(Node iVisited, String prefix){
-        def argsVisitor = new RubyNonResourcefulPropertiesVisitor(iVisited?.name)
+        def argsVisitor = new RubyRootPropertiesVisitor(iVisited?.name)
         def args = null
         iVisited?.childNodes()?.each{
             it.accept(argsVisitor)

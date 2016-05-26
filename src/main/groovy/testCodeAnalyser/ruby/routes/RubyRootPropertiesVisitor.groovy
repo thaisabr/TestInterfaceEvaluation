@@ -23,7 +23,7 @@ class RubyRootPropertiesVisitor extends NoopVisitor {
         String controllerActionString = null
         def result //name, value, method
 
-        if(values.size()==0 || values.size()==2) return null
+        if(values.size()==0) return null
         if(values.size()==1){
             controllerActionString = values.get(0).value
         } else{

@@ -41,7 +41,7 @@ class DataManager {
         File file = new File("${filename- ConstantData.FILTERED_FILE_SUFIX}_text_${taskId}.txt")
         if(file.exists()){
             file.withReader("utf-8") { reader ->
-                text = reader.readLines().join(System.lineSeparator())
+                text = reader.text
             }
         }
         text

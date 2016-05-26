@@ -6,6 +6,8 @@ import java.util.regex.Matcher
 
 class Util {
 
+    public static final String FRAMEWORK_PATH
+    public static final List<String> FRAMEWORK_FILES
     public static final String REPOSITORY_FOLDER_PATH
     public static final String GHERKIN_FILES_RELATIVE_PATH
     public static final String STEPS_FILES_RELATIVE_PATH
@@ -24,6 +26,9 @@ class Util {
     static {
         properties = new Properties()
         loadProperties()
+        FRAMEWORK_PATH = (properties.'spgroup.framework.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
+                Matcher.quoteReplacement(File.separator))
+        FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
         TASKS_FILE = configureTasksFilePath()
         GHERKIN_FILES_RELATIVE_PATH = (properties.'spgroup.gherkin.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,

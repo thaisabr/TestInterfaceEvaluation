@@ -9,7 +9,6 @@ import taskAnalyser.task.StepDefinition
 import taskAnalyser.task.StepDefinitionFile
 import taskAnalyser.task.TaskInterface
 import taskAnalyser.task.UnitFile
-import util.RegexUtil
 import util.Util
 
 
@@ -27,7 +26,6 @@ abstract class TestCodeAbstractParser {
     Set methods
     List<String> projectFiles
     List<String> viewFiles
-    static final ARGS_REGEX = /(["'])(?:(?=(\\?))\2.)*?\1/
 
     protected Set notFoundViews
     protected Set compilationErrors
@@ -134,7 +132,7 @@ abstract class TestCodeAbstractParser {
             List<FileToAnalyse> stepCode = findStepCode(stepCall, true)
             if(stepCode && !stepCode.empty) files += stepCode
         }
-        identifyMethodsPerFile(files) //talvez seja desnecessário (checar com exemplo em que files tenha mais de um valor)
+        identifyMethodsPerFile(files)
     }
 
     List<FileToAnalyse> findStepCode(StepCall call, boolean extractArgs) {
@@ -289,28 +287,9 @@ abstract class TestCodeAbstractParser {
         return result
     }
 
-    static List<String> extractStepArgs(Step step, String regex){
-        List<String> args = (step.text =~ ARGS_REGEX).collect{ it.getAt(0).toString().trim().replaceAll(/(["'])/,"") }
-        if(!args) args = []
-        args
-    }
-
     static List<String> extractArgsFromStepText(String text, String regex){
         List<String> args = []
         def matcher = (text =~ /${regex}/)
-        if(matcher){
-            def counter = matcher.groupCount()
-            for(int i=1; i<=counter; i++){
-                def arg = matcher[0][i]
-                if(arg) args += arg
-            }
-        }
-        args
-    }
-
-    static List<String> extractArgsFromStepText(String text){
-        List<String> args = []
-        def matcher = (text =~ RegexUtil.SCENARIO_OUTLINE_ARGS_REGEX)
         if(matcher){
             def counter = matcher.groupCount()
             for(int i=1; i<=counter; i++){
@@ -448,7 +427,7 @@ abstract class TestCodeAbstractParser {
         List<FileToAnalyse> files1 = identifyMethodsPerFileToVisit(stepCodes1)
         List<FileToAnalyse> files2 = findCodeForStepsIndependentFromAcceptanceTest(stepFiles)
         List<FileToAnalyse> filesToAnalyse = collapseFilesToVisit(files1, files2)
-        filesToAnalyse.each{ log.info it.toString() }
+        //filesToAnalyse.each{ log.info it.toString() }
         computeInterface(filesToAnalyse)
     }
 
@@ -466,12 +445,12 @@ abstract class TestCodeAbstractParser {
     }
 
     private TaskInterface computeInterface(List<FileToAnalyse> filesToAnalyse){
-        log.info "enter in computeInterface"
+        //log.info "enter in computeInterface"
         def interfaces = []
         List<StepCall> calledSteps = [] //keys:text, path, line
 
         filesToAnalyse?.eachWithIndex{ stepDefFile, index ->
-            log.info "step definition file: ${stepDefFile.path}"
+            //log.info "step definition file: ${stepDefFile.path}"
 
             /* first level: To identify method calls from step body. */
             TestCodeVisitor testCodeVisitor = parseStepBody(stepDefFile) //aqui é que vai usar args
@@ -486,7 +465,7 @@ abstract class TestCodeAbstractParser {
 
                 /* visits each file */
                 filesToParse.each { f ->
-                    log.info "next visit: $f"
+                    //log.info "next visit: $f"
                     visitFile(f, testCodeVisitor)
                 }
 
@@ -511,7 +490,7 @@ abstract class TestCodeAbstractParser {
         /* identifies more step definitions to analyse */
         List<FileToAnalyse> newStepsToAnalyse = identifyMethodsPerFileToVisitByStepCalls(calledSteps)
         newStepsToAnalyse = updateStepFiles(filesToAnalyse, newStepsToAnalyse)
-        log.info "newStepsToAnalyse: $newStepsToAnalyse"
+        //log.info "newStepsToAnalyse: $newStepsToAnalyse"
         if(!newStepsToAnalyse.empty) interfaces += computeInterface(newStepsToAnalyse)
 
         /* collapses step code interfaces to define the interface for the whole task */

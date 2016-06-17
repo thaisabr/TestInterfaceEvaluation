@@ -6,23 +6,16 @@ import org.jrubyparser.util.NoopVisitor
 import util.RegexUtil
 
 
-class RubyNonResourcefulPropertiesVisitor extends NoopVisitor {
+class RubyMatchPropertiesVisitor extends NoopVisitor {
 
+    public static List NON_RESOURCEFUL_IDENTIFIERS = RubyConfigRoutesVisitor.REQUEST_TYPES + ["match"]
+    def nodeName
     def argsNodes = []
 
-    /* Examples:
-           no args
-           one arg
-           name, to, value
-           name, to, value, as, pathMethod
-           name, to, value, type, value, as, pathMethod
-           name, to, value, via, values
-           to, value
-           name, value
-           name, value, as, pathMethod or controller, controllervalue, action, actionValue
-           name, controller, controllerValue, action, actionValue
-           controller, controllerValue, action, actionValue, as, pathMethod
-    */
+    RubyMatchPropertiesVisitor(String nodeName){
+        this.nodeName = nodeName
+    }
+
     def getValues(){
         def values = argsNodes.sort{ it.position }
         String pathValue = ""
@@ -53,6 +46,8 @@ class RubyNonResourcefulPropertiesVisitor extends NoopVisitor {
 
         //there is explicit pathMethodName
         if(indexAs>-1) pathMethodName = values.get(indexAs+1).value
+        else if(nodeName && !nodeName.empty && !(nodeName in NON_RESOURCEFUL_IDENTIFIERS)) pathMethodName = nodeName
+        else pathMethodName = values.get(0).value
 
         //there is explicit path value
         if(indexPath>-1) pathValue = values.get(indexPath).value
@@ -90,3 +85,4 @@ class RubyNonResourcefulPropertiesVisitor extends NoopVisitor {
     }
 
 }
+

@@ -11,7 +11,6 @@ import util.ruby.RubyUtil
 class RubyGetPropertiesVisitor extends NoopVisitor {
 
     static propertiesOfInterest = ["get", "to", "as", "controller", "action", "via", "on", "defaults", "constraints"]
-    String resourceName
     boolean isMember
     boolean isCollection
     def propsValues = []
@@ -52,11 +51,11 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         if(prefix){
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             nameSufix = "_${formatedPrefix}_$aliasSingular"
-            pathValuePrefix = "/${prefix}/$original/.*/"
+            pathValuePrefix = "/${prefix}/$original(/.*)/"
             argsPrefix = "${prefix}/$controllerName#"
         } else {
             nameSufix = "_$aliasSingular"
-            pathValuePrefix = "/$original/.*/"
+            pathValuePrefix = "/$original(/.*)/"
             argsPrefix = "$controllerName#"
         }
 

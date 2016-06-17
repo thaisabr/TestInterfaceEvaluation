@@ -69,6 +69,10 @@ class TaskInterface {
 
         //production files
         def files = ((classes+methodFiles+referencedPages) as Set)?.sort()
+
+        //filtering result to only identify view files
+        //files = files?.findAll{ it?.contains("${Util.VIEWS_FILES_RELATIVE_PATH}${File.separator}") }
+
         files?.findResults{ i-> i? i-Util.getRepositoriesCanonicalPath() : null } as Set
     }
 

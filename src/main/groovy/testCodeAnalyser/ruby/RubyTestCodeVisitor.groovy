@@ -162,11 +162,11 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         if (methodsToVisit.empty) {
             if(RubyUtil.isRouteMethod(name)){
                 taskInterface.calledPageMethods += [file:RubyUtil.ROUTES_ID, name: name-RubyUtil.ROUTE_SUFIX, args:[]]
-                log.info "param is (undefined) route method call: $name"
+                //log.info "param is (undefined) route method call: $name"
             }
-            else log.info "param is (undefined) method call: $name"
+            //else log.info "param is (undefined) method call: $name"
         } else{
-            log.info "param is (defined) method call: $name"
+            //log.info "param is (defined) method call: $name"
             def args = []
             if(stepDefinitionMethod) args = stepDefinitionMethod.args
             methodsToVisit?.each { m ->
@@ -187,7 +187,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         def index = value.indexOf("?")
         if(index>0) value = value.substring(0, index)//ignoring params
         taskInterface.calledPageMethods += [file: RubyUtil.ROUTES_ID, name: value, args: []]
-        log.info "param is literal: $value"
+        //log.info "param is literal: $value"
     }
 
     private registryVisitDynamicStringArg(DStrNode node){
@@ -196,17 +196,17 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         name = extractPath(name)
         def index = name.indexOf("?")
         if(index>0) name = name.substring(0, index)//ignoring params
-        /* if the dynamic content is not at the end of the string, the resultin url will be wrong. Example:
+        /* if the dynamic content is not at the end of the string, the resulting url will be wrong. Example:
            visit "/portal/classes/#{clazz.id}/remove_offering?offering_id=#{offering.id}"
            Extracted url: /portal/classes//remove_offering  */
-        name = name.replaceAll("//", "/id/")
+        name = name.replaceAll("//", "/:id/")
         taskInterface.calledPageMethods += [file: RubyUtil.ROUTES_ID, name: name, args: []]
-        log.info "param is dynamic literal: $name"
+        //log.info "param is dynamic literal: $name"
 
     }
 
     private analyseVisitCall(FCallNode iVisited){
-        log.info "VISIT CALL: ${lastVisitedFile} (${iVisited.position.startLine+1});"
+        //log.info "VISIT CALL: ${lastVisitedFile} (${iVisited.position.startLine+1});"
         registryVisitCall(iVisited.args.last)
     }
 
@@ -217,7 +217,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         end
         P.S.: The solution does not deal with the example, because it is not a step definition. */
     private registryVisitCall(LocalVarNode node){
-        log.info "param is a local variable: ${node.name}"
+        //log.info "param is a local variable: ${node.name}"
         if(stepDefinitionMethod && !stepDefinitionMethod.args.empty){
             def arg = stepDefinitionMethod.args.last()
             if(arg) {
@@ -235,7 +235,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
       end
     * */
     private registryVisitCall(InstVarNode node){
-        log.info "param is a instance variable: ${node.name}"
+        //log.info "param is a instance variable: ${node.name}"
     }
 
     /* https://github.com/leihs/leihs/blob/8fb0eace3f441320b6aa70980acf5ee1d279dc6c/features/
@@ -253,7 +253,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         end
     */
     private registryVisitCall(CaseNode node){
-        log.info "param is a case node"
+        //log.info "param is a case node"
         def args = []
         if(stepDefinitionMethod) args = stepDefinitionMethod.args
         RubyWhenNodeVisitor whenNodeVisitor = new RubyWhenNodeVisitor(args)
@@ -261,12 +261,12 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
         whenNodeVisitor.pages?.each{ page ->
             taskInterface.calledPageMethods += [file: RubyUtil.ROUTES_ID, name: page, args: []]
-            log.info "Page in casenode: $page"
+            //log.info "Page in casenode: $page"
         }
 
         whenNodeVisitor.auxiliaryMethods.each { method ->
             registryMethodCallVisitArg(method)
-            log.info "Method in casenode: ${method}"
+            //log.info "Method in casenode: ${method}"
         }
 
     }
@@ -288,7 +288,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
           end
     * */
     private registryVisitCall(DVarNode node){
-        log.info "param is a dynamic variable: ${node.name}"
+        //log.info "param is a dynamic variable: ${node.name}"
         if(stepDefinitionMethod && !stepDefinitionMethod.args.empty){
             def arg = stepDefinitionMethod.args.last()
             if(arg) {
@@ -317,7 +317,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
     /* default case */
     private registryVisitCall(Node node){
-        log.info "information about argument of visit call:"
+        //log.info "information about argument of visit call:"
         node.properties.each { k, v -> log.info "$k: $v" }
     }
 

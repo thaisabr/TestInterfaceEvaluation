@@ -162,7 +162,7 @@ class DoneTask extends Task {
 
         log.info "TASK ID: $id"
         log.info "COMMITS: ${this.commits*.hash}"
-        log.info "COMMITS CHANGED GERKIN FILE: ${this.commits?.findAll{it.gherkinChanges && !it.gherkinChanges.isEmpty()}*.hash}"
+        log.info "COMMITS CHANGED GHERKIN FILE: ${this.commits?.findAll{it.gherkinChanges && !it.gherkinChanges.isEmpty()}*.hash}"
         log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll{it.stepChanges && !it.stepChanges.isEmpty()}*.hash}"
 
         try{
@@ -243,11 +243,11 @@ class DoneTask extends Task {
 
         log.info "TASK ID: $id"
         log.info "COMMITS: ${this.commits*.hash}"
-        log.info "COMMITS CHANGED GERKIN FILE: ${this.commits?.findAll{it.gherkinChanges && !it.gherkinChanges.isEmpty()}*.hash}"
+        log.info "COMMITS CHANGED GHERKIN FILE: ${this.commits?.findAll{it.gherkinChanges && !it.gherkinChanges.isEmpty()}*.hash}"
         log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll{it.stepChanges && !it.stepChanges.isEmpty()}*.hash}"
 
         if(!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
-            try{
+            //try{
                 // resets repository to the state of the last commit to extract changes
                 gitRepository.reset(commits?.last()?.hash)
 
@@ -262,9 +262,9 @@ class DoneTask extends Task {
 
                 // resets repository to last version
                 gitRepository.reset()
-            } catch(Exception ex){
+            /*} catch(Exception ex){
                 log.error ex.message
-            }
+            }*/
         }
 
         [itest:itest, itext:itext, ireal:ireal]

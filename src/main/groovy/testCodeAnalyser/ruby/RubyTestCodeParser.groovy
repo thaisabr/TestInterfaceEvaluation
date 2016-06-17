@@ -25,12 +25,20 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     String routesFile
     def routes //name, file, value
     List<String> modelFiles
+    List<String> controllerFiles
 
     RubyTestCodeParser(String repositoryPath){
         super(repositoryPath)
         routesFile = repositoryPath+RubyUtil.ROUTES_FILE
+        modelFiles = []
+        controllerFiles = []
+    }
+
+    private updateFiles(){
         def modelsDir = "${repositoryPath}${File.separator}${Util.PRODUCTION_FILES_RELATIVE_PATH}${File.separator}models"
         modelFiles = Util.findFilesFromDirectoryByLanguage(modelsDir)
+        def controllersDir = "${repositoryPath}${File.separator}${Util.PRODUCTION_FILES_RELATIVE_PATH}${File.separator}controllers"
+        controllerFiles = Util.findFilesFromDirectoryByLanguage(controllersDir)
     }
 
     /***
@@ -144,8 +152,14 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     private findAllRoutes(){
         def node = generateAst(routesFile)
-        RubyConfigRoutesVisitor visitor = new RubyConfigRoutesVisitor(node, modelFiles)
-        visitor?.routingMethods
+        updateFiles()
+        RubyConfigRoutesVisitor visitor = new RubyConfigRoutesVisitor(node, modelFiles, controllerFiles)
+        def routes = [] //name, file, value
+        visitor?.routingMethods?.each{ route ->
+            def name = route.name.replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*/", "/.*/").replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*[^/()]", "/.*")
+            routes += [name:name, file:route.file, value:route.value, arg:route.arg]
+        }
+        routes
     }
 
     private String extractValueFromRouteMethod(String name){

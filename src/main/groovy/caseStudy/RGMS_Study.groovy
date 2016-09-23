@@ -63,7 +63,7 @@ class RGMS_Study {
         featurePath = "News.feature"
         def doneT4 = new DoneTask(repositoryUrl, "4", ["7e0c8915620cc9cdf0e21171703c06866834115e"])
         def todoT4 = new TodoTask(repositoryUrl, true, "4", [[path:featurePath, lines:[25, 31]]])
-        analyseTask(doneT4, todoT4)
+        analyseTask(doneT4, todoT4) //7,13,19,25,31
 
         /* TASK 5: Articles CRUD. */
         featurePath = "Article.feature"
@@ -120,7 +120,7 @@ class RGMS_Study {
         analyseTask(doneT12, todoT12)
 
         /* TASK 13: Import research line by XML.
-        Problems: tangled commit; de 6 arquivos alterados, apenas 4 dizem respeito
+        Problemas: tangled commit; de 6 arquivos alterados, apenas 4 dizem respeito
         a importação de researchline de fato); 2 cenários de teste e 1 deles não tem 1 step implementado, daí que antes
         não se calculava interface para cenário com implementação parcial, agora sim. */
         featurePath = "ResearchLine.feature"
@@ -129,7 +129,7 @@ class RGMS_Study {
         analyseTask(doneT13, todoT13)
 
         /* TASK 14: Import orientation (production and test tasks).
-        Problem: após a realização dessa tarefa o código foi refatorado e certas classes de IReal não existem mais (coisa de ProjectMember)
+        Problema: após a realização dessa tarefa o código foi refatorado e certas classes de IReal não existem mais (coisa de ProjectMember)
         e então jamais o teste poderia referenciá-las, já que ele é analisado em sua versão mais atual. Sim, o acesso a XMLService via teste não
         acontece porque o cálculo da interface com base no teste não analisa o código de produção. Caso sim, saberia que essa classe é usada indiretamente. */
         featurePath = "Orientation.feature"

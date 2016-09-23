@@ -36,7 +36,8 @@ class TaskAnalyser {
     private static generateResultForProject(String allTasksFile, String evaluationFile){
         def result1 = DataManager.extractProductionAndTestTasks(allTasksFile)
         def result2 = computeTaskData(result1.relevantTasks)
-        DataManager.saveAllResult(evaluationFile, result1.allTasksQuantity, result1.relevantTasks.size(), result2.stepCounter,
+        def url = result1.relevantTasks?.first()?.testCodeParser?.repositoryPath
+        DataManager.saveAllResult(evaluationFile, url, result1.allTasksQuantity, result1.relevantTasks.size(), result2.stepCounter,
                 result2.gherkinCounter, result2.data)
     }
 

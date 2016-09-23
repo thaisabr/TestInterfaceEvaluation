@@ -19,8 +19,8 @@ class DataManager {
     static final String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests", "#StepDef",
                                     "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
                                     "#AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views", "#Views", "#ITest", "#IReal",
-                                    "ITest", "IReal", "Precision", "Recall"]
-    static final int RECALL_INDEX = HEADER.size()-1
+                                    "ITest", "IReal", "Precision", "Recall", "Hashes"]
+    static final int RECALL_INDEX = HEADER.size()-2
     static final int PRECISION_INDEX = RECALL_INDEX-1
     static final int IREAL_INDEX = PRECISION_INDEX-1
     static final int ITEST_INDEX = IREAL_INDEX-1
@@ -47,8 +47,10 @@ class DataManager {
         text
     }
 
-    private static writeHeaderAllResult(CSVWriter writer, def allTasks, def relevantTasks, def stepTasks, def gherkinTasks){
-        String[] text = ["Tasks", allTasks]
+    private static writeHeaderAllResult(CSVWriter writer, def url, def allTasks, def relevantTasks, def stepTasks, def gherkinTasks){
+        String[] text = ["Repository", url]
+        writer.writeNext(text)
+        text = ["Tasks", allTasks]
         writer.writeNext(text)
         text = ["Tasks that have production and test code", relevantTasks]
         writer.writeNext(text)
@@ -143,7 +145,7 @@ class DataManager {
     }
 
     private static writeHeaderOrganizedResult(CSVWriter writer, def previousAnalysisData){
-        previousAnalysisData.subList(0,4).each{ data ->
+        previousAnalysisData.subList(0,5).each{ data ->
             String[] value = data.findAll{!it.allWhitespace}
             writer.writeNext(value)
         }
@@ -152,14 +154,14 @@ class DataManager {
     private static organizeAllResult(String evaluationFile, String organizedFile, String similarityFile, boolean similarityAnalysis){
         if(!evaluationFile || evaluationFile.empty) return
         List<String[]> entries = readAllResult(evaluationFile)
-        if(entries.size() <= 4) return
+        if(entries.size() <= 5) return
 
         CSVWriter writer = new CSVWriter(new FileWriter(organizedFile))
         writeHeaderOrganizedResult(writer, entries)
 
-        String[] resultHeader1 = entries.get(4).findAll{!it.allWhitespace}
+        String[] resultHeader1 = entries.get(5).findAll{!it.allWhitespace}
         String[] resultHeader2 = resultHeader1 + ["Empty_ITest", "Empty_IReal"]
-        entries = entries.subList(5,entries.size())
+        entries = entries.subList(6,entries.size())
 
         def emptyIReal = entries.findAll{ it[IREAL_INDEX].empty }
         entries = entries - emptyIReal
@@ -224,10 +226,8 @@ class DataManager {
         try{
             relevantEntries.each { entry ->
                 if(entry[2].size()>4){
-                    List<Commit> commits = []
                     def hashes = entry[3].tokenize(',[]')*.trim()
-                    hashes.each { commits += new Commit(hash: it) }
-                    tasks += new DoneTask(entry[0], entry[1], entry[2], commits)
+                    tasks += new DoneTask(entry[1], entry[2], hashes)
                 }
             }
         } catch(Exception ex){
@@ -241,10 +241,10 @@ class DataManager {
         extractProductionAndTestTasks(Util.TASKS_FILE)
     }
 
-    static saveAllResult(def filename, def allTasksCounter, def relevantTasksCounter, def stepDefTasksCounter,
+    static saveAllResult(def filename, def url, def allTasksCounter, def relevantTasksCounter, def stepDefTasksCounter,
                          def gherkinTasksCounter, def taskData){
         CSVWriter writer = new CSVWriter(new FileWriter(filename))
-        writeHeaderAllResult(writer, allTasksCounter, relevantTasksCounter, stepDefTasksCounter, gherkinTasksCounter)
+        writeHeaderAllResult(writer, url, allTasksCounter, relevantTasksCounter, stepDefTasksCounter, gherkinTasksCounter)
 
         def saveText = false
         if(taskData && taskData.size()>1) saveText = true
@@ -267,7 +267,7 @@ class DataManager {
             String[] line = [entry.task.id, dates, entry.task.days, entry.task.commitsQuantity, msgs, devs,
                              entry.task.gherkinTestQuantity, entry.task.stepDefQuantity, entry.methods, entry.stepCalls,
                              stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
-                             renames, removes, views, views.size(), itestSize, irealSize, entry.itest, entry.ireal, precision, recall]
+                             renames, removes, views, views.size(), itestSize, irealSize, entry.itest, entry.ireal, precision, recall, entry.task.commits*.hash]
             writer.writeNext(line)
             if(saveText) writeITextFile(filename, entry) //dealing with long textual description of a task
         }

@@ -40,34 +40,48 @@ class GitRepository {
     String localPath
     String lastCommit //used only to reset the repository for the original state after checkout command
 
+    GitRepository(String path) throws CloningRepositoryException {
+        if(path.startsWith("http")){
+            this.url = path + ConstantData.GIT_EXTENSION
+            this.name = Util.configureGitRepositoryName(url)
+            this.localPath = Util.REPOSITORY_FOLDER_PATH + name
+            if(isCloned()) {
+                this.lastCommit = searchAllRevCommits()?.last()?.name
+                log.info "Already cloned from " + url + " to " + localPath
+            }
+            else cloneRepository()
+        } else {
+            this.localPath = path
+            this.lastCommit = searchAllRevCommits()?.last()?.name
+            def git = Git.open(new File(localPath))
+            this.url = git.repository.config.getString("remote", "origin", "url")
+            git.close()
+            this.name = Util.configureGitRepositoryName(url)
+        }
+    }
 
-    GitRepository(String url) throws CloningRepositoryException {
-        this.url = url + ConstantData.GIT_EXTENSION
-        this.name = Util.configureGitRepositoryName(url)
-        this.localPath = Util.REPOSITORY_FOLDER_PATH + name
-        cloneRepository()
+    /***
+     * Verifies if a repository is already cloned
+     */
+    private isCloned(){
+        File dir = new File(localPath)
+        File[] files = dir.listFiles()
+        if(files && files.length>0) true
+        else false
     }
 
     /***
      * Clones a repository if it was not cloned yet.
      */
     private cloneRepository() throws CloningRepositoryException {
-        File dir = new File(localPath)
-        File[] files = dir.listFiles()
-        if(files && files.length>0){
-            log.info "Already cloned from " + url + " to " + localPath
-            lastCommit = searchAllRevCommits()?.last()?.name
-        }
-        else{
-            try{
-                def result = Git.cloneRepository().setURI(url).setDirectory(dir).call()
-                lastCommit = result?.log()?.call()?.sort{ it.commitTime }?.last()?.name
-                result.close()
-                log.info "Cloned from " + url + " to " + localPath
-            } catch(Exception ex){
-                Util.deleteFolder(localPath)
-                throw new CloningRepositoryException(ex.message)
-            }
+        try{
+            def result = Git.cloneRepository().setURI(url).setDirectory(new File(localPath)).call()
+            lastCommit = result?.log()?.call()?.sort{ it.commitTime }?.last()?.name
+            result.close()
+            log.info "Cloned from " + url + " to " + localPath
+        } catch(Exception ex){
+            Util.deleteFolder(localPath)
+            throw new CloningRepositoryException(ex.message)
         }
     }
 

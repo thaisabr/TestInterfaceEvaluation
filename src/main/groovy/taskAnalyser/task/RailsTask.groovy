@@ -11,8 +11,8 @@ import java.util.regex.Matcher
 @Slf4j
 class RailsTask extends DoneTask {
 
-    RailsTask(String repositoryIndex, String repositoryUrl, String id, List<Commit> commits) throws CloningRepositoryException {
-        super(repositoryIndex, repositoryUrl, id, commits)
+    RailsTask(String repositoryUrl, String id, List<String> hashes) throws CloningRepositoryException {
+        super(repositoryUrl, id, hashes)
     }
 
     def routeFileChanged(){

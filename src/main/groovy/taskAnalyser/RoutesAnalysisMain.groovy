@@ -48,10 +48,8 @@ class RoutesAnalysisMain {
 
         relevantEntries.each { entry ->
             if(entry[2].size()>4){
-                List<Commit> commits = []
                 def hashes = entry[3].tokenize(',[]')*.trim()
-                hashes.each { commits += new Commit(hash: it) }
-                tasks += new RailsTask(entry[0], entry[1], entry[2], commits)
+                tasks += new RailsTask(entry[1], entry[2], hashes)
             }
         }
 

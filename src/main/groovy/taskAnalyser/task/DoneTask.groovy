@@ -14,20 +14,31 @@ import util.exception.CloningRepositoryException
 @Slf4j
 class DoneTask extends Task {
 
-    String repositoryIndex
     List<Commit> commits
     List<GherkinFile> changedGherkinFiles
     List<StepDefinitionFile> changedStepDefinitions
     List<UnitFile> changedUnitFiles
 
     DoneTask(String repositoryUrl, String id, List<String> shas) throws CloningRepositoryException {
-        super(repositoryUrl, true, id)
+        super(repositoryUrl, id)
+        init(shas)
+    }
+
+    DoneTask(String repositoryUrl, String id, List<String> shas, boolean basic) throws CloningRepositoryException {
+        super(repositoryUrl, id)
+        if(basic) basicInit(shas)
+        else init(shas)
+    }
+
+    private basicInit(List<String> shas){
         changedGherkinFiles = []
         changedStepDefinitions = []
         changedUnitFiles = []
-
-        // retrieves commits code
         commits = gitRepository.searchCommitsBySha(testCodeParser, *shas)
+    }
+
+    private init(List<String> shas){
+        basicInit(shas)
 
         // identifies changed gherkin files and scenario definitions
         List<Commit> commitsChangedGherkinFile = commits?.findAll{ it.gherkinChanges && !it.gherkinChanges.isEmpty() }
@@ -36,25 +47,6 @@ class DoneTask extends Task {
         // identifies changed step definitions
         List<Commit> commitsStepsChange = this.commits?.findAll{ it.stepChanges && !it.stepChanges.isEmpty()}
         changedStepDefinitions = identifyChangedStepContent(commitsStepsChange)
-    }
-
-    DoneTask(String repositoryIndex, String repositoryUrl, String id, List<Commit> commits) throws CloningRepositoryException {
-        super(repositoryUrl, true, id)
-        this.repositoryIndex = repositoryIndex
-        changedGherkinFiles = []
-        changedStepDefinitions = []
-        changedUnitFiles = []
-
-        // retrieves commits code
-        this.commits = gitRepository.searchCommitsBySha(testCodeParser, *(commits*.hash))
-
-        // identifies changed gherkin files and scenario definitions
-        List<Commit> commitsChangedGherkinFile = this.commits?.findAll{ it.gherkinChanges && !it.gherkinChanges.isEmpty() }
-        changedGherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
-
-        // identifies changed step definitions
-        List<Commit> commitsChangedStepFile = this.commits?.findAll{ it.stepChanges && !it.stepChanges.isEmpty()}
-        changedStepDefinitions = identifyChangedStepContent(commitsChangedStepFile)
     }
 
     private static List<GherkinFile> identifyChangedGherkinContent(List<Commit> commitsChangedGherkinFile){

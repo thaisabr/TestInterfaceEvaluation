@@ -18,27 +18,22 @@ abstract class Task {
     GitRepository gitRepository
     TestCodeAbstractParser testCodeParser
 
-    Task(String rootDirectory, boolean isRemote, String id) throws CloningRepositoryException {
+    Task(String rootDirectory, String id) throws CloningRepositoryException {
         this.id = id
-        if(isRemote){
-            this.gitRepository = GitRepositoryManager.getRepository(rootDirectory)
-            configureTestCodeParser(gitRepository?.localPath)
-        }
-        else{
-            configureTestCodeParser(rootDirectory)
-        }
+        this.gitRepository = GitRepositoryManager.getRepository(rootDirectory)
+        configureTestCodeParser()
     }
 
-    def configureTestCodeParser(String path){
+    def configureTestCodeParser(){
         switch (Util.CODE_LANGUAGE){
             case LanguageOption.JAVA:
-                testCodeParser = new JavaTestCodeParser(path)
+                testCodeParser = new JavaTestCodeParser(gitRepository?.localPath)
                 break
             case LanguageOption.GROOVY:
-                testCodeParser = new GroovyTestCodeParser(path)
+                testCodeParser = new GroovyTestCodeParser(gitRepository?.localPath)
                 break
             case LanguageOption.RUBY:
-                testCodeParser = new RubyTestCodeParser(path)
+                testCodeParser = new RubyTestCodeParser(gitRepository?.localPath)
                 break
             default: throw new InvalidLanguageException()
         }

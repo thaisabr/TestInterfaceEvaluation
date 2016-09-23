@@ -24,7 +24,7 @@ class TodoTask extends Task {
      *        are related to the task, by keywords 'path' and 'lines' respectively.
      */
     TodoTask(String rootDirectory, boolean isRemote, String id, def scenarios) throws CloningRepositoryException {
-        super(rootDirectory, isRemote, id)
+        super(rootDirectory, id)
 
         testCodeParser.configureProperties()
 

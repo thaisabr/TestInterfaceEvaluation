@@ -29,8 +29,6 @@ Configuration (configuration.properties file)
 
 `spgroup.task.interface.path.test`: Test code's path. By default, its value is the common one used in Cucumber and RSpec projects.
 
-`spgroup.task.interface.path.toignore`: Files or folders to ignore when classifying production and test code.
-
 
 Execution
 -

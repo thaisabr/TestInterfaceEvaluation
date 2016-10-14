@@ -108,7 +108,9 @@ abstract class TestCodeAbstractParser {
         projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         configureRegexList() // Updates regex list used to match step definition and step code
         configureMethodsList()
-        viewFiles = Util.findFilesFromDirectory(repositoryPath+File.separator+Util.VIEWS_FILES_RELATIVE_PATH)
+        viewFiles = Util.findFilesFromDirectory(repositoryPath+File.separator+Util.VIEWS_FILES_RELATIVE_PATH).findAll{ file ->
+            Util.VALID_VIEW_FILES.any{ file.endsWith(it)}
+        }
     }
 
     private configureRegexList(){

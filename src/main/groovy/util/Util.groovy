@@ -6,7 +6,10 @@ import java.util.regex.Matcher
 
 class Util {
 
-    public static final String FRAMEWORK_PATH
+    public static String FRAMEWORK_PATH
+    public static String GEMS_PATH
+    public static String ACTIVESUPPORT_INFLECTOR_PATH
+    public static String I18N_PATH
     public static final List<String> FRAMEWORK_FILES
     public static final String REPOSITORY_FOLDER_PATH
     public static final String GHERKIN_FILES_RELATIVE_PATH
@@ -14,6 +17,8 @@ class Util {
     public static final String UNIT_TEST_FILES_RELATIVE_PATH
     public static final String PRODUCTION_FILES_RELATIVE_PATH
     public static final String VIEWS_FILES_RELATIVE_PATH
+    public static final String CONTROLLER_FILES_RELATIVE_PATH
+    public static final String MODEL_FILES_RELATIVE_PATH
     public static final String LIB_RELATIVE_PATH
     public static final String TASKS_FILE
     public static final List<String> VALID_FOLDERS
@@ -26,8 +31,7 @@ class Util {
     static {
         properties = new Properties()
         loadProperties()
-        FRAMEWORK_PATH = (properties.'spgroup.framework.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
+        configureRailsPaths()
         FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
         TASKS_FILE = configureTasksFilePath()
@@ -35,11 +39,13 @@ class Util {
                 Matcher.quoteReplacement(File.separator))
         STEPS_FILES_RELATIVE_PATH = (properties.'spgroup.steps.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        UNIT_TEST_FILES_RELATIVE_PATH = (properties.'spgroup.rspec.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
+        UNIT_TEST_FILES_RELATIVE_PATH = (properties.'spgroup.unit.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
         PRODUCTION_FILES_RELATIVE_PATH = (properties.'spgroup.production.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
         VIEWS_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "views"
+        CONTROLLER_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "controllers"
+        MODEL_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "models"
         CODE_LANGUAGE = (properties.'spgroup.language').trim().toUpperCase() as LanguageOption
 
         switch(CODE_LANGUAGE){
@@ -62,6 +68,21 @@ class Util {
 
         VALID_EXTENSIONS = [VALID_EXTENSION] + VALID_VIEW_FILES + [ConstantData.FEATURE_FILENAME_EXTENSION]
         VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, UNIT_TEST_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH, LIB_RELATIVE_PATH]
+    }
+
+    private static configureRailsPaths(){
+        FRAMEWORK_PATH = (properties.'spgroup.framework.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
+                Matcher.quoteReplacement(File.separator))
+        GEMS_PATH = (properties.'spgroup.gems.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
+                Matcher.quoteReplacement(File.separator))
+        def inflectorFolder = (properties.'spgroup.gems.activesupport-inflector.folder').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
+                Matcher.quoteReplacement(File.separator))
+        ACTIVESUPPORT_INFLECTOR_PATH = GEMS_PATH+Matcher.quoteReplacement(File.separator)+
+                inflectorFolder+Matcher.quoteReplacement(File.separator)+"lib"
+        def i18nFolder = (properties.'spgroup.gems.i18n.folder').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
+                Matcher.quoteReplacement(File.separator))
+        I18N_PATH = GEMS_PATH+Matcher.quoteReplacement(File.separator)+i18nFolder+
+                Matcher.quoteReplacement(File.separator)+"lib"
     }
 
     private static loadProperties(){

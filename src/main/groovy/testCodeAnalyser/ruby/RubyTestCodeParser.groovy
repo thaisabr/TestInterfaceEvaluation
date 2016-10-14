@@ -16,29 +16,19 @@ import testCodeAnalyser.ruby.routes.RubyConfigRoutesVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecFileVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
 import util.RegexUtil
-import util.Util
 import util.ruby.RubyUtil
+
+import java.util.regex.Matcher
 
 @Slf4j
 class RubyTestCodeParser extends TestCodeAbstractParser {
 
     String routesFile
     def routes //name, file, value
-    List<String> modelFiles
-    List<String> controllerFiles
 
     RubyTestCodeParser(String repositoryPath){
         super(repositoryPath)
         routesFile = repositoryPath+RubyUtil.ROUTES_FILE
-        modelFiles = []
-        controllerFiles = []
-    }
-
-    private updateFiles(){
-        def modelsDir = "${repositoryPath}${File.separator}${Util.PRODUCTION_FILES_RELATIVE_PATH}${File.separator}models"
-        modelFiles = Util.findFilesFromDirectoryByLanguage(modelsDir)
-        def controllersDir = "${repositoryPath}${File.separator}${Util.PRODUCTION_FILES_RELATIVE_PATH}${File.separator}controllers"
-        controllerFiles = Util.findFilesFromDirectoryByLanguage(controllersDir)
     }
 
     /***
@@ -152,8 +142,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     private findAllRoutes(){
         def node = generateAst(routesFile)
-        updateFiles()
-        RubyConfigRoutesVisitor visitor = new RubyConfigRoutesVisitor(node, modelFiles, controllerFiles)
+        RubyConfigRoutesVisitor visitor = new RubyConfigRoutesVisitor(node)
         def routes = [] //name, file, value
         visitor?.routingMethods?.each{ route ->
             def name = route.name.replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*/", "/.*/").replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*[^/()]", "/.*")
@@ -163,7 +152,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     }
 
     private String extractValueFromRouteMethod(String name){
-        def route = routes?.find{ it.name ==~ name || name ==~/${it.value}/ }
+        def route = routes?.find{ it.name ==~ /${name}e?/ || name ==~/${it.value}/ }
         def result = name
         if(route) {
             if(route.arg && route.arg!="") result = route.arg
@@ -237,41 +226,65 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         finalResult
     }
 
+    private identifyActionFromRoute(TestCodeVisitor visitor, String controller, String action){
+        def className = RubyUtil.underscoreToCamelCase(controller+"_controller")
+        def path = RubyUtil.getClassPathForRubyClass(className, this.projectFiles)
+        if(path) visitor?.taskInterface?.methods += [name: action, type: className, file: path]
+    }
+
+    private static extractActionFromRoute(String route) {
+        def result = null
+        def name = route.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        if(name.contains("#")){
+            def index = name.indexOf("#")
+            def controller = name.substring(0, index)
+            def action = name.substring(index+1,name.length())
+            if(controller && action) result = [controller:controller, action:action]
+        }
+        result
+    }
+
     private matchRouteAndView(TestCodeVisitor visitor, Set calledViews){
         log.info "All pages to identify: $calledViews"
+        def actionOnly = []
         def founded = []
         calledViews?.each{ page ->
-            def foundPages = RubyUtil.findViewPathForRailsProjects(page, viewFiles)
+            def result = extractActionFromRoute(page)
+            if(result) identifyActionFromRoute(visitor, result.controller, result.action)
+            def foundPages = RubyUtil.findViewPathForRailsProjects(page, this.viewFiles)
             if(foundPages && !foundPages.empty) {
                 visitor?.taskInterface?.referencedPages += foundPages
                 founded += page
             }
-        }
+            if(result && (!foundPages || foundPages.empty)) actionOnly += page
 
+
+        }
+        log.info "Pages with no views (controller#action case): $actionOnly"
         log.info "All founded views: ${visitor?.taskInterface?.referencedPages}"
-        def problematicViews = calledViews - founded
-        log.info "Not identified pages: $problematicViews"
+        def problematicViews = calledViews - founded - actionOnly
+        log.info "Not identified pages (excluding controller#action case): $problematicViews"
         notFoundViews += problematicViews
     }
 
     @Override
     void findAllPages(TestCodeVisitor visitor) {
         def filesToVisit = visitor?.taskInterface?.calledPageMethods
-        if(!routes) {
-            routes = findAllRoutes()
+        if(!this.routes) {
+            this.routes = findAllRoutes()
             log.info "All routes:"
-            routes.each{ log.info it.toString() }
+            this.routes.each{ log.info it.toString() }
         }
 
-        def result = [] as Set
+        def routes = [] as Set
         filesToVisit = filesToVisit.findAll{ it!= null } //it could be null if the test code references a class or file that does not exist
         filesToVisit?.each{ f ->
             log.info "FIND_ALL_PAGES; visiting file '${f.file}' and method '${f.name} (${f.args})'"
-            result += identifyRoutes(f)
+            routes += identifyRoutes(f)
         }
 
-        result = result.unique()
-        matchRouteAndView(visitor, result)
+        routes = routes.unique()
+        matchRouteAndView(visitor, routes)
     }
 
     @Override

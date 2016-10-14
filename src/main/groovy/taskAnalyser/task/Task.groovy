@@ -1,7 +1,6 @@
 package taskAnalyser.task
 
 import commitAnalyser.GitRepository
-import commitAnalyser.GitRepositoryManager
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.groovy.GroovyTestCodeParser
 import testCodeAnalyser.java.JavaTestCodeParser
@@ -20,7 +19,7 @@ abstract class Task {
 
     Task(String rootDirectory, String id) throws CloningRepositoryException {
         this.id = id
-        this.gitRepository = GitRepositoryManager.getRepository(rootDirectory)
+        this.gitRepository = GitRepository.getRepository(rootDirectory)
         configureTestCodeParser()
     }
 

@@ -12,7 +12,7 @@ class RSpecFileVisitor extends NoopVisitor {
     List lines //each element represents a range
     RubyTestCodeVisitor methodCallVisitor
 
-    RSpecFileVisitor(List lines, RubyTestCodeVisitor methodCallVisitor){
+    RSpecFileVisitor(List lines, RubyTestCodeVisitor methodCallVisitor) {
         this.lines = lines
         this.methodCallVisitor = methodCallVisitor
     }
@@ -23,8 +23,8 @@ class RSpecFileVisitor extends NoopVisitor {
      */
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
-        def fcallLines = iVisited.position.startLine .. iVisited.position.endLine
-        if( fcallLines in lines) {
+        def fcallLines = iVisited.position.startLine..iVisited.position.endLine
+        if (fcallLines in lines) {
             iVisited.accept(methodCallVisitor)
         }
         return iVisited

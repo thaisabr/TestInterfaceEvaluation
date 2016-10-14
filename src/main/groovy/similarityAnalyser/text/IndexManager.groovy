@@ -31,7 +31,7 @@ class IndexManager {
         TYPE_STORED.storeTermVectors = true
     }
 
-    private static configureStopWords(def dialect){
+    private static configureStopWords(def dialect) {
         def words = []
         words += dialect.backgroundKeywords.unique()*.trim()
         words += dialect.examplesKeywords.unique()*.trim()
@@ -44,11 +44,12 @@ class IndexManager {
 
     public IndexManager() {
         analyzer = new StandardAnalyzer(stopwords)
-        indexDirectory = new RAMDirectory() //Creates a memory directory; if necessary, it is possible to use an index database
+        indexDirectory = new RAMDirectory()
+        //Creates a memory directory; if necessary, it is possible to use an index database
         writer = new IndexWriter(indexDirectory, new IndexWriterConfig(analyzer)) //Create a file
     }
 
-    private addDoc(String text){
+    private addDoc(String text) {
         Document doc = new Document()
         doc.add(new Field("content", text, TYPE_STORED))
         writer.addDocument(doc)

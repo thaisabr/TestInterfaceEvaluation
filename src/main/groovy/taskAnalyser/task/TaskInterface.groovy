@@ -12,9 +12,10 @@ class TaskInterface {
     Set accessedProperties //accessed fields and constants, for example: "foo.bar"
 
     /******************************************** used by web-based tests *********************************************/
-    Set calledPageMethods //keys:[file, name, args] //help to identify referenced pages (GSP files); methods "to" and "at";
+    Set calledPageMethods
+    //keys:[file, name, args] //help to identify referenced pages (GSP files); methods "to" and "at";
     Set<String> referencedPages
-    /******************************************************************************************************************/
+    /** ****************************************************************************************************************/
 
     Set matchStepErrors
     Set compilationErrors
@@ -36,21 +37,21 @@ class TaskInterface {
     @Override
     String toString() {
         def files = findAllFiles()
-        if(files.empty) return ""
-        else{
+        if (files.empty) return ""
+        else {
             def text = ""
-            files.each{
-                if(it) text += it + ", "
+            files.each {
+                if (it) text += it + ", "
             }
             def index = text.lastIndexOf(",")
-            if(index != -1) return text.substring(0,index)
+            if (index != -1) return text.substring(0, index)
             else return ""
         }
     }
 
-    boolean isEmpty(){
+    boolean isEmpty() {
         def files = findAllFiles()
-        if(files.empty) true
+        if (files.empty) true
         else false
     }
 
@@ -60,20 +61,20 @@ class TaskInterface {
      *
      * @return a list of files
      */
-    Set<String> findAllFiles(){
+    Set<String> findAllFiles() {
         //production classes
-        def classes =  (classes?.findAll{ Util.isCoreCode(it.file) })*.file
+        def classes = (classes?.findAll { Util.isCoreCode(it.file) })*.file
 
         //production methods
-        def methodFiles = methods?.findAll{ it.type!=null && !it.type.empty && Util.isCoreCode(it.file) }*.file
+        def methodFiles = methods?.findAll { it.type != null && !it.type.empty && Util.isCoreCode(it.file) }*.file
 
         //production files
-        def files = ((classes+methodFiles+referencedPages) as Set)?.sort()
+        def files = ((classes + methodFiles + referencedPages) as Set)?.sort()
 
         //filtering result to only identify view files
         //files = files?.findAll{ it?.contains("${Util.VIEWS_FILES_RELATIVE_PATH}${File.separator}") }
 
-        files?.findResults{ i-> i? i-Util.getRepositoriesCanonicalPath() : null } as Set
+        files?.findResults { i -> i ? i - Util.getRepositoriesCanonicalPath() : null } as Set
     }
 
     def colapseInterfaces(TaskInterface task) {
@@ -88,7 +89,7 @@ class TaskInterface {
 
     static TaskInterface colapseInterfaces(List<TaskInterface> interfaces) {
         def taskInterface = new TaskInterface()
-        interfaces.each{ taskInterface.colapseInterfaces(it) }
+        interfaces.each { taskInterface.colapseInterfaces(it) }
         return taskInterface
     }
 

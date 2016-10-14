@@ -19,11 +19,11 @@ class AcceptanceTest {
         text += "Location: $gherkinFilePath\n"
         text += "${scenarioDefinition.keyword}: (${scenarioDefinition.location.line}) ${scenarioDefinition.name}\n"
         text += "Steps:\n"
-        scenarioDefinition.steps.each{ step ->
+        scenarioDefinition.steps.each { step ->
             text += "(${step.location.line}) ${step.keyword} ${step.text}\n"
         }
         text += "Steps code:\n"
-        stepCodes.each{ step ->
+        stepCodes.each { step ->
             text += step.toString() + "\n"
         }
         return text

@@ -14,7 +14,7 @@ class RubyGetVisitor extends NoopVisitor {
     List<Node> nodes
     List<Node> allNodes
 
-    RubyGetVisitor(Node node, List allNodes){
+    RubyGetVisitor(Node node, List allNodes) {
         this.node = node
         this.nodes = []
         this.allNodes = allNodes
@@ -23,8 +23,8 @@ class RubyGetVisitor extends NoopVisitor {
     @Override
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
-        if(iVisited.name == "get" && !iVisited.position.equals(node.position)) nodes += iVisited
-        else if(iVisited.name in REQUEST_TYPES){
+        if (iVisited.name == "get" && !iVisited.position.equals(node.position)) nodes += iVisited
+        else if (iVisited.name in REQUEST_TYPES) {
             allNodes = allNodes - iVisited
         }
         iVisited
@@ -33,8 +33,8 @@ class RubyGetVisitor extends NoopVisitor {
     @Override
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
-        if(iVisited.name == "get" && !iVisited.position.equals(node.position)) nodes += iVisited
-        else if(iVisited.name in REQUEST_TYPES){
+        if (iVisited.name == "get" && !iVisited.position.equals(node.position)) nodes += iVisited
+        else if (iVisited.name in REQUEST_TYPES) {
             allNodes = allNodes - iVisited
         }
         iVisited

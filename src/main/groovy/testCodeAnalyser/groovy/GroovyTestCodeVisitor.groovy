@@ -19,9 +19,10 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     TaskInterface taskInterface
     List<String> projectFiles //valid files
     String lastVisitedFile
-    List<StepCall> calledSteps //it is used when a step definition calls another one. until the moment, it is not used in groovy code yet.
+    List<StepCall> calledSteps
+    //it is used when a step definition calls another one. until the moment, it is not used in groovy code yet.
 
-    public GroovyTestCodeVisitor(String repositoryPath, String currentFile){
+    public GroovyTestCodeVisitor(String repositoryPath, String currentFile) {
         this.source = null
         this.projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         this.taskInterface = new TaskInterface()
@@ -29,34 +30,33 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
         calledSteps = []
     }
 
-    private registryMethodCall(MethodCallExpression call){
+    private registryMethodCall(MethodCallExpression call) {
         def result = false
-        def className =  GroovyUtil.configClassnameFromMethod(call.receiver.type.name)
+        def className = GroovyUtil.configClassnameFromMethod(call.receiver.type.name)
         def path = GroovyUtil.getClassPathForGroovy(className, projectFiles)
-        if( GroovyUtil.isValidClass(className, path) ) {
-            taskInterface.methods += [name:call.methodAsString, type:className, file:path]
+        if (GroovyUtil.isValidClass(className, path)) {
+            taskInterface.methods += [name: call.methodAsString, type: className, file: path]
             result = true
         }
         result
     }
 
-    static boolean isValidMethod(String referencedMethod){
-        if(referencedMethod ==~ /(println|print|setBinding)/) false
+    static boolean isValidMethod(String referencedMethod) {
+        if (referencedMethod ==~ /(println|print|setBinding)/) false
         else true
     }
 
-    private boolean registryIsInternalValidMethodCall(MethodCallExpression call){
+    private boolean registryIsInternalValidMethodCall(MethodCallExpression call) {
         def result = false
 
         if (call.implicitThis && isValidMethod(call.methodAsString)) { //call from test code
             result = true
-            if( GroovyUtil.isPageMethod(call.methodAsString) ){ //find gsp file
+            if (GroovyUtil.isPageMethod(call.methodAsString)) { //find gsp file
                 def value = call.arguments.text
-                def className = value.substring(1,value.length()-1)
+                def className = value.substring(1, value.length() - 1)
                 def path = GroovyUtil.getClassPathForGroovy(className, projectFiles)
-                if(!path?.isEmpty()) taskInterface.calledPageMethods += [name: call.methodAsString, arg:className, file:path]
-            }
-            else {
+                if (!path?.isEmpty()) taskInterface.calledPageMethods += [name: call.methodAsString, arg: className, file: path]
+            } else {
                 //calls for other methods do not need to be registered
                 //methods += [name: call.methodAsString, type: className]
             }
@@ -65,11 +65,11 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
         return result
     }
 
-    private boolean registryIsExternalValidMethodCall(MethodCallExpression call){
+    private boolean registryIsExternalValidMethodCall(MethodCallExpression call) {
         def result = false
-        if(!call.implicitThis){//call from other class
+        if (!call.implicitThis) {//call from other class
             if (call.receiver.dynamicTyped) {
-                taskInterface.methods += [name: call.methodAsString, type: null, file:null]
+                taskInterface.methods += [name: call.methodAsString, type: null, file: null]
                 result = true
             } else {
                 result = registryMethodCall(call)
@@ -78,11 +78,11 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
         result
     }
 
-    private static printMethodCall(MethodCallExpression call){
+    private static printMethodCall(MethodCallExpression call) {
         log.warn "!!!!!!!!!!!!! composite call !!!!!!!!!!!!!"
         log.warn "call text: $call.text"
         log.warn "call.receiver.class: ${call.receiver.toString()}"
-        call.properties.each{ k, v ->
+        call.properties.each { k, v ->
             log.warn "$k: $v"
         }
         log.warn "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -94,31 +94,31 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     }
 
     @Override
-    public void visitConstructorCallExpression(ConstructorCallExpression call){
+    public void visitConstructorCallExpression(ConstructorCallExpression call) {
         super.visitConstructorCallExpression(call)
         def path = GroovyUtil.getClassPathForGroovy(call?.type?.name, projectFiles)
-        if( GroovyUtil.isValidClass(call?.type?.name, path) ){
-            taskInterface.classes += [name: call?.type?.name, file:path]
+        if (GroovyUtil.isValidClass(call?.type?.name, path)) {
+            taskInterface.classes += [name: call?.type?.name, file: path]
         }
     }
 
     @Override
-    void visitMethodCallExpression(MethodCallExpression call){
+    void visitMethodCallExpression(MethodCallExpression call) {
         super.visitMethodCallExpression(call)
 
-        switch (call.receiver.class){
+        switch (call.receiver.class) {
             case ConstructorCallExpression.class: //composite call that includes constructor call
                 // ex: def path = new File(".").getCanonicalPath() + File.separator + "test" + File.separator + "files" + File.separator + "TCS.pdf"
                 def path = GroovyUtil.getClassPathForGroovy(call.receiver.type.name, projectFiles)
                 if (GroovyUtil.isValidClass(call.receiver.type.name, path)) {
                     def className = call.objectExpression.type.name
-                    taskInterface.classes += [name:call.receiver.type.name, file:path]
-                    taskInterface.methods += [name:call.methodAsString, type:className, file:path]
+                    taskInterface.classes += [name: call.receiver.type.name, file: path]
+                    taskInterface.methods += [name: call.methodAsString, type: className, file: path]
                 }
                 break
             case VariableExpression.class: //call that uses a reference variable
                 def result = registryIsInternalValidMethodCall(call)
-                if(!result) registryIsExternalValidMethodCall(call)
+                if (!result) registryIsExternalValidMethodCall(call)
                 break
             case MethodCallExpression.class: //composite call that does not include constructor call
             case StaticMethodCallExpression.class: //composite static call
@@ -137,22 +137,22 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     /***
      * Visits static method or step method(static import)
      */
-    public void visitStaticMethodCallExpression(StaticMethodCallExpression call){
+    public void visitStaticMethodCallExpression(StaticMethodCallExpression call) {
         super.visitStaticMethodCallExpression(call)
         def path = GroovyUtil.getClassPathForGroovy(call.ownerType.name, projectFiles)
-        if (GroovyUtil.isValidClass(call.ownerType.name, path)){
+        if (GroovyUtil.isValidClass(call.ownerType.name, path)) {
             def className = call.ownerType.name
-            taskInterface.methods += [name:call.methodAsString, type:className, file:path]
+            taskInterface.methods += [name: call.methodAsString, type: className, file: path]
         }
     }
 
     @Override
-    public void visitField(FieldNode node){
+    public void visitField(FieldNode node) {
         super.visitField(node)
         def className = node.type.name
         def path = GroovyUtil.getClassPathForGroovy(className, projectFiles)
-        if(GroovyUtil.isValidClass(className, path)) {
-            def result = [name:node.name, type:className, value:node.initialValueExpression.value, file:path]
+        if (GroovyUtil.isValidClass(className, path)) {
+            def result = [name: node.name, type: className, value: node.initialValueExpression.value, file: path]
             if (node.static) taskInterface.staticFields += result
             else taskInterface.fields += result
         }
@@ -162,12 +162,12 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     /***
      * Visits fields and constants from other classes, for example: "foo.bar"
      */
-    public void visitPropertyExpression(PropertyExpression expression){
+    public void visitPropertyExpression(PropertyExpression expression) {
         super.visitPropertyExpression(expression)
         def path = GroovyUtil.getClassPathForGroovy(expression.objectExpression.type.name, projectFiles)
-        if ( GroovyUtil.isValidClass(expression.objectExpression.type.name, path) ){
+        if (GroovyUtil.isValidClass(expression.objectExpression.type.name, path)) {
             def className = expression.objectExpression.type.name
-            taskInterface.accessedProperties += [name:expression.propertyAsString, type:className, file:path]
+            taskInterface.accessedProperties += [name: expression.propertyAsString, type: className, file: path]
         }
     }
 

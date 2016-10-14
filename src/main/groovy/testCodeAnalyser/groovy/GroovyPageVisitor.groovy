@@ -3,7 +3,6 @@ package testCodeAnalyser.groovy
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.control.SourceUnit
-
 import util.groovy.GroovyUtil
 
 class GroovyPageVisitor extends ClassCodeVisitorSupport {
@@ -12,7 +11,7 @@ class GroovyPageVisitor extends ClassCodeVisitorSupport {
     List<String> viewFiles
     static final PAGE_FIELD = "url" //name convention
 
-    public GroovyPageVisitor(List<String> viewFiles){
+    public GroovyPageVisitor(List<String> viewFiles) {
         this.source = null
         this.pages = [] as Set
         this.viewFiles = viewFiles
@@ -24,11 +23,11 @@ class GroovyPageVisitor extends ClassCodeVisitorSupport {
     }
 
     @Override
-    public void visitField(FieldNode node){
+    public void visitField(FieldNode node) {
         super.visitField(node)
-        if(node.name==PAGE_FIELD && node.initialValueExpression.value != ""){
+        if (node.name == PAGE_FIELD && node.initialValueExpression.value != "") {
             def name = GroovyUtil.findViewPathForGrailsProjects(node.initialValueExpression.value, viewFiles)
-            if(!name.isEmpty()) pages += name
+            if (!name.isEmpty()) pages += name
         }
     }
 }

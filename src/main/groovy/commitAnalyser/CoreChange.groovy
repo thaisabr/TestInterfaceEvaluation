@@ -10,7 +10,7 @@ class CoreChange implements CodeChange {
     List<Integer> lines
 
     @Override
-    public String toString(){
+    public String toString() {
         "(Core change) path: $path; type: $type; lines: $lines"
     }
 

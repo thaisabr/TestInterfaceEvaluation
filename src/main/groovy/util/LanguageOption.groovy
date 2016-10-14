@@ -7,7 +7,7 @@ enum LanguageOption {
 
     String extension
 
-    LanguageOption(String ext){
+    LanguageOption(String ext) {
         extension = ext
     }
 }

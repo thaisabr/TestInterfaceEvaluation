@@ -12,7 +12,7 @@ class RubyMethodVisitor extends NoopVisitor {
     def methods
     RubyTestCodeVisitor methodBodyVisitor
 
-    RubyMethodVisitor(List methods, RubyTestCodeVisitor methodBodyVisitor){
+    RubyMethodVisitor(List methods, RubyTestCodeVisitor methodBodyVisitor) {
         this.methods = methods
         this.methodBodyVisitor = methodBodyVisitor
     }
@@ -20,14 +20,14 @@ class RubyMethodVisitor extends NoopVisitor {
     @Override
     Object visitDefnNode(DefnNode iVisited) {
         super.visitDefnNode(iVisited)
-        if(iVisited.name in methods) iVisited.accept(methodBodyVisitor)
+        if (iVisited.name in methods) iVisited.accept(methodBodyVisitor)
         return iVisited
     }
 
     @Override
     Object visitDefsNode(DefsNode iVisited) {
         super.visitDefsNode(iVisited)
-        if(iVisited.name in methods) iVisited.accept(methodBodyVisitor)
+        if (iVisited.name in methods) iVisited.accept(methodBodyVisitor)
         return iVisited
     }
 

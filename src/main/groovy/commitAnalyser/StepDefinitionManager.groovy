@@ -10,15 +10,14 @@ import testCodeAnalyser.TestCodeAbstractParser
 class StepDefinitionManager {
 
     static List<StepDefinition> parseStepDefinitionFile(String filename, String content, String sha,
-                                                           TestCodeAbstractParser parser){
+                                                        TestCodeAbstractParser parser) {
         List<StepDefinition> stepDefinitions = null
-        if(!content || content==""){
+        if (!content || content == "") {
             GitRepository.log.warn "Problem to parse step definition file '$filename'. Reason: The commit deleted it."
-        }
-        else{
-            try{
+        } else {
+            try {
                 stepDefinitions = parser.doExtractStepDefinitions(filename, content)
-            } catch(ParserException ex){
+            } catch (ParserException ex) {
                 GitRepository.log.warn "Problem to parse step definition file '$filename' (commit $sha). ${ex.class}: ${ex.message}."
                 GitRepository.log.warn content
             }
@@ -31,12 +30,12 @@ class StepDefinitionManager {
      * It is used only when dealing with done tasks.
      */
     static StepDefinitionFile extractStepDefinitionAdds(RevCommit commit, String content, String path,
-                                                               TestCodeAbstractParser parser){
+                                                        TestCodeAbstractParser parser) {
         StepDefinitionFile changedStepDefFile = null
         def newStepDefinitions = parseStepDefinitionFile(path, content, commit.name, parser)
 
-        if(newStepDefinitions && !newStepDefinitions.isEmpty()){
-            changedStepDefFile = new StepDefinitionFile(path:path, changedStepDefinitions:newStepDefinitions)
+        if (newStepDefinitions && !newStepDefinitions.isEmpty()) {
+            changedStepDefFile = new StepDefinitionFile(path: path, changedStepDefinitions: newStepDefinitions)
         }
         changedStepDefFile
     }

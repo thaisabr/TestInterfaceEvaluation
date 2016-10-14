@@ -13,12 +13,12 @@ class StepDefinition {
     @Override
     String toString() {
         def text = "Step ($line-$end): $value\n"
-        body?.each{ text += it+"\n" }
+        body?.each { text += it + "\n" }
         return text
     }
 
-    int size(){
-        return end-line
+    int size() {
+        return end - line
     }
 
 }

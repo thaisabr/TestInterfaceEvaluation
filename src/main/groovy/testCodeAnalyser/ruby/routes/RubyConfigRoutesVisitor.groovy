@@ -3,7 +3,6 @@ package testCodeAnalyser.ruby.routes
 import groovy.util.logging.Slf4j
 import org.jrubyparser.ast.Node
 import org.jrubyparser.ast.SymbolNode
-import util.ConstantData
 import util.RegexUtil
 import util.ruby.RubyUtil
 
@@ -25,113 +24,113 @@ class RubyConfigRoutesVisitor {
         routingMethods = [] as Set
         namespacevisitor = new RubyNamespaceVisitor()
         fileNode?.accept(namespacevisitor)
-        nodes = namespacevisitor.fcallNodes.sort{ it.position.startLine }
-        nodes += namespacevisitor.callNodes.sort{ it.position.startLine }
-        while(!nodes.empty){
+        nodes = namespacevisitor.fcallNodes.sort { it.position.startLine }
+        nodes += namespacevisitor.callNodes.sort { it.position.startLine }
+        while (!nodes.empty) {
             def next = nodes.first()
             extractData(next, null)
             nodes = nodes - [next]
         }
     }
 
-    private getChildNodes(Node iVisited){
-        def others = nodes-[iVisited]
-        def childNodes = others.findAll{
+    private getChildNodes(Node iVisited) {
+        def others = nodes - [iVisited]
+        def childNodes = others.findAll {
             it.position.startLine in iVisited.position.startLine..iVisited.position.endLine
         }
         return childNodes
     }
 
-    private registryGetNonResourcefulRoute(Node iVisited, String namespace){
+    private registryGetNonResourcefulRoute(Node iVisited, String namespace) {
         def argsVisitor = new RubyNonResourcefulPropertiesVisitor()
         def args = []
-        iVisited?.childNodes()?.each{
+        iVisited?.childNodes()?.each {
             it.accept(argsVisitor)
             def values = argsVisitor.values
-            if(values && !values?.empty) args = argsVisitor.values
+            if (values && !values?.empty) args = argsVisitor.values
         }
-        if(!args) return
-        if(namespace){
+        if (!args) return
+        if (namespace) {
             def formatedPrefix = namespace.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-            routingMethods += [name:"${formatedPrefix}_${args.name}", file:RubyUtil.ROUTES_ID, value:"${namespace}/${args.value}", arg:"$namespace/${args.arg}"]
+            routingMethods += [name: "${formatedPrefix}_${args.name}", file: RubyUtil.ROUTES_ID, value: "${namespace}/${args.value}", arg: "$namespace/${args.arg}"]
         } else {
-            routingMethods += [name:args.name, file:RubyUtil.ROUTES_ID, value:args.value, arg:args.arg]
+            routingMethods += [name: args.name, file: RubyUtil.ROUTES_ID, value: args.value, arg: args.arg]
         }
     }
 
-    private registryMatchNonResourcefulRoute(Node iVisited, String namespace){
+    private registryMatchNonResourcefulRoute(Node iVisited, String namespace) {
         def name = iVisited?.name
-        if(name == "match") name = null
+        if (name == "match") name = null
         def argsVisitor = new RubyMatchPropertiesVisitor(name)
         def args = null
 
-        iVisited?.childNodes()?.each{
+        iVisited?.childNodes()?.each {
             it.accept(argsVisitor)
             def values = argsVisitor.values
-            if(values && !values?.empty) args = argsVisitor.values
+            if (values && !values?.empty) args = argsVisitor.values
         }
-        if(!args) return
-        if(namespace){
+        if (!args) return
+        if (namespace) {
             def formatedPrefix = namespace.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-            routingMethods += [name:"${formatedPrefix}_${args.name}", file:RubyUtil.ROUTES_ID, value:"${namespace}/${args.value}", arg:"$namespace/${args.arg}"]
+            routingMethods += [name: "${formatedPrefix}_${args.name}", file: RubyUtil.ROUTES_ID, value: "${namespace}/${args.value}", arg: "$namespace/${args.arg}"]
         } else {
-            routingMethods += [name:args.name, file:RubyUtil.ROUTES_ID, value:args.value, arg:args.arg]
+            routingMethods += [name: args.name, file: RubyUtil.ROUTES_ID, value: args.value, arg: args.arg]
         }
     }
 
-    private registryRootRoute(Node iVisited, String prefix){
+    private registryRootRoute(Node iVisited, String prefix) {
         def argsVisitor = new RubyRootPropertiesVisitor(iVisited?.name)
         def args = null
-        iVisited?.childNodes()?.each{
+        iVisited?.childNodes()?.each {
             it.accept(argsVisitor)
             def values = argsVisitor.values
-            if(values && !values?.empty) args = argsVisitor.values
+            if (values && !values?.empty) args = argsVisitor.values
         }
-        if(!args) return
-        if(prefix){
+        if (!args) return
+        if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-            routingMethods += [name:"${formatedPrefix}_${iVisited.name}", file:RubyUtil.ROUTES_ID, value:"${prefix}/", arg:"$prefix/${args.arg}"]
+            routingMethods += [name: "${formatedPrefix}_${iVisited.name}", file: RubyUtil.ROUTES_ID, value: "${prefix}/", arg: "$prefix/${args.arg}"]
         } else {
-            routingMethods += [name:iVisited?.name, file:RubyUtil.ROUTES_ID, value:"/", arg:args.arg]
+            routingMethods += [name: iVisited?.name, file: RubyUtil.ROUTES_ID, value: "/", arg: args.arg]
         }
     }
 
     private extractResourcesData(Node node, String prefix, String original, String aliasSingular, String controllerName,
-                                 String indexName){
+                                 String indexName) {
         def nestedResourcesVisitor = new RubyNestedResourcesVisitor(node)
         node.accept(nestedResourcesVisitor)
 
         def nestedResourcesList = nestedResourcesVisitor.resources
         nodes = nodes - nestedResourcesList
-        def rangesOfNestedResources = nestedResourcesList.collect{ it.position.startLine..it.position.endLine }
+        def rangesOfNestedResources = nestedResourcesList.collect { it.position.startLine..it.position.endLine }
 
         def nestedResourceList = nestedResourcesVisitor.resource
         nodes = nodes - nestedResourceList
-        def rangesOfNestedResource = nestedResourceList.collect{ it.position.startLine..it.position.endLine }
+        def rangesOfNestedResource = nestedResourceList.collect { it.position.startLine..it.position.endLine }
 
         /* extracting collection and member (CallNode or FCallNode) */
         def alreadyVisitedNodes = []
 
-        def collectionAndMemberVisitor = new RubyCollectionAndMemberVisitor(node, rangesOfNestedResources+rangesOfNestedResource, nodes)
+        def collectionAndMemberVisitor = new RubyCollectionAndMemberVisitor(node, rangesOfNestedResources + rangesOfNestedResource, nodes)
         node.accept(collectionAndMemberVisitor)
         List<Node> collectionValues = collectionAndMemberVisitor.collectionValues
-        if(collectionAndMemberVisitor.collectionNode) alreadyVisitedNodes += collectionAndMemberVisitor.collectionNode
+        if (collectionAndMemberVisitor.collectionNode) alreadyVisitedNodes += collectionAndMemberVisitor.collectionNode
         alreadyVisitedNodes += collectionValues
         def collectionData = []
-        collectionValues.each{ getNode ->
+        collectionValues.each { getNode ->
             def getPropertiesVisitor = new RubyGetPropertiesVisitor(false, true, prefix, original, aliasSingular, controllerName, indexName)
             getNode.accept(getPropertiesVisitor)
-            collectionData += [node: getNode, route:getPropertiesVisitor.route]
+            collectionData += [node: getNode, route: getPropertiesVisitor.route]
         }
 
         List<Node> memberValues = collectionAndMemberVisitor.memberValues
-        if(collectionAndMemberVisitor.memberNode) alreadyVisitedNodes += collectionAndMemberVisitor.memberNode
+        if (collectionAndMemberVisitor.memberNode) alreadyVisitedNodes += collectionAndMemberVisitor.memberNode
         alreadyVisitedNodes += memberValues
         def memberData = []
-        memberValues.each{ getNode ->
+        memberValues.each { getNode ->
             def getPropertiesVisitor = new RubyGetPropertiesVisitor(true, false, prefix, original, aliasSingular, controllerName, indexName)
             getNode.accept(getPropertiesVisitor)
-            memberData += [node: getNode, route:getPropertiesVisitor.route]
+            memberData += [node: getNode, route: getPropertiesVisitor.route]
         }
 
         /* extracting get on member or collection */
@@ -140,22 +139,21 @@ class RubyConfigRoutesVisitor {
         def getVisitor = new RubyGetVisitor(node, nodes)
         node.accept(getVisitor)
         def getNodes = getVisitor.nodes
-        getNodes.each{ getNode ->
+        getNodes.each { getNode ->
             def visitor = new RubyGetPropertiesVisitor()
             getNode.accept(visitor)
-            if(visitor.onValue == "member") {
+            if (visitor.onValue == "member") {
                 memberNodeValue = getNode
                 alreadyVisitedNodes += getNode
                 def getPropertiesVisitor = new RubyGetPropertiesVisitor(true, false, prefix, original, aliasSingular, controllerName, indexName)
                 getNode.accept(getPropertiesVisitor)
-                memberData += [node: getNode, route:getPropertiesVisitor.route]
-            }
-            else if(visitor.onValue == "collection") {
+                memberData += [node: getNode, route: getPropertiesVisitor.route]
+            } else if (visitor.onValue == "collection") {
                 collectionNodeValue = getNode
                 alreadyVisitedNodes += getNode
                 def getPropertiesVisitor = new RubyGetPropertiesVisitor(false, true, prefix, original, aliasSingular, controllerName, indexName)
                 getNode.accept(getPropertiesVisitor)
-                collectionData += [node: getNode, route:getPropertiesVisitor.route]
+                collectionData += [node: getNode, route: getPropertiesVisitor.route]
             }
         }
 
@@ -164,24 +162,24 @@ class RubyConfigRoutesVisitor {
         def argsVisitor = new RubyResourcesPropertiesVisitor(node, rangesOfNestedResources, rangesOfNestedResource, alreadyVisitedNodes)
         node.accept(argsVisitor)
         def args = argsVisitor.organizedValues
-        return [nestedResourcesList: nestedResourcesList, nestedResourceList:nestedResourceList, args:args,
-                collectionRoutes:collectionData*.route, memberRoutes:memberData*.route]
+        return [nestedResourcesList: nestedResourcesList, nestedResourceList: nestedResourceList, args: args,
+                collectionRoutes   : collectionData*.route, memberRoutes: memberData*.route]
     }
 
-    private static extractArgValues(List args){
+    private static extractArgValues(List args) {
         def styleRequestFirst = isRequestFirstStyleCode(args)
         def values = []
-        if(styleRequestFirst){
-            for(int i=0; i<args.size(); i++){
-                if(args.get(i).value == "get") {
-                    values += args.get(i+1)
+        if (styleRequestFirst) {
+            for (int i = 0; i < args.size(); i++) {
+                if (args.get(i).value == "get") {
+                    values += args.get(i + 1)
                     i++
                 }
             }
         } else {
-            for(int i=0; i<args.size(); i++){
-                if(args.get(i).value == "get") {
-                    values += args.get(i-1)
+            for (int i = 0; i < args.size(); i++) {
+                if (args.get(i).value == "get") {
+                    values += args.get(i - 1)
                     i++
                 }
             }
@@ -189,39 +187,38 @@ class RubyConfigRoutesVisitor {
         values
     }
 
-    private static isRequestFirstStyleCode(def dataList){
+    private static isRequestFirstStyleCode(def dataList) {
         def styleRequestFirst = false
-        if(dataList.first().value in REQUEST_TYPES) styleRequestFirst = true
+        if (dataList.first().value in REQUEST_TYPES) styleRequestFirst = true
         return styleRequestFirst
     }
 
     /***
-     *  @param args [as="", member=[line, position, value], collection=[], only=[], except=[], controller:""]
+     * @param args [as="", member=[line, position, value], collection=[], only=[], except=[], controller:""]
      */
-    private static resourceArgsIsEmpty(def args){
+    private static resourceArgsIsEmpty(def args) {
         args.as.empty && args.controller.empty && args.member.empty && args.collection.empty && args.only.empty && args.except.empty
     }
 
     private generateResourcesRoutes(Node node, String namespaceValue, String indexName, String original, String plural,
-                                    String singular, String controllerName){
+                                    String singular, String controllerName) {
         def resourcesData = extractResourcesData(node, namespaceValue, original, singular, controllerName, indexName)
         String aliasSingular = singular
         def args = resourcesData.args
-        if(resourceArgsIsEmpty(args)) {
+        if (resourceArgsIsEmpty(args)) {
             configureResourcesDefaultRoute(namespaceValue, indexName, original, controllerName, aliasSingular)
             routingMethods += resourcesData.memberRoutes
             routingMethods += resourcesData.collectionRoutes
-        }
-        else {
+        } else {
             def alias = generateBasicResourcesRoutes(args, namespaceValue, indexName, original, singular, controllerName)
-            if(alias != singular){
-                resourcesData.memberRoutes?.each{ route ->
+            if (alias != singular) {
+                resourcesData.memberRoutes?.each { route ->
                     routingMethods += route.name.replace(singular, alias)
                 }
-                resourcesData.collectionRoutes?.each{ route ->
+                resourcesData.collectionRoutes?.each { route ->
                     routingMethods += route.name.replace(singular, alias)
                 }
-            } else{
+            } else {
                 routingMethods += resourcesData.memberRoutes
                 routingMethods += resourcesData.collectionRoutes
             }
@@ -231,11 +228,11 @@ class RubyConfigRoutesVisitor {
         def parentNamePlural = plural
         def originalParentName = original
 
-        resourcesData.nestedResourcesList.each{ nestedResources ->
+        resourcesData.nestedResourcesList.each { nestedResources ->
             extractResources(nestedResources, namespaceValue, parentNameSingular, parentNamePlural, originalParentName)
         }
 
-        resourcesData.nestedResourceList.each{ nestedResource ->
+        resourcesData.nestedResourceList.each { nestedResource ->
             extractResource(nestedResource, namespaceValue, parentNameSingular, parentNamePlural, originalParentName)
         }
     }
@@ -245,38 +242,38 @@ class RubyConfigRoutesVisitor {
      * @return [as="", member=[line, position, value], collection=[], only=[], except=[], controller:""]
      */
     private generateBasicResourcesRoutes(def args, String prefix, String indexName, String original, String singular,
-                                         String controllerName){
+                                         String controllerName) {
         String aliasSingular = singular
 
-        if(!args.as.empty) {
+        if (!args.as.empty) {
             def plural = args.as.value
             aliasSingular = inflector.singularize(plural)
             indexName = args.as.value
         }
-        if(!args.controller.empty) controllerName = args.controller.value
-        if(!args.member.empty){
+        if (!args.controller.empty) controllerName = args.controller.value
+        if (!args.member.empty) {
             def values = extractArgValues(args.member)*.value
-            values.each{ value ->
+            values.each { value ->
                 generateResourcesMemberRoute(value, prefix, original, aliasSingular, controllerName)
             }
         }
-        if(!args.collection.empty){
+        if (!args.collection.empty) {
             def values = extractArgValues(args.collection)*.value
-            values.each{ value ->
+            values.each { value ->
                 generateResourcesCollectionRoute(value, prefix, original, indexName, controllerName)
             }
         }
-        if(!args.only.empty){
+        if (!args.only.empty) {
             def values = args.only*.value
-            values.each{ value ->
+            values.each { value ->
                 generateResourcesOnlyRoutes(value, prefix, original, controllerName, indexName, aliasSingular)
             }
         }
-        if(!args.except.empty) {
+        if (!args.except.empty) {
             def values = args.except*.value
             generateResourcesExceptRoutes(values, prefix, original, controllerName, indexName, aliasSingular)
         }
-        if(args.except.empty && args.only.empty) {
+        if (args.except.empty && args.only.empty) {
             configureResourcesDefaultRoute(prefix, indexName, original, controllerName, aliasSingular)
         }
 
@@ -284,46 +281,46 @@ class RubyConfigRoutesVisitor {
     }
 
     private generateResourcesExceptRoutes(def except, String prefix, String original, String controllerName,
-                                          String indexName, String alias){
+                                          String indexName, String alias) {
         def all = ["edit", "index", "new", "show"]
         def routesToGenerate = all - except
         def formatedPrefix = prefix?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-        routesToGenerate.each{ actionName ->
-            switch(actionName){
+        routesToGenerate.each { actionName ->
+            switch (actionName) {
                 case "index":
-                    if(prefix){
-                        routingMethods += [name:"${formatedPrefix}_$indexName", file:RubyUtil.ROUTES_ID,
-                                   value:"/${prefix}/$original", arg:"${prefix}/$controllerName#index"]
+                    if (prefix) {
+                        routingMethods += [name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index"]
                     } else {
-                        routingMethods += [name:indexName, file:RubyUtil.ROUTES_ID, value:"/$original",
-                                           arg:"$controllerName#index"]
+                        routingMethods += [name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
+                                           arg : "$controllerName#index"]
                     }
                     break
                 case "new":
-                    if(prefix){
-                        routingMethods += [name:"new_${formatedPrefix}_$alias", file:RubyUtil.ROUTES_ID,
-                                   value:"/${prefix}/$original/new", arg:"${prefix}/$controllerName#new"]
+                    if (prefix) {
+                        routingMethods += [name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
                     } else {
-                        routingMethods += [name:"new_$alias", file:RubyUtil.ROUTES_ID, value:"/$original/new",
-                                           arg:"$controllerName#new"]
+                        routingMethods += [name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
+                                           arg : "$controllerName#new"]
                     }
                     break
                 case "edit":
-                    if(prefix){
-                        routingMethods += [name:"edit_${formatedPrefix}_$alias", file:RubyUtil.ROUTES_ID,
-                                   value:"/${prefix}/$original(/.*)/edit", arg:"${prefix}/$controllerName#edit"]
+                    if (prefix) {
+                        routingMethods += [name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit"]
                     } else {
-                        routingMethods += [name:"edit_$alias", file:RubyUtil.ROUTES_ID, value:"/$original(/.*)/edit",
-                                           arg:"$controllerName#edit"]
+                        routingMethods += [name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)/edit",
+                                           arg : "$controllerName#edit"]
                     }
                     break
                 case "show":
-                    if(prefix){
-                        routingMethods += [name:"${formatedPrefix}_${alias}", file:RubyUtil.ROUTES_ID,
-                                   value:"/${prefix}/$original/", arg:"${prefix}/$controllerName#show"]
+                    if (prefix) {
+                        routingMethods += [name : "${formatedPrefix}_${alias}", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show"]
                     } else {
-                        routingMethods += [name:alias, file:RubyUtil.ROUTES_ID, value:"/$original/",
-                                           arg:"$controllerName#show"]
+                        routingMethods += [name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
+                                           arg : "$controllerName#show"]
                     }
                     break
             }
@@ -331,97 +328,97 @@ class RubyConfigRoutesVisitor {
     }
 
     private generateResourcesOnlyRoutes(def value, String prefix, String original, String controllerName,
-                                        String indexName, String alias){
+                                        String indexName, String alias) {
         def formatedPrefix = prefix?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
         switch (value) {
             case "index":
                 if (prefix) {
-                    routingMethods += [name: "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
+                    routingMethods += [name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
                                        value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index"]
                 } else {
                     routingMethods += [name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
-                                       arg: "$controllerName#index"]
+                                       arg : "$controllerName#index"]
                 }
                 break
             case "new":
                 if (prefix) {
-                    routingMethods += [name: "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                    routingMethods += [name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
                                        value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
                 } else {
                     routingMethods += [name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
-                                       arg: "$controllerName#new"]
+                                       arg : "$controllerName#new"]
                 }
                 break
             case "edit":
                 if (prefix) {
-                    routingMethods += [name: "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                    routingMethods += [name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
                                        value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit"]
                 } else {
                     routingMethods += [name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)/edit",
-                                       arg: "$controllerName#edit"]
+                                       arg : "$controllerName#edit"]
                 }
                 break
             case "show":
                 if (prefix) {
-                    routingMethods += [name: "${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                    routingMethods += [name : "${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
                                        value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show"]
                 } else {
                     routingMethods += [name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
-                                       arg: "$controllerName#show"]
+                                       arg : "$controllerName#show"]
                 }
                 break
         }
     }
 
     private generateResourceOnlyRoutes(def value, String prefix, String original, String controllerName,
-                                        String indexName, String alias){
+                                       String indexName, String alias) {
         def formatedPrefix = prefix?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
         switch (value) {
             case "index":
                 if (prefix) {
-                    routingMethods += [name: "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
+                    routingMethods += [name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
                                        value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index"]
                 } else {
                     routingMethods += [name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
-                                       arg: "$controllerName#index"]
+                                       arg : "$controllerName#index"]
                 }
                 break
             case "new":
                 if (prefix) {
-                    routingMethods += [name: "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                    routingMethods += [name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
                                        value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
                 } else {
                     routingMethods += [name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
-                                       arg: "$controllerName#new"]
+                                       arg : "$controllerName#new"]
                 }
                 break
             case "edit":
                 if (prefix) {
-                    routingMethods += [name: "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                    routingMethods += [name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
                                        value: "/${prefix}/$original/edit", arg: "${prefix}/$controllerName#edit"]
                 } else {
                     routingMethods += [name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/edit",
-                                       arg: "$controllerName#edit"]
+                                       arg : "$controllerName#edit"]
                 }
                 break
             case "show":
                 if (prefix) {
-                    routingMethods += [name: "${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                    routingMethods += [name : "${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
                                        value: "/${prefix}/$original", arg: "${prefix}/$controllerName#show"]
                 } else {
                     routingMethods += [name: alias, file: RubyUtil.ROUTES_ID, value: "/$original",
-                                       arg: "$controllerName#show"]
+                                       arg : "$controllerName#show"]
                 }
                 break
         }
     }
 
     private generateResourcesMemberRoute(def actionName, String prefix, String original, String aliasSingular,
-                                         String controllerName){
+                                         String controllerName) {
         def nameSufix
         def pathValuePrefix
         def argsPrefix
-        if(prefix){
+        if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             nameSufix = "_${formatedPrefix}_$aliasSingular"
             pathValuePrefix = "/${prefix}/$original(/.*)/"
@@ -431,16 +428,16 @@ class RubyConfigRoutesVisitor {
             pathValuePrefix = "/$original(/.*)/"
             argsPrefix = "$controllerName#"
         }
-        routingMethods += [name:"$actionName$nameSufix", file:RubyUtil.ROUTES_ID, value:"$pathValuePrefix$actionName",
-                           arg:"$argsPrefix$actionName"]
+        routingMethods += [name: "$actionName$nameSufix", file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName",
+                           arg : "$argsPrefix$actionName"]
     }
 
     private generateResourcesCollectionRoute(def actionName, String prefix, String original, String indexName,
-                                             String controllerName){
+                                             String controllerName) {
         def nameSufix
         def pathValuePrefix
         def argsPrefix
-        if(prefix){
+        if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             nameSufix = "_${formatedPrefix}_$indexName"
             pathValuePrefix = "/${prefix}/$original/"
@@ -450,61 +447,62 @@ class RubyConfigRoutesVisitor {
             pathValuePrefix = "/$original/"
             argsPrefix = "$controllerName#"
         }
-        routingMethods += [name:"$actionName$nameSufix", file:RubyUtil.ROUTES_ID, value:"$pathValuePrefix$actionName",
-                           arg:"$argsPrefix$actionName"]
+        routingMethods += [name: "$actionName$nameSufix", file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName",
+                           arg : "$argsPrefix$actionName"]
     }
 
     private configureResourcesDefaultRoute(String prefix, String indexName, String original, String controllerName,
-                                           String aliasSingular){
-        if(prefix){
+                                           String aliasSingular) {
+        if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-            routingMethods += [name:"${formatedPrefix}_$indexName", file:RubyUtil.ROUTES_ID,
-                               value:"/${prefix}/$original", arg:"${prefix}/$controllerName#index"]
-            routingMethods += [name:"new_${formatedPrefix}_$aliasSingular", file:RubyUtil.ROUTES_ID,
-                               value:"/${prefix}/$original/new", arg:"${prefix}/$controllerName#new"]
-            routingMethods += [name:"edit_${formatedPrefix}_$aliasSingular", file:RubyUtil.ROUTES_ID,
-                               value:"/${prefix}/$original(/.*)/edit", arg:"${prefix}/$controllerName#edit"]
-            routingMethods += [name:"${formatedPrefix}_${aliasSingular}", file:RubyUtil.ROUTES_ID,
-                               value:"/${prefix}/$original/", arg:"${prefix}/$controllerName#show"]
+            routingMethods += [name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index"]
+            routingMethods += [name : "new_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
+            routingMethods += [name : "edit_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit"]
+            routingMethods += [name : "${formatedPrefix}_${aliasSingular}", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show"]
         } else {
-            routingMethods += [name:indexName, file:RubyUtil.ROUTES_ID, value:"/$original", arg:"$controllerName#index"]
-            routingMethods += [name:"new_$aliasSingular", file:RubyUtil.ROUTES_ID, value:"/$original/new", arg:"$controllerName#new"]
-            routingMethods += [name:"edit_$aliasSingular", file:RubyUtil.ROUTES_ID, value:"/$original(/.*)/edit", arg:"$controllerName#edit"]
-            routingMethods += [name:aliasSingular, file:RubyUtil.ROUTES_ID, value:"/$original/", arg:"$controllerName#show"]
+            routingMethods += [name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original", arg: "$controllerName#index"]
+            routingMethods += [name: "new_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original/new", arg: "$controllerName#new"]
+            routingMethods += [name: "edit_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)/edit", arg: "$controllerName#edit"]
+            routingMethods += [name: aliasSingular, file: RubyUtil.ROUTES_ID, value: "/$original/", arg: "$controllerName#show"]
         }
     }
 
-    private generateResourceExceptRoutes(def except, String prefix, String original, String controllerName, String alias){
+    private generateResourceExceptRoutes(
+            def except, String prefix, String original, String controllerName, String alias) {
         def all = ["edit", "new", "show"]
         def routesToGenerate = all - except
         def formatedPrefix = prefix?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-        routesToGenerate.each{ actionName ->
-            switch(actionName){
+        routesToGenerate.each { actionName ->
+            switch (actionName) {
                 case "new":
-                    if(prefix){
-                        routingMethods += [name:"new_${formatedPrefix}_$alias", file:RubyUtil.ROUTES_ID,
-                                           value:"/${prefix}/$original/new", arg:"${prefix}/$controllerName#new"]
+                    if (prefix) {
+                        routingMethods += [name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
                     } else {
-                        routingMethods += [name:"new_$alias", file:RubyUtil.ROUTES_ID, value:"/$original/new",
-                                           arg:"$controllerName#new"]
+                        routingMethods += [name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
+                                           arg : "$controllerName#new"]
                     }
                     break
                 case "edit":
-                    if(prefix){
-                        routingMethods += [name:"edit_${formatedPrefix}_$alias", file:RubyUtil.ROUTES_ID,
-                                           value:"/${prefix}/$original/edit", arg:"${prefix}/$controllerName#edit"]
+                    if (prefix) {
+                        routingMethods += [name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original/edit", arg: "${prefix}/$controllerName#edit"]
                     } else {
-                        routingMethods += [name:"edit_$alias", file:RubyUtil.ROUTES_ID, value:"/$original/edit",
-                                           arg:"$controllerName#edit"]
+                        routingMethods += [name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/edit",
+                                           arg : "$controllerName#edit"]
                     }
                     break
                 case "show":
-                    if(prefix){
-                        routingMethods += [name:"${formatedPrefix}_${alias}", file:RubyUtil.ROUTES_ID,
-                                           value:"/${prefix}/$original/", arg:"${prefix}/$controllerName#show"]
+                    if (prefix) {
+                        routingMethods += [name : "${formatedPrefix}_${alias}", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show"]
                     } else {
-                        routingMethods += [name:alias, file:RubyUtil.ROUTES_ID, value:"/$original/",
-                                           arg:"$controllerName#show"]
+                        routingMethods += [name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
+                                           arg : "$controllerName#show"]
                     }
                     break
             }
@@ -512,80 +510,79 @@ class RubyConfigRoutesVisitor {
     }
 
     private generateBasicResourceRoutes(def args, String prefix, String indexName, String original, String singular,
-                                        String controllerName){
+                                        String controllerName) {
         String aliasSingular = singular
 
-        if(!args.as.empty) {
+        if (!args.as.empty) {
             def plural = args.as.value
             aliasSingular = inflector.singularize(plural)
             indexName = args.as.value
         }
-        if(!args.controller.empty) controllerName = args.controller.value
-        if(!args.member.empty){
+        if (!args.controller.empty) controllerName = args.controller.value
+        if (!args.member.empty) {
             def values = extractArgValues(args.member)*.value
-            values.each{ value ->
+            values.each { value ->
                 generateResourcesMemberRoute(value, prefix, original, aliasSingular, controllerName)
             }
         }
-        if(!args.collection.empty){
+        if (!args.collection.empty) {
             def values = extractArgValues(args.collection)*.value
-            values.each{ value ->
+            values.each { value ->
                 generateResourcesCollectionRoute(value, prefix, original, indexName, controllerName)
             }
         }
-        if(!args.only.empty){
+        if (!args.only.empty) {
             def values = args.only*.value
-            values.each{ value ->
+            values.each { value ->
                 generateResourceOnlyRoutes(value, prefix, original, controllerName, indexName, aliasSingular)
             }
         }
-        if(!args.except.empty) {
+        if (!args.except.empty) {
             def values = args.except*.value
             generateResourceExceptRoutes(values, prefix, original, controllerName, aliasSingular)
         }
-        if(args.except.empty && args.only.empty) {
+        if (args.except.empty && args.only.empty) {
             configureResourceDefaultRoute(prefix, original, controllerName, aliasSingular)
         }
         return aliasSingular
     }
 
-    private configureResourceDefaultRoute(String prefix, String original, String controllerName, String aliasSingular){
-        if(prefix){
+    private configureResourceDefaultRoute(String prefix, String original, String controllerName, String aliasSingular) {
+        if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-            routingMethods += [name:"new_${formatedPrefix}_$aliasSingular", file:RubyUtil.ROUTES_ID,
-                               value:"/${prefix}/$original/new", arg:"${prefix}/$controllerName#new"]
-            routingMethods += [name:"edit_${formatedPrefix}_$aliasSingular", file:RubyUtil.ROUTES_ID,
-                               value:"/${prefix}/$original/edit", arg:"${prefix}/$controllerName#edit"]
-            routingMethods += [name:"${formatedPrefix}_${aliasSingular}", file:RubyUtil.ROUTES_ID,
-                               value:"/${prefix}/$original", arg:"${prefix}/$controllerName#show"]
+            routingMethods += [name : "new_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
+            routingMethods += [name : "edit_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original/edit", arg: "${prefix}/$controllerName#edit"]
+            routingMethods += [name : "${formatedPrefix}_${aliasSingular}", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original", arg: "${prefix}/$controllerName#show"]
         } else {
-            routingMethods += [name:"new_$aliasSingular", file:RubyUtil.ROUTES_ID, value:"/$original/new", arg:"$controllerName#new"]
-            routingMethods += [name:"edit_$aliasSingular", file:RubyUtil.ROUTES_ID, value:"/$original/edit", arg:"$controllerName#edit"]
-            routingMethods += [name:aliasSingular, file:RubyUtil.ROUTES_ID, value:"/$original", arg:"$controllerName#show"]
+            routingMethods += [name: "new_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original/new", arg: "$controllerName#new"]
+            routingMethods += [name: "edit_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original/edit", arg: "$controllerName#edit"]
+            routingMethods += [name: aliasSingular, file: RubyUtil.ROUTES_ID, value: "/$original", arg: "$controllerName#show"]
         }
 
     }
 
     private generateResourceRoutes(Node node, String namespaceValue, String indexName, String original, String plural,
-                                   String singular, String controllerName){
+                                   String singular, String controllerName) {
         def resourcesData = extractResourcesData(node, namespaceValue, original, singular, controllerName, indexName)
         String aliasSingular = singular
         def args = resourcesData.args
-        if(resourceArgsIsEmpty(args)){
+        if (resourceArgsIsEmpty(args)) {
             configureResourceDefaultRoute(namespaceValue, original, controllerName, aliasSingular)
             routingMethods += resourcesData.memberRoutes
             routingMethods += resourcesData.collectionRoutes
-        }
-        else {
+        } else {
             def alias = generateBasicResourceRoutes(args, namespaceValue, indexName, original, singular, controllerName)
-            if(alias != singular){
-                resourcesData.memberRoutes?.each{ route ->
+            if (alias != singular) {
+                resourcesData.memberRoutes?.each { route ->
                     routingMethods += route.name.replace(singular, alias)
                 }
-                resourcesData.collectionRoutes?.each{ route ->
+                resourcesData.collectionRoutes?.each { route ->
                     routingMethods += route.name.replace(singular, alias)
                 }
-            } else{
+            } else {
                 routingMethods += resourcesData.memberRoutes
                 routingMethods += resourcesData.collectionRoutes
             }
@@ -595,71 +592,71 @@ class RubyConfigRoutesVisitor {
         def parentNamePlural = plural
         def originalParentName = original
 
-        resourcesData.nestedResourcesList.each{ nestedResources ->
+        resourcesData.nestedResourcesList.each { nestedResources ->
             extractResources(nestedResources, namespaceValue, parentNameSingular, parentNamePlural, originalParentName)
         }
 
-        resourcesData.nestedResourceList.each{ nestedResource ->
+        resourcesData.nestedResourceList.each { nestedResource ->
             extractResource(nestedResource, namespaceValue, parentNameSingular, parentNamePlural, originalParentName)
         }
     }
 
-    private static getNameForNamespace(Node iVisited, String prefix){
-        List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll{ it instanceof SymbolNode }
+    private static getNameForNamespace(Node iVisited, String prefix) {
+        List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll { it instanceof SymbolNode }
         String name
-        if(prefix) name = prefix+"/"+entities.first().name
+        if (prefix) name = prefix + "/" + entities.first().name
         else name = entities.first().name
         return name
     }
 
-    private extractRoutesInNamespace(Node iVisited, String prefix){
+    private extractRoutesInNamespace(Node iVisited, String prefix) {
         String name = getNameForNamespace(iVisited, prefix)
         def childNodes = getChildNodes(iVisited)
 
-        for(int i=0; i<childNodes.size(); i++){
-            if( !(childNodes.get(i) in nodes)) continue
+        for (int i = 0; i < childNodes.size(); i++) {
+            if (!(childNodes.get(i) in nodes)) continue
             extractData(childNodes.get(i), name)
             nodes = nodes - [childNodes.get(i)]
         }
     }
 
-    private extractDevise(Node iVisited){
-        List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll{ it instanceof SymbolNode }
-        entities?.each{ entity ->
+    private extractDevise(Node iVisited) {
+        List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll { it instanceof SymbolNode }
+        entities?.each { entity ->
             def plural = entity.name
             def singular = inflector.singularize(plural)
 
             //Authenticatable (default)
-            routingMethods += [name:"new_${singular}_session", file:RubyUtil.ROUTES_ID, value:"/$plural/sign_in",
-                               arg:"devise/sessions#new"]
-            routingMethods += [name:"${singular}_session", file:RubyUtil.ROUTES_ID, value:"/$plural/sign_in",
-                               arg:"devise/sessions#create"]
-            routingMethods += [name:"destroy_${singular}_session", file:RubyUtil.ROUTES_ID, value:"/$plural/sign_out",
-                               arg:"devise/sessions#destroy"]
+            routingMethods += [name: "new_${singular}_session", file: RubyUtil.ROUTES_ID, value: "/$plural/sign_in",
+                               arg : "devise/sessions#new"]
+            routingMethods += [name: "${singular}_session", file: RubyUtil.ROUTES_ID, value: "/$plural/sign_in",
+                               arg : "devise/sessions#create"]
+            routingMethods += [name: "destroy_${singular}_session", file: RubyUtil.ROUTES_ID, value: "/$plural/sign_out",
+                               arg : "devise/sessions#destroy"]
             //Recoverable
-            routingMethods += [name:"new_${singular}_password", file:RubyUtil.ROUTES_ID, value:"/$plural/password/new",
-                               arg:"devise/passwords#new"]
-            routingMethods += [name:"edit_${singular}_password", file:RubyUtil.ROUTES_ID, value:"/$plural/password/edit",
-                               arg:"devise/passwords#edit"]
-            routingMethods += [name:"${singular}_password", file:RubyUtil.ROUTES_ID, value:"/$plural/password",
-                               arg:"devise/passwords#update"]
+            routingMethods += [name: "new_${singular}_password", file: RubyUtil.ROUTES_ID, value: "/$plural/password/new",
+                               arg : "devise/passwords#new"]
+            routingMethods += [name: "edit_${singular}_password", file: RubyUtil.ROUTES_ID, value: "/$plural/password/edit",
+                               arg : "devise/passwords#edit"]
+            routingMethods += [name: "${singular}_password", file: RubyUtil.ROUTES_ID, value: "/$plural/password",
+                               arg : "devise/passwords#update"]
             //Confirmable
-            routingMethods += [name:"new_${singular}_confirmation", file:RubyUtil.ROUTES_ID,
-                               value:"/$plural/confirmation/new", arg:"devise/confirmations#new"]
-            routingMethods += [name:"${singular}_confirmation", file:RubyUtil.ROUTES_ID, value:"/$plural/confirmation",
-                               arg:"devise/confirmations#show"]
+            routingMethods += [name : "new_${singular}_confirmation", file: RubyUtil.ROUTES_ID,
+                               value: "/$plural/confirmation/new", arg: "devise/confirmations#new"]
+            routingMethods += [name: "${singular}_confirmation", file: RubyUtil.ROUTES_ID, value: "/$plural/confirmation",
+                               arg : "devise/confirmations#show"]
             //Registerable
-            routingMethods += [name:"new_${singular}_registration", file:RubyUtil.ROUTES_ID,
-                               value:"/$plural/registration/new", arg:"devise/registrations#new"]
-            routingMethods += [name:"edit_${singular}_registration", file:RubyUtil.ROUTES_ID,
-                               value:"/$plural/registration/edit", arg:"devise/registrations#edit"]
-            routingMethods += [name:"${singular}_registration", file:RubyUtil.ROUTES_ID, value:"/$plural/registration",
-                               arg:"devise/registrations#update"]
+            routingMethods += [name : "new_${singular}_registration", file: RubyUtil.ROUTES_ID,
+                               value: "/$plural/registration/new", arg: "devise/registrations#new"]
+            routingMethods += [name : "edit_${singular}_registration", file: RubyUtil.ROUTES_ID,
+                               value: "/$plural/registration/edit", arg: "devise/registrations#edit"]
+            routingMethods += [name: "${singular}_registration", file: RubyUtil.ROUTES_ID, value: "/$plural/registration",
+                               arg : "devise/registrations#update"]
             //Lockable
-            routingMethods += [name:"new_${singular}_unlock", file:RubyUtil.ROUTES_ID, value:"/$plural/unlock/new",
-                               arg:"devise/unlocks#new"]
-            routingMethods += [name:"${singular}_unlock", file:RubyUtil.ROUTES_ID, value:"/$plural/unlock",
-                               arg:"devise/unlocks#create"]
+            routingMethods += [name: "new_${singular}_unlock", file: RubyUtil.ROUTES_ID, value: "/$plural/unlock/new",
+                               arg : "devise/unlocks#new"]
+            routingMethods += [name: "${singular}_unlock", file: RubyUtil.ROUTES_ID, value: "/$plural/unlock",
+                               arg : "devise/unlocks#create"]
 
             //Rememberable
             //Trackable
@@ -670,22 +667,21 @@ class RubyConfigRoutesVisitor {
     }
 
     private extractResources(Node iVisited, String namespaceValue, String parentNameSingular, String parentNamePlural,
-                             String originalParentName){
-        List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll{ it instanceof SymbolNode }
-        entities?.each{ entity ->
+                             String originalParentName) {
+        List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll { it instanceof SymbolNode }
+        entities?.each { entity ->
             String original = entity.name
             String plural = original
             String singular = inflector.singularize(plural)
-            if(original == singular) { //the original term is singular
+            if (original == singular) { //the original term is singular
                 plural = inflector.pluralize(original)
             }
 
             String controllerName = plural
             String indexName
-            if(!parentNameSingular && !parentNamePlural) {
+            if (!parentNameSingular && !parentNamePlural) {
                 indexName = original
-            }
-            else {
+            } else {
                 indexName = "${parentNameSingular.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$original"
                 singular = "${parentNameSingular.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$singular"
                 plural = "${parentNamePlural.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$plural"
@@ -696,20 +692,19 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private extractResource(Node iVisited, String namespaceValue, String parentNameSingular, String parentNamePlural, String originalParentName){
-        List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll{ it instanceof SymbolNode }
-        entities?.each{ entity ->
+    private extractResource(Node iVisited, String namespaceValue, String parentNameSingular, String parentNamePlural, String originalParentName) {
+        List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll { it instanceof SymbolNode }
+        entities?.each { entity ->
             def original = entity.name
             def plural = original
             def singular = inflector.singularize(plural)
-            if(original == singular) plural = inflector.pluralize(original)
+            if (original == singular) plural = inflector.pluralize(original)
 
             String controllerName = plural
             String indexName
-            if(!parentNameSingular && !parentNamePlural) {
+            if (!parentNameSingular && !parentNamePlural) {
                 indexName = original
-            }
-            else {
+            } else {
                 indexName = "${parentNameSingular.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$original"
                 singular = "${parentNameSingular.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$singular"
                 plural = "${parentNamePlural.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$plural"
@@ -720,8 +715,8 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private extractData(Node iVisited, String namespaceValue){
-        switch (iVisited?.name){
+    private extractData(Node iVisited, String namespaceValue) {
+        switch (iVisited?.name) {
             case "namespace": //it a grouping mechanism
                 //log.info "namespace: ${iVisited?.name}; line:${iVisited.position.startLine+1}"
                 extractRoutesInNamespace(iVisited, namespaceValue)

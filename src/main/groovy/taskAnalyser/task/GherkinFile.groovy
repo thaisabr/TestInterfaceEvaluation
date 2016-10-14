@@ -10,7 +10,7 @@ import gherkin.ast.ScenarioDefinition
 class GherkinFile implements CodeChange {
 
     /***
-    * Gherkin file path (local path)
+     * Gherkin file path (local path)
      */
     String path
 
@@ -39,20 +39,20 @@ class GherkinFile implements CodeChange {
     @Override
     String toString() {
         def text = "Gherkin file: ${path}\nFeature: ${feature.name}\n"
-        if(feature.background){
+        if (feature.background) {
             text += "Background (line ${feature.background.location.line}):${feature.background.name}\n"
-            feature.background.steps.each{
+            feature.background.steps.each {
                 text += "${it.keyword}: ${it.text}\n"
             }
         }
         text += "Changed scenario definitions:\n"
-        changedScenarioDefinitions.each{ definition ->
+        changedScenarioDefinitions.each { definition ->
             text += "${definition.keyword} (line ${definition.location.line}): ${definition.name}\n"
         }
         return text
     }
 
-    def getText(){
+    def getText() {
         baseText + "\n" + (changedScenarioDefinitionsText.join("\n"))
     }
 

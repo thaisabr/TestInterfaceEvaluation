@@ -14,7 +14,7 @@ class GroovyStepsFileVisitor extends ClassCodeVisitorSupport {
     List lines
     GroovyTestCodeVisitor methodCallVisitor
 
-    public GroovyStepsFileVisitor(List<MethodToAnalyse> methodsToAnalyse, GroovyTestCodeVisitor methodCallVisitor){
+    public GroovyStepsFileVisitor(List<MethodToAnalyse> methodsToAnalyse, GroovyTestCodeVisitor methodCallVisitor) {
         this.lines = methodsToAnalyse*.line
         this.methodCallVisitor = methodCallVisitor
     }
@@ -25,7 +25,7 @@ class GroovyStepsFileVisitor extends ClassCodeVisitorSupport {
     }
 
     @Override
-    public void visitStaticMethodCallExpression(StaticMethodCallExpression call){
+    public void visitStaticMethodCallExpression(StaticMethodCallExpression call) {
         super.visitStaticMethodCallExpression(call)
         if (call.lineNumber in lines) {
             call.visit(methodCallVisitor)

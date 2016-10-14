@@ -28,26 +28,26 @@ class TodoTask extends Task {
 
         testCodeParser.configureProperties()
 
-        if(isRemote) testDescription = findAllRelatedGherkinFile(gitRepository.localPath, scenarios)
+        if (isRemote) testDescription = findAllRelatedGherkinFile(gitRepository.localPath, scenarios)
         else testDescription = findAllRelatedGherkinFile(rootDirectory, scenarios)
     }
 
-    private static List<GherkinFile> findAllRelatedGherkinFile(String rootDirectory, def scenarios){
+    private static List<GherkinFile> findAllRelatedGherkinFile(String rootDirectory, def scenarios) {
         Parser<Feature> featureParser = new Parser<>()
         List<GherkinFile> gherkinFiles = []
 
-        scenarios.each{ scenario ->
-            try{
-                def path = rootDirectory+File.separator+Util.GHERKIN_FILES_RELATIVE_PATH+File.separator+scenario.path
+        scenarios.each { scenario ->
+            try {
+                def path = rootDirectory + File.separator + Util.GHERKIN_FILES_RELATIVE_PATH + File.separator + scenario.path
                 def reader = new FileReader(path)
                 Feature feature = featureParser.parse(reader)
                 reader.close()
-                def scenarioDefinitions = feature?.scenarioDefinitions?.findAll{ it.location.line in scenario.lines }
-                if(scenarioDefinitions){
-                    gherkinFiles += new GherkinFile(path:scenario.path, feature:feature, changedScenarioDefinitions:scenarioDefinitions)
+                def scenarioDefinitions = feature?.scenarioDefinitions?.findAll { it.location.line in scenario.lines }
+                if (scenarioDefinitions) {
+                    gherkinFiles += new GherkinFile(path: scenario.path, feature: feature, changedScenarioDefinitions: scenarioDefinitions)
                 }
 
-            } catch(FileNotFoundException ex){
+            } catch (FileNotFoundException ex) {
                 log.warn "Problem to parse Gherkin file: ${ex.message}"
             }
         }
@@ -57,11 +57,10 @@ class TodoTask extends Task {
 
     @Override
     TaskInterface computeTestBasedInterface() {
-        if(!testDescription.isEmpty()) {
+        if (!testDescription.isEmpty()) {
             log.info "Task id: $id"
             testCodeParser.computeInterfaceForTodoTask(testDescription)
-        }
-        else return null
+        } else return null
     }
 
     @Override

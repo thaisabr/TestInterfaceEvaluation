@@ -13,7 +13,7 @@ class RubyNestedVisitor extends NoopVisitor {
     String argsPrefix
     def routes = [] //name, value, args
 
-    RubyNestedVisitor(String nameSufix, String pathValuePrefix, String argsPrefix){
+    RubyNestedVisitor(String nameSufix, String pathValuePrefix, String argsPrefix) {
         this.nameSufix = nameSufix
         this.pathValuePrefix = pathValuePrefix
         this.argsPrefix = argsPrefix
@@ -23,16 +23,16 @@ class RubyNestedVisitor extends NoopVisitor {
     Object visitArrayNode(ArrayNode iVisited) {
         super.visitArrayNode(iVisited)
         def children = iVisited.childNodes()
-        for(int i=0; i<children.size(); i++){
+        for (int i = 0; i < children.size(); i++) {
             def element = children.get(i)
-            if(element instanceof SymbolNode && element.name=="get"){
-                def previous = children.get(i-1)
+            if (element instanceof SymbolNode && element.name == "get") {
+                def previous = children.get(i - 1)
                 def actionName = null
-                if(previous instanceof StrNode) actionName = previous.value
+                if (previous instanceof StrNode) actionName = previous.value
                 else if (previous instanceof SymbolNode) actionName = previous.name
 
-                if(actionName){
-                    def route = [name:"$actionName$nameSufix", file:RubyUtil.ROUTES_ID, value:"$pathValuePrefix$actionName", arg:"$argsPrefix$actionName"]
+                if (actionName) {
+                    def route = [name: "$actionName$nameSufix", file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: "$argsPrefix$actionName"]
                     routes += route
                 }
             }

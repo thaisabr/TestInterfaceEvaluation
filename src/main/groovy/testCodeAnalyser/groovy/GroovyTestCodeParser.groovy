@@ -21,37 +21,36 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
     static {
         /******************************* VALORES FIXADOS APENAS PARA RODAR; ORGANIZAR DEPOIS **************************/
         classLoader = new GroovyClassLoader()
-        String projectPath = "${System.getProperty("user.home")}${File.separator}Documents${File.separator}GitHub${File.separator}OriginalRgms"
+        String projectPath = "${System.getProperty("user.home")}${File.separator}Documents${File.separator}GitHub${File.separator}rgms"
         configurePlugins([], "${System.getProperty("user.home")}${File.separator}.grails${File.separator}ivy-cache")
         configureClassLoader("$projectPath${File.separator}target${File.separator}classes",
                 "$projectPath${File.separator}target${File.separator}test-classes${File.separator}functional")
-        /**************************************************************************************************************/
+        /** ************************************************************************************************************/
     }
 
     GroovyTestCodeParser(String repositoryPath) {
         super(repositoryPath)
     }
 
-    private static configureClassLoader(String productionPath, String testPath){
+    private static configureClassLoader(String productionPath, String testPath) {
         classLoader.addClasspath(productionPath) //compiled code files
         classLoader.addClasspath(testPath) //compiled test code
     }
 
-    private static configurePlugins(List pluginsPath, String dependencyCache){
-        if(pluginsPath.isEmpty()){
+    private static configurePlugins(List pluginsPath, String dependencyCache) {
+        if (pluginsPath.isEmpty()) {
             def jars = Util.findJarFilesFromDirectory(dependencyCache)
-            jars?.each{
+            jars?.each {
                 classLoader.addClasspath(it)
             }
-        }
-        else{
-            pluginsPath?.each{ path ->
+        } else {
+            pluginsPath?.each { path ->
                 classLoader.addClasspath(path)
             }
         }
     }
 
-    private static generateAst(String path){
+    private static generateAst(String path) {
         def file = new File(path)
         SourceUnit unit = SourceUnit.create(file.name, file.text)
         CompilationUnit compUnit = new CompilationUnit(classLoader)
@@ -83,15 +82,15 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
     @Override
     Set doExtractMethodDefinitions(String path) {
         def methods = [] as Set
-        CompilationUnit compUnit =  new CompilationUnit()
+        CompilationUnit compUnit = new CompilationUnit()
         def file = new File(path)
         SourceUnit unit = SourceUnit.create(file.name, file.text)
         compUnit.addSource(unit)
         compUnit.compile(Phases.CONVERSION)
         def node = unit.getAST()
         ClassNode classNode = node.scriptClassDummy
-        classNode.methods.each{
-            methods += [name:it.name, className:classNode.name, path:path]
+        classNode.methods.each {
+            methods += [name: it.name, className: classNode.name, path: path]
         }
         methods
     }
@@ -103,7 +102,7 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
      * @param file List of map objects that identifies files by 'path' and 'lines'.
      * @return visitor to visit method bodies
      */
-    TestCodeVisitor parseStepBody(FileToAnalyse file){
+    TestCodeVisitor parseStepBody(FileToAnalyse file) {
         def ast = generateAst(file.path)
         def visitor = new GroovyTestCodeVisitor(repositoryPath, file.path)
         def testCodeVisitor = new GroovyStepsFileVisitor(file.methods, visitor)
@@ -130,8 +129,8 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
     void findAllPages(TestCodeVisitor visitor) {
         def pageCodeVisitor = new GroovyPageVisitor(viewFiles)
         def filesToVisit = visitor?.taskInterface?.calledPageMethods*.file as Set
-        filesToVisit?.each{ f ->
-            if(f != null){ //f could be null if the test code references a class or file that does not exist
+        filesToVisit?.each { f ->
+            if (f != null) { //f could be null if the test code references a class or file that does not exist
                 generateAst(f).classes.get(0).visitContents(pageCodeVisitor) //gets url
             }
         }

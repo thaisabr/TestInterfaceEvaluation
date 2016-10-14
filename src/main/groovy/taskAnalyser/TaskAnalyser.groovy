@@ -8,32 +8,32 @@ import util.Util
 @Slf4j
 class TaskAnalyser {
 
-    private static computeTaskData(List<DoneTask> tasks){
+    private static computeTaskData(List<DoneTask> tasks) {
         log.info "Number of tasks: ${tasks.size()}"
         def stepCounter = 0
         def gherkinCounter = 0
         def result = []
 
-        tasks?.each{ task ->
+        tasks?.each { task ->
             def interfaces = task.computeInterfaces()
-            def stepCalls = interfaces.itest.methods?.findAll{ it.type == "StepCall"}?.unique()?.size()
-            def methods = interfaces.itest.methods?.findAll{ it.type == "Object"}?.unique()
+            def stepCalls = interfaces.itest.methods?.findAll { it.type == "StepCall" }?.unique()?.size()
+            def methods = interfaces.itest.methods?.findAll { it.type == "Object" }?.unique()
             def methodsIdentity = ""
-            if(!methods.empty) methodsIdentity = methods*.name
-            if(!task.changedStepDefinitions.empty) stepCounter++
-            if(!task.changedGherkinFiles.empty) gherkinCounter++
+            if (!methods.empty) methodsIdentity = methods*.name
+            if (!task.changedStepDefinitions.empty) stepCounter++
+            if (!task.changedGherkinFiles.empty) gherkinCounter++
 
-            result += [task:task, itest:interfaces.itest, ireal:interfaces.ireal, methods:methodsIdentity, stepCalls:stepCalls,
-                       text:interfaces.itext]
+            result += [task: task, itest: interfaces.itest, ireal: interfaces.ireal, methods: methodsIdentity, stepCalls: stepCalls,
+                       text: interfaces.itext]
         }
 
         log.info "Number of tasks that contains step definitions: $stepCounter"
         log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
 
-        [stepCounter:stepCounter, gherkinCounter:gherkinCounter, data:result]
+        [stepCounter: stepCounter, gherkinCounter: gherkinCounter, data: result]
     }
 
-    private static generateResultForProject(String allTasksFile, String evaluationFile){
+    private static generateResultForProject(String allTasksFile, String evaluationFile) {
         def result1 = DataManager.extractProductionAndTestTasks(allTasksFile)
         def result2 = computeTaskData(result1.relevantTasks)
         def url = result1.relevantTasks?.first()?.testCodeParser?.repositoryPath
@@ -41,9 +41,9 @@ class TaskAnalyser {
                 result2.gherkinCounter, result2.data)
     }
 
-    static analyseAllForProject(String allTasksFile){
+    static analyseAllForProject(String allTasksFile) {
         File file = new File(allTasksFile)
-        def evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
+        def evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER + File.separator + file.name
         def name = evaluationFile - ConstantData.CSV_FILE_EXTENSION
         def organizedFile = name + ConstantData.ORGANIZED_FILE_SUFIX
         def filteredFile = name + ConstantData.FILTERED_FILE_SUFIX
@@ -67,24 +67,24 @@ class TaskAnalyser {
         log.info "The results were saved!"
     }
 
-    static analyseAllForMultipleProjects(def folder){
-        def cvsFiles = Util.findFilesFromDirectory(folder).findAll{ it.endsWith(ConstantData.CSV_FILE_EXTENSION)}
-        cvsFiles?.each{
+    static analyseAllForMultipleProjects(def folder) {
+        def cvsFiles = Util.findFilesFromDirectory(folder).findAll { it.endsWith(ConstantData.CSV_FILE_EXTENSION) }
+        cvsFiles?.each {
             analyseAllForProject(it)
         }
     }
 
-    static analysePrecisionAndRecallForProject(String allTasksFile){
+    static analysePrecisionAndRecallForProject(String allTasksFile) {
         File file = new File(allTasksFile)
-        def evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER+File.separator+file.name
+        def evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER + File.separator + file.name
         def organizedFile = evaluationFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.ORGANIZED_FILE_SUFIX
         generateResultForProject(allTasksFile, evaluationFile)
         DataManager.organizeResult(evaluationFile, organizedFile)
     }
 
-    static analysePrecisionAndRecallForMultipleProjects(String folder){
-        def cvsFiles = Util.findFilesFromDirectory(folder).findAll{ it.endsWith(ConstantData.CSV_FILE_EXTENSION)}
-        cvsFiles?.each{
+    static analysePrecisionAndRecallForMultipleProjects(String folder) {
+        def cvsFiles = Util.findFilesFromDirectory(folder).findAll { it.endsWith(ConstantData.CSV_FILE_EXTENSION) }
+        cvsFiles?.each {
             analysePrecisionAndRecallForProject(it)
         }
     }

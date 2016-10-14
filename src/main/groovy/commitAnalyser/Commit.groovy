@@ -21,9 +21,9 @@ class Commit {
     List<RenamingChange> renameChanges
 
     @Override
-    public String toString(){
+    public String toString() {
         def paths = (coreChanges*.path + unitChanges*.path + gherkinChanges*.path + stepChanges*.path)?.flatten()
-         "$hash*${new Date(date*1000)}*$author*$message*${paths.toListString()}"
+        "$hash*${new Date(date * 1000)}*$author*$message*${paths.toListString()}"
     }
 
 }

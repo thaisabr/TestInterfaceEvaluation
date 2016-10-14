@@ -27,7 +27,7 @@ class UnitFile implements CodeChange {
     @Override
     String toString() {
         def text = "Unit file: ${path}\nChanged tests:\n"
-        tests.each{ t ->
+        tests.each { t ->
             text += "${t.name} (lines ${t.lines})\n"
         }
         return text

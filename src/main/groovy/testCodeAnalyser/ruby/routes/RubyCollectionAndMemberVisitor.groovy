@@ -14,16 +14,16 @@ class RubyCollectionAndMemberVisitor extends NoopVisitor {
     List invalidNodeRanges
     List<Node> allNodes
 
-    RubyCollectionAndMemberVisitor(Node node, List ranges, List allNodes){
+    RubyCollectionAndMemberVisitor(Node node, List ranges, List allNodes) {
         this.node = node
         this.invalidNodeRanges = ranges
         this.allNodes = allNodes
         node.accept(this)
     }
 
-    def getMemberValues(){
+    def getMemberValues() {
         def values = []
-        if(memberNode){
+        if (memberNode) {
             def getVisitor = new RubyGetVisitor(memberNode, allNodes)
             memberNode.accept(getVisitor)
             values = getVisitor.nodes
@@ -31,9 +31,9 @@ class RubyCollectionAndMemberVisitor extends NoopVisitor {
         return values
     }
 
-    def getCollectionValues(){
+    def getCollectionValues() {
         def values = []
-        if(collectionNode){
+        if (collectionNode) {
             def getVisitor = new RubyGetVisitor(collectionNode, allNodes)
             collectionNode.accept(getVisitor)
             values = getVisitor.nodes
@@ -44,10 +44,10 @@ class RubyCollectionAndMemberVisitor extends NoopVisitor {
     @Override
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
-        def nested = invalidNodeRanges.findAll{ iVisited.position.startLine in it }
-        if(nested.empty){
-            if(iVisited.name == "collection" && !iVisited.position.equals(node.position)) collectionNode = iVisited
-            else if(iVisited.name == "member" && !iVisited.position.equals(node.position)) memberNode = iVisited
+        def nested = invalidNodeRanges.findAll { iVisited.position.startLine in it }
+        if (nested.empty) {
+            if (iVisited.name == "collection" && !iVisited.position.equals(node.position)) collectionNode = iVisited
+            else if (iVisited.name == "member" && !iVisited.position.equals(node.position)) memberNode = iVisited
         }
         iVisited
     }
@@ -55,10 +55,10 @@ class RubyCollectionAndMemberVisitor extends NoopVisitor {
     @Override
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
-        def nested = invalidNodeRanges.findAll{ iVisited.position.startLine in it }
-        if(nested.empty){
-            if(iVisited.name == "collection" && !iVisited.position.equals(node.position)) collectionNode = iVisited
-            else if(iVisited.name == "member" && !iVisited.position.equals(node.position)) memberNode = iVisited
+        def nested = invalidNodeRanges.findAll { iVisited.position.startLine in it }
+        if (nested.empty) {
+            if (iVisited.name == "collection" && !iVisited.position.equals(node.position)) collectionNode = iVisited
+            else if (iVisited.name == "member" && !iVisited.position.equals(node.position)) memberNode = iVisited
         }
         iVisited
     }

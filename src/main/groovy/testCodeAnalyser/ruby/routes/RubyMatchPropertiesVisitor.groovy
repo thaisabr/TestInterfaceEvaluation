@@ -12,12 +12,12 @@ class RubyMatchPropertiesVisitor extends NoopVisitor {
     def nodeName
     def argsNodes = []
 
-    RubyMatchPropertiesVisitor(String nodeName){
+    RubyMatchPropertiesVisitor(String nodeName) {
         this.nodeName = nodeName
     }
 
-    def getValues(){
-        def values = argsNodes.sort{ it.position }
+    def getValues() {
+        def values = argsNodes.sort { it.position }
         String pathValue = ""
         def controllerValue = null
         def actionValue = null
@@ -25,48 +25,48 @@ class RubyMatchPropertiesVisitor extends NoopVisitor {
         def controllerActionString = null
         def result //name, value, method
 
-        if(values.size()<2) return
+        if (values.size() < 2) return
 
         //relevant nodes: to, as, controller, action, via, defaults, constraints
         //TO REMEMBER: via, defaults e contraints sao conjuntos de valores sem relevancia nesse ponto e por isso nao sao extraidos
-        def indexTo = values.findIndexOf{ it.value == "to" }
-        def indexAs = values.findIndexOf{ it.value == "as" }
-        def indexController = values.findIndexOf{ it.value == "controller" }
-        def indexAction = values.findIndexOf{ it.value == "action" }
+        def indexTo = values.findIndexOf { it.value == "to" }
+        def indexAs = values.findIndexOf { it.value == "as" }
+        def indexController = values.findIndexOf { it.value == "controller" }
+        def indexAction = values.findIndexOf { it.value == "action" }
         def indexPath = 0
 
         //there is no explicit name
-        if(indexTo==0 || indexController==0) indexPath = -1
+        if (indexTo == 0 || indexController == 0) indexPath = -1
 
         //there is explicit controller
-        if(indexController>-1) controllerValue = values.get(indexController+1).value
+        if (indexController > -1) controllerValue = values.get(indexController + 1).value
 
         //there is explicit action
-        if(indexAction>-1) actionValue = values.get(indexAction+1).value
+        if (indexAction > -1) actionValue = values.get(indexAction + 1).value
 
         //there is explicit pathMethodName
-        if(indexAs>-1) pathMethodName = values.get(indexAs+1).value
-        else if(nodeName && !nodeName.empty && !(nodeName in NON_RESOURCEFUL_IDENTIFIERS)) pathMethodName = nodeName
+        if (indexAs > -1) pathMethodName = values.get(indexAs + 1).value
+        else if (nodeName && !nodeName.empty && !(nodeName in NON_RESOURCEFUL_IDENTIFIERS)) pathMethodName = nodeName
         else pathMethodName = values.get(0).value
 
         //there is explicit path value
-        if(indexPath>-1) pathValue = values.get(indexPath).value
+        if (indexPath > -1) pathValue = values.get(indexPath).value
         pathValue = pathValue.replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*/", "/.*/").replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*[^/()]", "/.*")
-        if(!pathValue.startsWith("/")) pathValue = "/"+pathValue
-        if(pathMethodName.empty && pathValue.size()>1 && !pathValue.contains(".*")) {
+        if (!pathValue.startsWith("/")) pathValue = "/" + pathValue
+        if (pathMethodName.empty && pathValue.size() > 1 && !pathValue.contains(".*")) {
             pathMethodName = pathValue.substring(1).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
         }
 
         //configures controllerActionString value
-        if(controllerValue && actionValue) controllerActionString = "$controllerValue#$actionValue"
-        else if(controllerValue && !actionValue) controllerActionString = "$controllerValue#index"
+        if (controllerValue && actionValue) controllerActionString = "$controllerValue#$actionValue"
+        else if (controllerValue && !actionValue) controllerActionString = "$controllerValue#index"
         else {
-            if(indexPath==0 && indexTo==-1) controllerActionString = values.get(indexPath+1).value
-            else if(indexTo>-1) controllerActionString = values.get(indexTo+1).value
+            if (indexPath == 0 && indexTo == -1) controllerActionString = values.get(indexPath + 1).value
+            else if (indexTo > -1) controllerActionString = values.get(indexTo + 1).value
         }
 
         //configures result
-        result = [name:pathMethodName, value:pathValue, arg: controllerActionString]
+        result = [name: pathMethodName, value: pathValue, arg: controllerActionString]
         return result
     }
 

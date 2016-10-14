@@ -14,24 +14,24 @@ class TextualSimilarityAnalyser {
     IndexReader reader
     Set terms
 
-    private configureIndexManager(Task task1, Task task2){
+    private configureIndexManager(Task task1, Task task2) {
         indexManager = new IndexManager()
         indexManager.index(task1.acceptanceTests)
         indexManager.index(task2.acceptanceTests)
         terms = [] as Set
     }
 
-    private configureIndexManager(String task1, String task2){
+    private configureIndexManager(String task1, String task2) {
         indexManager = new IndexManager()
         indexManager.index(task1)
         indexManager.index(task2)
         terms = [] as Set
     }
 
-    private getTermFrequencies(int docId){
+    private getTermFrequencies(int docId) {
         def frequencies = [:]
         Terms vector = reader.getTermVector(docId, "content")
-        if(!vector) return frequencies
+        if (!vector) return frequencies
         TermsEnum termsEnum = null
         termsEnum = vector.iterator(termsEnum)
 
@@ -39,7 +39,7 @@ class TextualSimilarityAnalyser {
         while ((text = termsEnum?.next()) != null) {
             String term = text.utf8ToString()
             int freq = (int) termsEnum.totalTermFreq()
-            frequencies += [(term):freq]
+            frequencies += [(term): freq]
             terms += term
         }
         frequencies
@@ -48,18 +48,18 @@ class TextualSimilarityAnalyser {
     private RealVector toRealVector(Map map) {
         RealVector vector = new ArrayRealVector(terms.size())
         int i = 0
-        terms.each{ term ->
+        terms.each { term ->
             int value = map.containsKey(term) ? map.get(term) : 0
             vector.setEntry(i++, value)
         }
         return (RealVector) vector.mapDivide(vector.getL1Norm())
     }
 
-    private static double getCosineSimilarity(RealVector v1, RealVector v2){
+    private static double getCosineSimilarity(RealVector v1, RealVector v2) {
         v1.dotProduct(v2) / (v1.norm * v2.norm)
     }
 
-    private calculateFreqVectorSimilarity(){
+    private calculateFreqVectorSimilarity() {
         def freqVectorTask1 = getTermFrequencies(0).sort()
         def freqVectorTask2 = getTermFrequencies(1).sort()
         RealVector v1 = toRealVector(freqVectorTask1)
@@ -67,14 +67,14 @@ class TextualSimilarityAnalyser {
         getCosineSimilarity(v1, v2)
     }
 
-    double calculateSimilarity(Task task1, Task task2){
+    double calculateSimilarity(Task task1, Task task2) {
         configureIndexManager(task1, task2)
         reader = DirectoryReader.open(indexManager.indexDirectory)
         calculateFreqVectorSimilarity()
     }
 
-    double calculateSimilarity(String task1, String task2){
-        if(task1=="" || task2=="") return 0
+    double calculateSimilarity(String task1, String task2) {
+        if (task1 == "" || task2 == "") return 0
         configureIndexManager(task1, task2)
         reader = DirectoryReader.open(indexManager.indexDirectory)
         calculateFreqVectorSimilarity()

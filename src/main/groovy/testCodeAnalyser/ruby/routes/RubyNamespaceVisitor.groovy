@@ -13,7 +13,7 @@ class RubyNamespaceVisitor extends NoopVisitor {
     List<FCallNode> fcallNodes
     List<CallNode> callNodes
 
-    RubyNamespaceVisitor(){
+    RubyNamespaceVisitor() {
         namespaces = []
         others = []
         fcallNodes = []
@@ -30,7 +30,7 @@ class RubyNamespaceVisitor extends NoopVisitor {
     @Override
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
-        if(iVisited.name != "draw") callNodes += iVisited
+        if (iVisited.name != "draw") callNodes += iVisited
         return iVisited
     }
 }

@@ -13,7 +13,7 @@ class RubyStepsFileVisitor extends NoopVisitor {
     List lines
     RubyTestCodeVisitor methodCallVisitor
 
-    RubyStepsFileVisitor(List<MethodToAnalyse> methodsToAnalyse, RubyTestCodeVisitor methodCallVisitor){
+    RubyStepsFileVisitor(List<MethodToAnalyse> methodsToAnalyse, RubyTestCodeVisitor methodCallVisitor) {
         this.lines = methodsToAnalyse*.line
         this.methods = methodsToAnalyse
         this.methodCallVisitor = methodCallVisitor
@@ -25,9 +25,9 @@ class RubyStepsFileVisitor extends NoopVisitor {
     @Override
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
-        if( iVisited.position.startLine in lines) {
-            def matches = methods.findAll{ it.line == iVisited.position.startLine }
-            matches?.each{ method ->
+        if (iVisited.position.startLine in lines) {
+            def matches = methods.findAll { it.line == iVisited.position.startLine }
+            matches?.each { method ->
                 methodCallVisitor.stepDefinitionMethod = method
                 iVisited.accept(methodCallVisitor)
                 methodCallVisitor.stepDefinitionMethod = null

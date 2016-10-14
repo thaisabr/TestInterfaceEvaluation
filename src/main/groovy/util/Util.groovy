@@ -2,6 +2,7 @@ package util
 
 import org.springframework.util.ClassUtils
 import util.exception.InvalidLanguageException
+
 import java.util.regex.Matcher
 
 class Util {
@@ -48,7 +49,7 @@ class Util {
         MODEL_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "models"
         CODE_LANGUAGE = (properties.'spgroup.language').trim().toUpperCase() as LanguageOption
 
-        switch(CODE_LANGUAGE){
+        switch (CODE_LANGUAGE) {
             case LanguageOption.RUBY:
                 VALID_EXTENSION = ConstantData.RUBY_EXTENSION
                 VALID_VIEW_FILES = [".html", ".html.haml", ".html.erb", ".html.slim"]
@@ -70,49 +71,48 @@ class Util {
         VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, UNIT_TEST_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH, LIB_RELATIVE_PATH]
     }
 
-    private static configureRailsPaths(){
+    private static configureRailsPaths() {
         FRAMEWORK_PATH = (properties.'spgroup.framework.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
         GEMS_PATH = (properties.'spgroup.gems.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
         def inflectorFolder = (properties.'spgroup.gems.activesupport-inflector.folder').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        ACTIVESUPPORT_INFLECTOR_PATH = GEMS_PATH+Matcher.quoteReplacement(File.separator)+
-                inflectorFolder+Matcher.quoteReplacement(File.separator)+"lib"
+        ACTIVESUPPORT_INFLECTOR_PATH = GEMS_PATH + Matcher.quoteReplacement(File.separator) +
+                inflectorFolder + Matcher.quoteReplacement(File.separator) + "lib"
         def i18nFolder = (properties.'spgroup.gems.i18n.folder').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        I18N_PATH = GEMS_PATH+Matcher.quoteReplacement(File.separator)+i18nFolder+
-                Matcher.quoteReplacement(File.separator)+"lib"
+        I18N_PATH = GEMS_PATH + Matcher.quoteReplacement(File.separator) + i18nFolder +
+                Matcher.quoteReplacement(File.separator) + "lib"
     }
 
-    private static loadProperties(){
+    private static loadProperties() {
         ClassLoader loader = Thread.currentThread().getContextClassLoader()
         InputStream is = loader.getResourceAsStream(ConstantData.PROPERTIES_FILE_NAME)
         properties.load(is)
     }
 
-    private static configureTasksFilePath(){
+    private static configureTasksFilePath() {
         String value = properties.'spgroup.task.file.path'
-        if(value!=null && !value.isEmpty()) return value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        if (value != null && !value.isEmpty()) return value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         else return ConstantData.DEFAULT_TASK_FILE
     }
 
-    private static configureRepositoryFolderPath(){
+    private static configureRepositoryFolderPath() {
         String value = properties.'spgroup.task.repositories.path'
-        if(value!=null && !value.isEmpty()){
+        if (value != null && !value.isEmpty()) {
             value = value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-            if(!value.endsWith(File.separator)) value += File.separator
-        }
-        else value = "repositories${File.separator}"
+            if (!value.endsWith(File.separator)) value += File.separator
+        } else value = "repositories${File.separator}"
         return value
     }
 
-    static String configureGitRepositoryName(String url){
+    static String configureGitRepositoryName(String url) {
         String name = url - ConstantData.GITHUB_URL - ConstantData.GIT_EXTENSION
         return name.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
     }
 
-    static String getRepositoriesCanonicalPath(){
+    static String getRepositoriesCanonicalPath() {
         new File(".").getCanonicalPath() + File.separator + REPOSITORY_FOLDER_PATH
     }
 
@@ -122,8 +122,8 @@ class Util {
      * @param files a list of file paths
      * @return a list of production file paths
      */
-    static Collection<String> findAllProductionFiles(Collection<String> files){
-        files?.findAll{ isCoreCode(it) }
+    static Collection<String> findAllProductionFiles(Collection<String> files) {
+        files?.findAll { isCoreCode(it) }
     }
 
     /***
@@ -133,38 +133,39 @@ class Util {
      * @param path the file path
      * @return true if the file contains test code. Otherwise, it returns false
      */
-    static boolean isTestCode(String path){
-        if( path?.contains(UNIT_TEST_FILES_RELATIVE_PATH+File.separator) ||
-                path?.contains(GHERKIN_FILES_RELATIVE_PATH+File.separator) ||
-                path?.contains(STEPS_FILES_RELATIVE_PATH+File.separator) ||
-                path?.contains("test"+File.separator) ){
+    static boolean isTestCode(String path) {
+        if (path?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) ||
+                path?.contains(GHERKIN_FILES_RELATIVE_PATH + File.separator) ||
+                path?.contains(STEPS_FILES_RELATIVE_PATH + File.separator) ||
+                path?.contains("test" + File.separator)) {
             true
-        }
+        } else false
+    }
+
+    static boolean isValidCode(String path) {
+        if (VALID_FOLDERS.any { path?.contains(it + File.separator) } && VALID_EXTENSIONS.any {
+            path?.endsWith(it)
+        }) true
         else false
     }
 
-    static boolean isValidCode(String path){
-        if( VALID_FOLDERS.any{path?.contains(it+File.separator)} && VALID_EXTENSIONS.any{path?.endsWith(it)} ) true
+    static boolean isStepDefinitionCode(String path) {
+        if (path?.contains(STEPS_FILES_RELATIVE_PATH + File.separator) && path?.endsWith(VALID_EXTENSION)) true
         else false
     }
 
-    static boolean isStepDefinitionCode(String path){
-        if( path?.contains(STEPS_FILES_RELATIVE_PATH+File.separator) && path?.endsWith(VALID_EXTENSION) ) true
+    static boolean isGherkinCode(String path) {
+        if (path?.endsWith(ConstantData.FEATURE_FILENAME_EXTENSION)) true
         else false
     }
 
-    static boolean isGherkinCode(String path){
-        if( path?.endsWith(ConstantData.FEATURE_FILENAME_EXTENSION) ) true
+    static boolean isUnitTestCode(String path) {
+        if (path?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) && path?.endsWith(VALID_EXTENSION)) true
         else false
     }
 
-    static boolean isUnitTestCode(String path){
-        if( path?.contains(UNIT_TEST_FILES_RELATIVE_PATH+File.separator) && path?.endsWith(VALID_EXTENSION) ) true
-        else false
-    }
-
-    static boolean isCoreCode(String path){
-        if( isValidCode(path) && !isTestCode(path) ) true
+    static boolean isCoreCode(String path) {
+        if (isValidCode(path) && !isTestCode(path)) true
         else false
     }
 
@@ -176,8 +177,8 @@ class Util {
     static emptyFolder(String folder) {
         def dir = new File(folder)
         def files = dir.listFiles()
-        if(files != null) {
-            files.each{ f ->
+        if (files != null) {
+            files.each { f ->
                 if (f.isDirectory()) emptyFolder(f.getAbsolutePath())
                 else f.delete()
             }
@@ -187,8 +188,8 @@ class Util {
     static deleteFolder(String folder) {
         def dir = new File(folder)
         def files = dir.listFiles()
-        if(files != null) {
-            files.each{ f ->
+        if (files != null) {
+            files.each { f ->
                 if (f.isDirectory()) emptyFolder(f.getAbsolutePath())
                 else f.delete()
             }
@@ -196,60 +197,60 @@ class Util {
         dir.deleteDir()
     }
 
-    static List<String> findFilesFromDirectoryByLanguage(String directory){
+    static List<String> findFilesFromDirectoryByLanguage(String directory) {
         def files = findFilesFromDirectory(directory)
-        switch (CODE_LANGUAGE){
+        switch (CODE_LANGUAGE) {
             case LanguageOption.JAVA:
-                files = files.findAll{it.contains(ConstantData.JAVA_EXTENSION)}
+                files = files.findAll { it.contains(ConstantData.JAVA_EXTENSION) }
                 break
             case LanguageOption.GROOVY:
-                files = files.findAll{it.contains(ConstantData.GROOVY_EXTENSION)}
+                files = files.findAll { it.contains(ConstantData.GROOVY_EXTENSION) }
                 break
             case LanguageOption.RUBY:
-                files = files.findAll{it.contains(ConstantData.RUBY_EXTENSION)}
+                files = files.findAll { it.contains(ConstantData.RUBY_EXTENSION) }
                 break
             default: throw new InvalidLanguageException()
         }
         return files
     }
 
-    static List<String> findFilesFromDirectory(String directory){
+    static List<String> findFilesFromDirectory(String directory) {
         def f = new File(directory)
         def files = []
 
-        if(!f.exists()) return files
+        if (!f.exists()) return files
 
-        f?.eachDirRecurse{ dir ->
-            dir.listFiles().each{
-                if(it.isFile()) files += it.absolutePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        f?.eachDirRecurse { dir ->
+            dir.listFiles().each {
+                if (it.isFile()) files += it.absolutePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
             }
         }
-        f?.eachFile{
-            if(it.isFile()) files += it.absolutePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        f?.eachFile {
+            if (it.isFile()) files += it.absolutePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         }
         files
     }
 
-    static String underscoreToCamelCase(String underscore){
-        if(!underscore || underscore.empty || underscore.isAllWhitespace()) return ""
-        def name = underscore[0].toUpperCase()+underscore.substring(1)
-        name.replaceAll(/_\w/){ it[1].toUpperCase() }
+    static String underscoreToCamelCase(String underscore) {
+        if (!underscore || underscore.empty || underscore.isAllWhitespace()) return ""
+        def name = underscore[0].toUpperCase() + underscore.substring(1)
+        name.replaceAll(/_\w/) { it[1].toUpperCase() }
     }
 
-    static String camelCaseToUnderscore(String camelCase){
-        if(!camelCase || camelCase.empty || camelCase.isAllWhitespace()) return ""
-        camelCase.replaceAll(/(\B[A-Z])/,'_$1').toLowerCase()
+    static String camelCaseToUnderscore(String camelCase) {
+        if (!camelCase || camelCase.empty || camelCase.isAllWhitespace()) return ""
+        camelCase.replaceAll(/(\B[A-Z])/, '_$1').toLowerCase()
     }
 
-    static findJarFilesFromDirectory(String directory){
+    static findJarFilesFromDirectory(String directory) {
         def files = findFilesFromDirectory(directory)
-        files.findAll{it.contains(ConstantData.JAR_FILENAME_EXTENSION)}
+        files.findAll { it.contains(ConstantData.JAR_FILENAME_EXTENSION) }
     }
 
-    private static getClassPath(String className, String extension, Collection<String> projectFiles){
-        def name = ClassUtils.convertClassNameToResourcePath(className)+extension
+    private static getClassPath(String className, String extension, Collection<String> projectFiles) {
+        def name = ClassUtils.convertClassNameToResourcePath(className) + extension
         name = name.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        projectFiles?.find{ it.endsWith(File.separator+name) }
+        projectFiles?.find { it.endsWith(File.separator + name) }
     }
 
 }

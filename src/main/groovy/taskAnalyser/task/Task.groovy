@@ -23,8 +23,8 @@ abstract class Task {
         configureTestCodeParser()
     }
 
-    def configureTestCodeParser(){
-        switch (Util.CODE_LANGUAGE){
+    def configureTestCodeParser() {
+        switch (Util.CODE_LANGUAGE) {
             case LanguageOption.JAVA:
                 testCodeParser = new JavaTestCodeParser(gitRepository?.localPath)
                 break
@@ -38,11 +38,11 @@ abstract class Task {
         }
     }
 
-    String computeTextBasedInterface(){
+    String computeTextBasedInterface() {
         def text = ""
         def gherkinFiles = getAcceptanceTests()
-        if(!gherkinFiles || gherkinFiles.empty) return text
-        gherkinFiles?.each{ file ->
+        if (!gherkinFiles || gherkinFiles.empty) return text
+        gherkinFiles?.each { file ->
             text += file.text + "\n"
         }
         text.replaceAll("(?m)^\\s", "")

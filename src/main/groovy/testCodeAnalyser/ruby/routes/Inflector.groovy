@@ -10,7 +10,7 @@ class Inflector {
     ScriptingContainer container
     Object receiver
 
-    Inflector(){
+    Inflector() {
         container = new ScriptingContainer()
         container.loadPaths.add(Util.GEMS_PATH)
         container.loadPaths.add(Util.ACTIVESUPPORT_INFLECTOR_PATH)
@@ -18,11 +18,11 @@ class Inflector {
         receiver = container.runScriptlet(PathType.ABSOLUTE, "inflector.rb")
     }
 
-    String pluralize(String word){
+    String pluralize(String word) {
         container.callMethod(receiver, "plural", word)
     }
 
-    String singularize(String word){
+    String singularize(String word) {
         container.callMethod(receiver, "singular", word)
     }
 

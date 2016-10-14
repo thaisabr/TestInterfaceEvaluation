@@ -1,8 +1,6 @@
 package testCodeAnalyser.ruby.routes
 
 import groovy.util.logging.Slf4j
-import org.atteo.evo.inflector.English
-import org.javalite.common.Inflector
 import org.jrubyparser.ast.Node
 import org.jrubyparser.ast.SymbolNode
 import util.ConstantData
@@ -12,29 +10,17 @@ import util.ruby.RubyUtil
 @Slf4j
 class RubyConfigRoutesVisitor {
 
-    public static final REQUEST_TYPES = ["get", "post", "put", "patch", "delete"]
     List terms
     Node fileNode
     RubyNamespaceVisitor namespacevisitor
     List<Node> nodes
     Set routingMethods //name, file, value, arg
 
-    RubyConfigRoutesVisitor(Node fileNode, List<String> modelFiles, List<String> controllerFiles) {
-        terms = []
-        modelFiles.each{ file ->
-            def initIndex = file.lastIndexOf(File.separator)
-            def endIndex = file.lastIndexOf(ConstantData.RUBY_EXTENSION)
-            def singular = file.substring(initIndex+1,endIndex)
-            terms += [singular: singular, plural:English.plural(singular,2)]
-        }
-        controllerFiles.each{ file ->
-            def initIndex = file.lastIndexOf(File.separator)
-            def endIndex = file.lastIndexOf("_")
-            def plural = file.substring(initIndex+1,endIndex)
-            def singular = Inflector.singularize(plural)
-            def found = terms.findAll{ it.singular == singular }
-            if(!found) terms += [singular: Inflector.singularize(plural), plural:plural]
-        }
+    static Inflector inflector = new Inflector()
+
+    public static final REQUEST_TYPES = ["get", "post", "put", "patch", "delete"]
+
+    RubyConfigRoutesVisitor(Node fileNode) {
         this.fileNode = fileNode
         routingMethods = [] as Set
         namespacevisitor = new RubyNamespaceVisitor()
@@ -264,8 +250,7 @@ class RubyConfigRoutesVisitor {
 
         if(!args.as.empty) {
             def plural = args.as.value
-            aliasSingular = terms?.find{ it.plural == plural }?.singular
-            if(!aliasSingular) aliasSingular = Inflector.singularize(plural)
+            aliasSingular = inflector.singularize(plural)
             indexName = args.as.value
         }
         if(!args.controller.empty) controllerName = args.controller.value
@@ -531,11 +516,8 @@ class RubyConfigRoutesVisitor {
         String aliasSingular = singular
 
         if(!args.as.empty) {
-            //aliasSingular = Inflector.singularize(args.as.value)
-            //indexName = args.as.value
             def plural = args.as.value
-            aliasSingular = terms?.find{ it.plural == plural }?.singular
-            if(!aliasSingular) aliasSingular = Inflector.singularize(plural)
+            aliasSingular = inflector.singularize(plural)
             indexName = args.as.value
         }
         if(!args.controller.empty) controllerName = args.controller.value
@@ -641,12 +623,11 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private extractDevise(Node iVisited, String prefix){
+    private extractDevise(Node iVisited){
         List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll{ it instanceof SymbolNode }
         entities?.each{ entity ->
             def plural = entity.name
-            def singular = terms?.find{ it.plural == plural }?.singular
-            if(!singular) singular = plural
+            def singular = inflector.singularize(plural)
 
             //Authenticatable (default)
             routingMethods += [name:"new_${singular}_session", file:RubyUtil.ROUTES_ID, value:"/$plural/sign_in",
@@ -694,16 +675,9 @@ class RubyConfigRoutesVisitor {
         entities?.each{ entity ->
             String original = entity.name
             String plural = original
-            String singular
-            def projectTerm = terms?.find{ it.plural == plural }
-            if(projectTerm){
-                singular = projectTerm?.singular
-                plural = projectTerm?.plural
-            } else {
-                singular = Inflector.singularize(plural)
-                if(original == singular) { //the original term is singular
-                    plural = English.plural(original,2)
-                }
+            String singular = inflector.singularize(plural)
+            if(original == singular) { //the original term is singular
+                plural = inflector.pluralize(original)
             }
 
             String controllerName = plural
@@ -727,9 +701,9 @@ class RubyConfigRoutesVisitor {
         entities?.each{ entity ->
             def original = entity.name
             def plural = original
-            def singular = terms?.find{ it.plural == plural }?.singular
-            if(!singular) singular = Inflector.singularize(plural)
-            if(original == singular) plural = English.plural(original,2)
+            def singular = inflector.singularize(plural)
+            if(original == singular) plural = inflector.pluralize(original)
+
             String controllerName = plural
             String indexName
             if(!parentNameSingular && !parentNamePlural) {
@@ -756,14 +730,12 @@ class RubyConfigRoutesVisitor {
                 //log.info "scope: ${iVisited?.name}; line:${iVisited.position.startLine+1}"
                 break
             case "resources":
+                //log.info "resources: ${iVisited?.name}; line:${iVisited.position.startLine+1}"
                 extractResources(iVisited, namespaceValue, null, null, null)
                 break
             case "resource":
                 //similar to resources (http://stackoverflow.com/questions/9194767/difference-between-resource-and-resources-methods)
                 extractResource(iVisited, namespaceValue, null, null, null)
-                break
-            case "get": //it is also used into resources
-                registryGetNonResourcefulRoute(iVisited, namespaceValue)
                 break
             case "root":
                 //log.info "root: ${iVisited?.name}; line:${iVisited.position.startLine+1}"
@@ -775,15 +747,18 @@ class RubyConfigRoutesVisitor {
                 break
             case "devise_for": //devise is a gem for authentication
                 //log.info "devise_for: ${iVisited?.name}; line:${iVisited.position.startLine+1}"
-                extractDevise(iVisited, namespaceValue)
+                extractDevise(iVisited)
+                break
+            case "get": //it is also used into resources
+            case "post":
+            case "put":
+            case "patch":
+            case "delete":
+                registryGetNonResourcefulRoute(iVisited, namespaceValue)
                 break
             case "mount": //calls rake application
             case "redirect": //it is used with "get" and others; it does not require treatment
             case "devise_scope": //it is not important for the study purpose
-            case "post": //visil call is a get request; it is not necessary to extract routes from post, put, patch or delete
-            case "put":
-            case "patch":
-            case "delete":
             case "authenticated":
             case "routes":
             case "collection": //it is used into resources

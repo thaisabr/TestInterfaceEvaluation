@@ -476,7 +476,7 @@ abstract class TestCodeAbstractParser {
             /* searches for view files */
             log.info "calledPageMethods:"
             testCodeVisitor?.taskInterface?.calledPageMethods?.each { log.info it.toString() }
-            findAllPages(testCodeVisitor)
+            if(!testCodeVisitor?.taskInterface?.calledPageMethods?.empty) findAllPages(testCodeVisitor)
 
             /* updates task interface */
             interfaces += testCodeVisitor.taskInterface

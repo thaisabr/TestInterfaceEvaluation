@@ -13,7 +13,7 @@ class RubyConfigRoutesVisitor {
     Node fileNode
     RubyNamespaceVisitor namespacevisitor
     List<Node> nodes
-    Set routingMethods //name, file, value, arg
+    Set<Route> routingMethods //name, file, value, arg
 
     static Inflector inflector = new Inflector()
 
@@ -21,7 +21,7 @@ class RubyConfigRoutesVisitor {
 
     RubyConfigRoutesVisitor(Node fileNode) {
         this.fileNode = fileNode
-        routingMethods = [] as Set
+        this.routingMethods = [] as Set
         namespacevisitor = new RubyNamespaceVisitor()
         fileNode?.accept(namespacevisitor)
         nodes = namespacevisitor.fcallNodes.sort { it.position.startLine }
@@ -52,9 +52,10 @@ class RubyConfigRoutesVisitor {
         if (!args) return
         if (namespace) {
             def formatedPrefix = namespace.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-            routingMethods += [name: "${formatedPrefix}_${args.name}", file: RubyUtil.ROUTES_ID, value: "${namespace}/${args.value}", arg: "$namespace/${args.arg}"]
+            routingMethods += new Route(name: "${formatedPrefix}_${args.name}", file: RubyUtil.ROUTES_ID,
+                    value: "${namespace}/${args.value}", arg: "$namespace/${args.arg}")
         } else {
-            routingMethods += [name: args.name, file: RubyUtil.ROUTES_ID, value: args.value, arg: args.arg]
+            routingMethods += new Route(name: args.name, file: RubyUtil.ROUTES_ID, value: args.value, arg: args.arg)
         }
     }
 
@@ -72,9 +73,10 @@ class RubyConfigRoutesVisitor {
         if (!args) return
         if (namespace) {
             def formatedPrefix = namespace.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-            routingMethods += [name: "${formatedPrefix}_${args.name}", file: RubyUtil.ROUTES_ID, value: "${namespace}/${args.value}", arg: "$namespace/${args.arg}"]
+            routingMethods += new Route(name: "${formatedPrefix}_${args.name}", file: RubyUtil.ROUTES_ID,
+                    value: "${namespace}/${args.value}", arg: "$namespace/${args.arg}")
         } else {
-            routingMethods += [name: args.name, file: RubyUtil.ROUTES_ID, value: args.value, arg: args.arg]
+            routingMethods += new Route(name: args.name, file: RubyUtil.ROUTES_ID, value: args.value, arg: args.arg)
         }
     }
 
@@ -89,9 +91,10 @@ class RubyConfigRoutesVisitor {
         if (!args) return
         if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-            routingMethods += [name: "${formatedPrefix}_${iVisited.name}", file: RubyUtil.ROUTES_ID, value: "${prefix}/", arg: "$prefix/${args.arg}"]
+            routingMethods += new Route(name: "${formatedPrefix}_${iVisited.name}", file: RubyUtil.ROUTES_ID,
+                    value: "${prefix}/", arg: "$prefix/${args.arg}")
         } else {
-            routingMethods += [name: iVisited?.name, file: RubyUtil.ROUTES_ID, value: "/", arg: args.arg]
+            routingMethods += new Route(name: iVisited?.name, file: RubyUtil.ROUTES_ID, value: "/", arg: args.arg)
         }
     }
 
@@ -289,38 +292,38 @@ class RubyConfigRoutesVisitor {
             switch (actionName) {
                 case "index":
                     if (prefix) {
-                        routingMethods += [name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
-                                           value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index"]
+                        routingMethods += new Route(name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index")
                     } else {
-                        routingMethods += [name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
-                                           arg : "$controllerName#index"]
+                        routingMethods += new Route(name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
+                                           arg : "$controllerName#index")
                     }
                     break
                 case "new":
                     if (prefix) {
-                        routingMethods += [name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                           value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
+                        routingMethods += new Route(name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new")
                     } else {
-                        routingMethods += [name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
-                                           arg : "$controllerName#new"]
+                        routingMethods += new Route(name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
+                                           arg : "$controllerName#new")
                     }
                     break
                 case "edit":
                     if (prefix) {
-                        routingMethods += [name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                           value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit"]
+                        routingMethods += new Route(name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit")
                     } else {
-                        routingMethods += [name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)/edit",
-                                           arg : "$controllerName#edit"]
+                        routingMethods += new Route(name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)/edit",
+                                           arg : "$controllerName#edit")
                     }
                     break
                 case "show":
                     if (prefix) {
-                        routingMethods += [name : "${formatedPrefix}_${alias}", file: RubyUtil.ROUTES_ID,
-                                           value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show"]
+                        routingMethods += new Route(name : "${formatedPrefix}_${alias}", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show")
                     } else {
-                        routingMethods += [name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
-                                           arg : "$controllerName#show"]
+                        routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
+                                           arg : "$controllerName#show")
                     }
                     break
             }
@@ -333,38 +336,38 @@ class RubyConfigRoutesVisitor {
         switch (value) {
             case "index":
                 if (prefix) {
-                    routingMethods += [name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index"]
+                    routingMethods += new Route(name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
+                                       value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index")
                 } else {
-                    routingMethods += [name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
-                                       arg : "$controllerName#index"]
+                    routingMethods += new Route(name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
+                                       arg : "$controllerName#index")
                 }
                 break
             case "new":
                 if (prefix) {
-                    routingMethods += [name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
+                    routingMethods += new Route(name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                       value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new")
                 } else {
-                    routingMethods += [name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
-                                       arg : "$controllerName#new"]
+                    routingMethods += new Route(name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
+                                       arg : "$controllerName#new")
                 }
                 break
             case "edit":
                 if (prefix) {
-                    routingMethods += [name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit"]
+                    routingMethods += new Route(name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                       value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit")
                 } else {
-                    routingMethods += [name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)/edit",
-                                       arg : "$controllerName#edit"]
+                    routingMethods += new Route(name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)/edit",
+                                       arg : "$controllerName#edit")
                 }
                 break
             case "show":
                 if (prefix) {
-                    routingMethods += [name : "${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show"]
+                    routingMethods += new Route(name : "${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                       value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show")
                 } else {
-                    routingMethods += [name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
-                                       arg : "$controllerName#show"]
+                    routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
+                                       arg : "$controllerName#show")
                 }
                 break
         }
@@ -376,38 +379,38 @@ class RubyConfigRoutesVisitor {
         switch (value) {
             case "index":
                 if (prefix) {
-                    routingMethods += [name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index"]
+                    routingMethods += new Route(name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
+                                       value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index")
                 } else {
-                    routingMethods += [name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
-                                       arg : "$controllerName#index"]
+                    routingMethods += new Route(name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
+                                       arg : "$controllerName#index")
                 }
                 break
             case "new":
                 if (prefix) {
-                    routingMethods += [name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
+                    routingMethods += new Route(name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                       value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new")
                 } else {
-                    routingMethods += [name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
-                                       arg : "$controllerName#new"]
+                    routingMethods += new Route(name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
+                                       arg : "$controllerName#new")
                 }
                 break
             case "edit":
                 if (prefix) {
-                    routingMethods += [name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original/edit", arg: "${prefix}/$controllerName#edit"]
+                    routingMethods += new Route(name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                       value: "/${prefix}/$original/edit", arg: "${prefix}/$controllerName#edit")
                 } else {
-                    routingMethods += [name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/edit",
-                                       arg : "$controllerName#edit"]
+                    routingMethods += new Route(name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/edit",
+                                       arg : "$controllerName#edit")
                 }
                 break
             case "show":
                 if (prefix) {
-                    routingMethods += [name : "${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original", arg: "${prefix}/$controllerName#show"]
+                    routingMethods += new Route(name : "${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                       value: "/${prefix}/$original", arg: "${prefix}/$controllerName#show")
                 } else {
-                    routingMethods += [name: alias, file: RubyUtil.ROUTES_ID, value: "/$original",
-                                       arg : "$controllerName#show"]
+                    routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original",
+                                       arg : "$controllerName#show")
                 }
                 break
         }
@@ -428,8 +431,8 @@ class RubyConfigRoutesVisitor {
             pathValuePrefix = "/$original(/.*)/"
             argsPrefix = "$controllerName#"
         }
-        routingMethods += [name: "$actionName$nameSufix", file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName",
-                           arg : "$argsPrefix$actionName"]
+        routingMethods += new Route(name: "$actionName$nameSufix", file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName",
+                           arg : "$argsPrefix$actionName")
     }
 
     private generateResourcesCollectionRoute(def actionName, String prefix, String original, String indexName,
@@ -447,27 +450,31 @@ class RubyConfigRoutesVisitor {
             pathValuePrefix = "/$original/"
             argsPrefix = "$controllerName#"
         }
-        routingMethods += [name: "$actionName$nameSufix", file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName",
-                           arg : "$argsPrefix$actionName"]
+        routingMethods += new Route(name: "$actionName$nameSufix", file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName",
+                           arg : "$argsPrefix$actionName")
     }
 
     private configureResourcesDefaultRoute(String prefix, String indexName, String original, String controllerName,
                                            String aliasSingular) {
         if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-            routingMethods += [name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
-                               value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index"]
-            routingMethods += [name : "new_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
-                               value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
-            routingMethods += [name : "edit_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
-                               value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit"]
-            routingMethods += [name : "${formatedPrefix}_${aliasSingular}", file: RubyUtil.ROUTES_ID,
-                               value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show"]
+            routingMethods += new Route(name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original", arg: "${prefix}/$controllerName#index")
+            routingMethods += new Route(name : "new_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new")
+            routingMethods += new Route(name : "edit_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit")
+            routingMethods += new Route(name : "${formatedPrefix}_${aliasSingular}", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show")
         } else {
-            routingMethods += [name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original", arg: "$controllerName#index"]
-            routingMethods += [name: "new_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original/new", arg: "$controllerName#new"]
-            routingMethods += [name: "edit_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)/edit", arg: "$controllerName#edit"]
-            routingMethods += [name: aliasSingular, file: RubyUtil.ROUTES_ID, value: "/$original/", arg: "$controllerName#show"]
+            routingMethods += new Route(name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
+                    arg: "$controllerName#index")
+            routingMethods += new Route(name: "new_$aliasSingular", file: RubyUtil.ROUTES_ID,
+                    value: "/$original/new", arg: "$controllerName#new")
+            routingMethods += new Route(name: "edit_$aliasSingular", file: RubyUtil.ROUTES_ID,
+                    value: "/$original(/.*)/edit", arg: "$controllerName#edit")
+            routingMethods += new Route(name: aliasSingular, file: RubyUtil.ROUTES_ID, value: "/$original/",
+                    arg: "$controllerName#show")
         }
     }
 
@@ -480,29 +487,29 @@ class RubyConfigRoutesVisitor {
             switch (actionName) {
                 case "new":
                     if (prefix) {
-                        routingMethods += [name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                           value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
+                        routingMethods += new Route(name : "new_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new")
                     } else {
-                        routingMethods += [name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
-                                           arg : "$controllerName#new"]
+                        routingMethods += new Route(name: "new_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/new",
+                                           arg : "$controllerName#new")
                     }
                     break
                 case "edit":
                     if (prefix) {
-                        routingMethods += [name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                           value: "/${prefix}/$original/edit", arg: "${prefix}/$controllerName#edit"]
+                        routingMethods += new Route(name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original/edit", arg: "${prefix}/$controllerName#edit")
                     } else {
-                        routingMethods += [name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/edit",
-                                           arg : "$controllerName#edit"]
+                        routingMethods += new Route(name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original/edit",
+                                           arg : "$controllerName#edit")
                     }
                     break
                 case "show":
                     if (prefix) {
-                        routingMethods += [name : "${formatedPrefix}_${alias}", file: RubyUtil.ROUTES_ID,
-                                           value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show"]
+                        routingMethods += new Route(name : "${formatedPrefix}_${alias}", file: RubyUtil.ROUTES_ID,
+                                           value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show")
                     } else {
-                        routingMethods += [name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
-                                           arg : "$controllerName#show"]
+                        routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
+                                           arg : "$controllerName#show")
                     }
                     break
             }
@@ -550,16 +557,19 @@ class RubyConfigRoutesVisitor {
     private configureResourceDefaultRoute(String prefix, String original, String controllerName, String aliasSingular) {
         if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-            routingMethods += [name : "new_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
-                               value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new"]
-            routingMethods += [name : "edit_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
-                               value: "/${prefix}/$original/edit", arg: "${prefix}/$controllerName#edit"]
-            routingMethods += [name : "${formatedPrefix}_${aliasSingular}", file: RubyUtil.ROUTES_ID,
-                               value: "/${prefix}/$original", arg: "${prefix}/$controllerName#show"]
+            routingMethods += new Route(name : "new_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new")
+            routingMethods += new Route(name : "edit_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original/edit", arg: "${prefix}/$controllerName#edit")
+            routingMethods += new Route(name : "${formatedPrefix}_${aliasSingular}", file: RubyUtil.ROUTES_ID,
+                               value: "/${prefix}/$original", arg: "${prefix}/$controllerName#show")
         } else {
-            routingMethods += [name: "new_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original/new", arg: "$controllerName#new"]
-            routingMethods += [name: "edit_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original/edit", arg: "$controllerName#edit"]
-            routingMethods += [name: aliasSingular, file: RubyUtil.ROUTES_ID, value: "/$original", arg: "$controllerName#show"]
+            routingMethods += new Route(name: "new_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original/new",
+                    arg: "$controllerName#new")
+            routingMethods += new Route(name: "edit_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original/edit",
+                    arg: "$controllerName#edit")
+            routingMethods += new Route(name: aliasSingular, file: RubyUtil.ROUTES_ID, value: "/$original",
+                    arg: "$controllerName#show")
         }
 
     }
@@ -627,36 +637,36 @@ class RubyConfigRoutesVisitor {
             def singular = inflector.singularize(plural)
 
             //Authenticatable (default)
-            routingMethods += [name: "new_${singular}_session", file: RubyUtil.ROUTES_ID, value: "/$plural/sign_in",
-                               arg : "devise/sessions#new"]
-            routingMethods += [name: "${singular}_session", file: RubyUtil.ROUTES_ID, value: "/$plural/sign_in",
-                               arg : "devise/sessions#create"]
-            routingMethods += [name: "destroy_${singular}_session", file: RubyUtil.ROUTES_ID, value: "/$plural/sign_out",
-                               arg : "devise/sessions#destroy"]
+            routingMethods += new Route(name: "new_${singular}_session", file: RubyUtil.ROUTES_ID, value: "/$plural/sign_in",
+                               arg : "devise/sessions#new")
+            routingMethods += new Route(name: "${singular}_session", file: RubyUtil.ROUTES_ID, value: "/$plural/sign_in",
+                               arg : "devise/sessions#create")
+            routingMethods += new Route(name: "destroy_${singular}_session", file: RubyUtil.ROUTES_ID, value: "/$plural/sign_out",
+                               arg : "devise/sessions#destroy")
             //Recoverable
-            routingMethods += [name: "new_${singular}_password", file: RubyUtil.ROUTES_ID, value: "/$plural/password/new",
-                               arg : "devise/passwords#new"]
-            routingMethods += [name: "edit_${singular}_password", file: RubyUtil.ROUTES_ID, value: "/$plural/password/edit",
-                               arg : "devise/passwords#edit"]
-            routingMethods += [name: "${singular}_password", file: RubyUtil.ROUTES_ID, value: "/$plural/password",
-                               arg : "devise/passwords#update"]
+            routingMethods += new Route(name: "new_${singular}_password", file: RubyUtil.ROUTES_ID, value: "/$plural/password/new",
+                               arg : "devise/passwords#new")
+            routingMethods += new Route(name: "edit_${singular}_password", file: RubyUtil.ROUTES_ID, value: "/$plural/password/edit",
+                               arg : "devise/passwords#edit")
+            routingMethods += new Route(name: "${singular}_password", file: RubyUtil.ROUTES_ID, value: "/$plural/password",
+                               arg : "devise/passwords#update")
             //Confirmable
-            routingMethods += [name : "new_${singular}_confirmation", file: RubyUtil.ROUTES_ID,
-                               value: "/$plural/confirmation/new", arg: "devise/confirmations#new"]
-            routingMethods += [name: "${singular}_confirmation", file: RubyUtil.ROUTES_ID, value: "/$plural/confirmation",
-                               arg : "devise/confirmations#show"]
+            routingMethods += new Route(name : "new_${singular}_confirmation", file: RubyUtil.ROUTES_ID,
+                               value: "/$plural/confirmation/new", arg: "devise/confirmations#new")
+            routingMethods += new Route(name: "${singular}_confirmation", file: RubyUtil.ROUTES_ID, value: "/$plural/confirmation",
+                               arg : "devise/confirmations#show")
             //Registerable
-            routingMethods += [name : "new_${singular}_registration", file: RubyUtil.ROUTES_ID,
-                               value: "/$plural/registration/new", arg: "devise/registrations#new"]
-            routingMethods += [name : "edit_${singular}_registration", file: RubyUtil.ROUTES_ID,
-                               value: "/$plural/registration/edit", arg: "devise/registrations#edit"]
-            routingMethods += [name: "${singular}_registration", file: RubyUtil.ROUTES_ID, value: "/$plural/registration",
-                               arg : "devise/registrations#update"]
+            routingMethods += new Route(name : "new_${singular}_registration", file: RubyUtil.ROUTES_ID,
+                               value: "/$plural/registration/new", arg: "devise/registrations#new")
+            routingMethods += new Route(name : "edit_${singular}_registration", file: RubyUtil.ROUTES_ID,
+                               value: "/$plural/registration/edit", arg: "devise/registrations#edit")
+            routingMethods += new Route(name: "${singular}_registration", file: RubyUtil.ROUTES_ID, value: "/$plural/registration",
+                               arg : "devise/registrations#update")
             //Lockable
-            routingMethods += [name: "new_${singular}_unlock", file: RubyUtil.ROUTES_ID, value: "/$plural/unlock/new",
-                               arg : "devise/unlocks#new"]
-            routingMethods += [name: "${singular}_unlock", file: RubyUtil.ROUTES_ID, value: "/$plural/unlock",
-                               arg : "devise/unlocks#create"]
+            routingMethods += new Route(name: "new_${singular}_unlock", file: RubyUtil.ROUTES_ID, value: "/$plural/unlock/new",
+                               arg : "devise/unlocks#new")
+            routingMethods += new Route(name: "${singular}_unlock", file: RubyUtil.ROUTES_ID, value: "/$plural/unlock",
+                               arg : "devise/unlocks#create")
 
             //Rememberable
             //Trackable

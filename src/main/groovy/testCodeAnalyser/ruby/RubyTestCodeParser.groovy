@@ -12,6 +12,7 @@ import testCodeAnalyser.FileToAnalyse
 import testCodeAnalyser.StepRegex
 import testCodeAnalyser.TestCodeAbstractParser
 import testCodeAnalyser.TestCodeVisitor
+import testCodeAnalyser.ruby.routes.Route
 import testCodeAnalyser.ruby.routes.RubyConfigRoutesVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecFileVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
@@ -24,11 +25,12 @@ import java.util.regex.Matcher
 class RubyTestCodeParser extends TestCodeAbstractParser {
 
     String routesFile
-    def routes //name, file, value
+    Set<Route> routes
 
     RubyTestCodeParser(String repositoryPath) {
         super(repositoryPath)
-        routesFile = repositoryPath + RubyUtil.ROUTES_FILE
+        this.routesFile = repositoryPath + RubyUtil.ROUTES_FILE
+        this.routes = [] as Set
     }
 
     /***
@@ -36,12 +38,12 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
      * @param path path of interest file
      * @return the root node of the AST
      */
-    Node generateAst(String path) {
+    private Node generateAst(String path) {
         FileReader reader = new FileReader(path)
         Parser rubyParser = new Parser()
         CompatVersion version = CompatVersion.RUBY2_0
         ParserConfiguration config = new ParserConfiguration(0, version)
-        def result = null
+        Node result = null
 
         try {
             result = rubyParser.parse("<code>", reader, config)
@@ -57,13 +59,12 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         result
     }
 
-    Node generateAst(String path, String content) {
+    private Node generateAst(String path, String content) {
         StringReader reader = new StringReader(content)
         Parser rubyParser = new Parser()
         CompatVersion version = CompatVersion.RUBY2_0
         ParserConfiguration config = new ParserConfiguration(0, version)
-
-        def result = null
+        Node result = null
 
         try {
             result = rubyParser.parse("<code>", reader, config)
@@ -79,80 +80,14 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         result
     }
 
-    /***
-     * Finds all regex expression in a source code file.
-     *
-     * @param path ruby file
-     * @return map identifying the file and its regexs
-     */
-    @Override
-    List<StepRegex> doExtractStepsRegex(String path) {
-        def node = generateAst(path)
-        def visitor = new RubyStepRegexVisitor(path)
-        node?.accept(visitor)
-        visitor.regexs
-    }
-
-    @Override
-    List<StepDefinition> doExtractStepDefinitions(String path, String content) {
-        def node = generateAst(path, content)
-        def visitor = new RubyStepDefinitionVisitor(path, content)
-        node?.accept(visitor)
-        visitor.stepDefinitions
-    }
-
-    @Override
-    Set doExtractMethodDefinitions(String file) {
-        RubyMethodDefinitionVisitor visitor = new RubyMethodDefinitionVisitor()
-        visitor.path = file
-        def node = generateAst(file)
-        node?.accept(visitor)
-        visitor.methods
-    }
-
-    /***
-     * Visits a step body and method calls inside it. The result is stored as a field of the returned visitor.
-     *
-     * @param file List of map objects that identifies files by 'path' and 'lines'.
-     * @return visitor to visit method bodies
-     */
-    @Override
-    TestCodeVisitor parseStepBody(FileToAnalyse file) {
-        def node = generateAst(file.path)
-        def visitor = new RubyTestCodeVisitor(projectFiles, file.path, methods)
-        def testCodeVisitor = new RubyStepsFileVisitor(file.methods, visitor)
-        node?.accept(testCodeVisitor)
-        visitor
-    }
-
-    /***
-     * Visits selected method bodies from a source code file searching for other method calls. The result is stored as a
-     * field of the input visitor.
-     *
-     * @param file a map object that identifies a file by 'path' and 'methods'. A method is identified by its name.
-     * @param visitor visitor to visit method bodies
-     */
-    @Override
-    def visitFile(def file, TestCodeVisitor visitor) {
-        def node = generateAst(file.path)
-        visitor.lastVisitedFile = file.path
-        def auxVisitor = new RubyMethodVisitor(file.methods, (RubyTestCodeVisitor) visitor)
-        node?.accept(auxVisitor)
-    }
-
-    private findAllRoutes() {
+    private generateProjectRoutes() {
         def node = generateAst(routesFile)
         RubyConfigRoutesVisitor visitor = new RubyConfigRoutesVisitor(node)
-        def routes = [] //name, file, value
-        visitor?.routingMethods?.each { route ->
-            def name = route.name.replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*/", "/.*/").replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*[^/()]", "/.*")
-            routes += [name: name, file: route.file, value: route.value, arg: route.arg]
-        }
-        routes
+        this.routes = visitor?.routingMethods
     }
 
     private String extractValueFromRouteMethod(String name) {
-        def route = routes?.find { it.name ==~ /${name}e?/ || name ==~ /${it.value}/ }
+        def route = this.routes?.find { it.name ==~ /${name}e?/ || name ==~ /${it.value}/ }
         def result = name
         if (route) {
             if (route.arg && route.arg != "") result = route.arg
@@ -199,7 +134,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                 generateAst(f.file)?.accept(pageVisitor) //extracts path from method
                 if (!pageVisitor.pages.empty) {
                     pageVisitor.pages.each { page ->
-                        def route = routes?.find { page == it.name || page ==~ /${it.value}/ }
+                        def route = this.routes?.find { page == it.name || page ==~ /${it.value}/ }
                         if (route) {
                             result += route.arg
                         } else {
@@ -268,16 +203,17 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     @Override
     void findAllPages(TestCodeVisitor visitor) {
-        def filesToVisit = visitor?.taskInterface?.calledPageMethods
-        if (!this.routes) {
-            this.routes = findAllRoutes()
-            log.info "All routes:"
-            this.routes.each { log.info it.toString() }
-        }
+        /* generates all routes according to config/routes.rb file */
+        this.generateProjectRoutes()
+        log.info "All routes:"
+        this.routes.each { log.info it.toString() }
 
         def routes = [] as Set
-        filesToVisit = filesToVisit.findAll { it != null }
+        def filesToVisit = visitor?.taskInterface?.calledPageMethods
+
         //it could be null if the test code references a class or file that does not exist
+        filesToVisit = filesToVisit.findAll { it != null }
+
         filesToVisit?.each { f ->
             log.info "FIND_ALL_PAGES; visiting file '${f.file}' and method '${f.name} (${f.args})'"
             routes += identifyRoutes(f)
@@ -285,6 +221,67 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
         routes = routes.unique()
         matchRouteAndView(visitor, routes)
+    }
+
+    /***
+     * Finds all regex expression in a source code file.
+     *
+     * @param path ruby file
+     * @return map identifying the file and its regexs
+     */
+    @Override
+    List<StepRegex> doExtractStepsRegex(String path) {
+        def node = generateAst(path)
+        def visitor = new RubyStepRegexVisitor(path)
+        node?.accept(visitor)
+        visitor.regexs
+    }
+
+    @Override
+    List<StepDefinition> doExtractStepDefinitions(String path, String content) {
+        def node = generateAst(path, content)
+        def visitor = new RubyStepDefinitionVisitor(path, content)
+        node?.accept(visitor)
+        visitor.stepDefinitions
+    }
+
+    @Override
+    Set doExtractMethodDefinitions(String file) {
+        RubyMethodDefinitionVisitor visitor = new RubyMethodDefinitionVisitor()
+        visitor.path = file
+        def node = generateAst(file)
+        node?.accept(visitor)
+        visitor.methods
+    }
+
+    /***
+     * Visits a step body and method calls inside it. The result is stored as a field of the returned visitor.
+     *
+     * @param file List of map objects that identifies files by 'path' and 'lines'.
+     * @return visitor to visit method bodies
+     */
+    @Override
+    TestCodeVisitor parseStepBody(FileToAnalyse file) {
+        def node = generateAst(file.path)
+        def visitor = new RubyTestCodeVisitor(projectFiles, file.path, methods)
+        def testCodeVisitor = new RubyStepsFileVisitor(file.methods, visitor)
+        node?.accept(testCodeVisitor)
+        visitor
+    }
+
+    /***
+     * Visits selected method bodies from a source code file searching for other method calls. The result is stored as a
+     * field of the input visitor.
+     *
+     * @param file a map object that identifies a file by 'path' and 'methods'. A method is identified by its name.
+     * @param visitor visitor to visit method bodies
+     */
+    @Override
+    def visitFile(def file, TestCodeVisitor visitor) {
+        def node = generateAst(file.path)
+        visitor.lastVisitedFile = file.path
+        def auxVisitor = new RubyMethodVisitor(file.methods, (RubyTestCodeVisitor) visitor)
+        node?.accept(auxVisitor)
     }
 
     @Override

@@ -43,7 +43,7 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         return value
     }
 
-    private generateResourcesMemberRoute(String actionName, String actionValue, String argValue, String pathMethodName) {
+    private Route generateResourcesMemberRoute(String actionName, String actionValue, String argValue, String pathMethodName) {
         def nameSufix
         def pathValuePrefix
         def argsPrefix
@@ -65,10 +65,10 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         def arg = "$argsPrefix$actionValue"
         if (argValue) arg = argValue
 
-        return [name: methodName, file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: arg]
+        return new Route(name: methodName, file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: arg)
     }
 
-    private generateResourcesCollectionRoute(String actionName, String actionValue, String argValue,
+    private Route generateResourcesCollectionRoute(String actionName, String actionValue, String argValue,
                                              String pathMethodName) {
         def nameSufix
         def pathValuePrefix
@@ -90,10 +90,10 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         def arg = "$argsPrefix$actionValue"
         if (argValue) arg = argValue
 
-        return [name: methodName, file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: arg]
+        return new Route(name: methodName, file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: arg)
     }
 
-    def getRoute() {
+    Route getRoute() {
         def values = propsValues.sort { it.line }.sort { it.position }
         if (values.size() < 2) return
 
@@ -133,6 +133,7 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         //configures route
         if (isMember) generateResourcesMemberRoute(actionName, actionValue, controllerActionString, pathMethodName)
         else if (isCollection) generateResourcesCollectionRoute(actionName, actionValue, controllerActionString, pathMethodName)
+        else null
     }
 
     @Override

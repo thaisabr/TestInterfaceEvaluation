@@ -254,7 +254,7 @@ class RubyConfigRoutesVisitor {
         if (!args.member.empty) {
             def values = extractArgValues(args.member)*.value
             values.each { value ->
-                generateResourcesMemberRoute(value, prefix, original, aliasSingular, controllerName)
+                generateResourcesMemberRoute(value, prefix, aliasSingular, controllerName)
             }
         }
         if (!args.collection.empty) {
@@ -413,11 +413,11 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private generateResourcesMemberRoute(def actionName, String prefix, String original, String aliasSingular,
-                                         String controllerName) {
+    private generateResourcesMemberRoute(def actionName, String prefix, String aliasSingular, String controllerName) {
         def nameSufix
         def pathValuePrefix
         def argsPrefix
+        def original = inflector.pluralize(aliasSingular)
         if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             nameSufix = "_${formatedPrefix}_$aliasSingular"
@@ -522,7 +522,7 @@ class RubyConfigRoutesVisitor {
         if (!args.member.empty) {
             def values = extractArgValues(args.member)*.value
             values.each { value ->
-                generateResourcesMemberRoute(value, prefix, original, aliasSingular, controllerName)
+                generateResourcesMemberRoute(value, prefix, aliasSingular, controllerName)
             }
         }
         if (!args.collection.empty) {

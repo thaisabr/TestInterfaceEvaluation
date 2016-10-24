@@ -1,5 +1,7 @@
 package taskAnalyser
 
+import groovy.time.TimeCategory
+import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
 import taskAnalyser.task.DoneTask
 import util.ConstantData
@@ -15,7 +17,13 @@ class TaskAnalyser {
         def result = []
 
         tasks?.each { task ->
+            TimeDuration timestamp
+            def initTime = new Date()
             def interfaces = task.computeInterfaces()
+            def endTime = new Date()
+            use(TimeCategory) {
+                timestamp = endTime - initTime
+            }
             def stepCalls = interfaces.itest.methods?.findAll { it.type == "StepCall" }?.unique()?.size()
             def methods = interfaces.itest.methods?.findAll { it.type == "Object" }?.unique()
             def methodsIdentity = ""
@@ -24,7 +32,7 @@ class TaskAnalyser {
             if (!task.changedGherkinFiles.empty) gherkinCounter++
 
             result += [task: task, itest: interfaces.itest, ireal: interfaces.ireal, methods: methodsIdentity, stepCalls: stepCalls,
-                       text: interfaces.itext]
+                       text: interfaces.itext, timestamp:timestamp]
         }
 
         log.info "Number of tasks that contains step definitions: $stepCounter"

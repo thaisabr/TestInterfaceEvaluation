@@ -2,10 +2,9 @@ package taskAnalyser
 
 import au.com.bytecode.opencsv.CSVReader
 import au.com.bytecode.opencsv.CSVWriter
-import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
-import commitAnalyser.Commit
 import evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 import org.eclipse.jgit.diff.DiffEntry
 import similarityAnalyser.test.TestSimilarityAnalyser
 import similarityAnalyser.text.TextualSimilarityAnalyser
@@ -16,30 +15,31 @@ import util.Util
 @Slf4j
 class DataManager {
 
-    static final String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests", "#StepDef",
-                                    "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
-                                    "#AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views", "#Views", "#ITest", "#IReal",
-                                    "ITest", "IReal", "Precision", "Recall", "Hashes"]
-    static final int RECALL_INDEX = HEADER.size()-2
-    static final int PRECISION_INDEX = RECALL_INDEX-1
-    static final int IREAL_INDEX = PRECISION_INDEX-1
-    static final int ITEST_INDEX = IREAL_INDEX-1
+    static
+    final String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests", "#StepDef",
+                             "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
+                             "#AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views", "#Views", "#ITest", "#IReal",
+                             "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp"]
+    static final int RECALL_INDEX = HEADER.size() - 3
+    static final int PRECISION_INDEX = RECALL_INDEX - 1
+    static final int IREAL_INDEX = PRECISION_INDEX - 1
+    static final int ITEST_INDEX = IREAL_INDEX - 1
 
 
-    private static computePairs(def set){
+    private static computePairs(def set) {
         def result = [] as Set
-        if(!set || set.empty || set.size()==1) return set
-        set.eachWithIndex{ v, k ->
-            def next = set.drop(k+1)
+        if (!set || set.empty || set.size() == 1) return set
+        set.eachWithIndex { v, k ->
+            def next = set.drop(k + 1)
             result.add([task: v, pairs: next]) //next.each{ n -> result.add([v, n]) }
         }
         result
     }
 
-    private static extractTaskText(def filename, def taskId){
+    private static extractTaskText(def filename, def taskId) {
         def text = ""
-        File file = new File("${filename- ConstantData.FILTERED_FILE_SUFIX}_text_${taskId}.txt")
-        if(file.exists()){
+        File file = new File("${filename - ConstantData.FILTERED_FILE_SUFIX}_text_${taskId}.txt")
+        if (file.exists()) {
             file.withReader("utf-8") { reader ->
                 text = reader.text
             }
@@ -47,7 +47,8 @@ class DataManager {
         text
     }
 
-    private static writeHeaderAllResult(CSVWriter writer, def url, def allTasks, def relevantTasks, def stepTasks, def gherkinTasks){
+    private static writeHeaderAllResult(CSVWriter writer,
+                                        def url, def allTasks, def relevantTasks, def stepTasks, def gherkinTasks) {
         String[] text = ["Repository", url]
         writer.writeNext(text)
         text = ["Tasks", allTasks]
@@ -61,68 +62,68 @@ class DataManager {
         writer.writeNext(HEADER)
     }
 
-    private static writeITextFile(def filename, def entry){
-        if(entry.text && !entry.text.empty){
-            File file = new File("${filename-ConstantData.CSV_FILE_EXTENSION}_text_${entry.task.id}.txt")
+    private static writeITextFile(def filename, def entry) {
+        if (entry.text && !entry.text.empty) {
+            File file = new File("${filename - ConstantData.CSV_FILE_EXTENSION}_text_${entry.task.id}.txt")
             file.withWriter("utf-8") { out ->
                 out.write(entry.text)
             }
         }
     }
 
-    private static extractDates(def entry){
-        def dates =  entry?.task?.commits*.date?.flatten()?.sort()
-        if(dates) dates = dates.collect{ new Date(it*1000).format('dd-MM-yyyy') }.unique()
+    private static extractDates(def entry) {
+        def dates = entry?.task?.commits*.date?.flatten()?.sort()
+        if (dates) dates = dates.collect { new Date(it * 1000).format('dd-MM-yyyy') }.unique()
         else dates = []
         dates
     }
 
-    private static String extractMessages(def entry){
+    private static String extractMessages(def entry) {
         String msgs = entry?.task?.commits*.message?.flatten()?.toString()
-        if(msgs.length()>1000) msgs = msgs.toString().substring(0,999)+" [TOO_LONG]"
+        if (msgs.length() > 1000) msgs = msgs.toString().substring(0, 999) + " [TOO_LONG]"
         msgs
     }
 
-    private static extractStepErrors(def entry){
+    private static extractStepErrors(def entry) {
         def stepErrors = entry.itest.matchStepErrors
         def stepErrorsQuantity = 0
-        if(stepErrors.empty) stepErrors = ""
-        else{
+        if (stepErrors.empty) stepErrors = ""
+        else {
             stepErrorsQuantity = stepErrors*.lines.flatten().size()
             stepErrors = stepErrors.toString()
         }
-        [text: stepErrors, quantity:stepErrorsQuantity]
+        [text: stepErrors, quantity: stepErrorsQuantity]
     }
 
-    private static extractCompilationErrors(def entry){
+    private static extractCompilationErrors(def entry) {
         def compilationErrors = entry.itest.compilationErrors
         def compErrorsQuantity = 0
-        if(compilationErrors.empty) compilationErrors = ""
-        else{
+        if (compilationErrors.empty) compilationErrors = ""
+        else {
             compErrorsQuantity = compilationErrors*.msgs.flatten().size()
             compilationErrors = compilationErrors.toString()
         }
-        [text: compilationErrors, quantity:compErrorsQuantity]
+        [text: compilationErrors, quantity: compErrorsQuantity]
     }
 
-    private static extractRemovedFiles(def entry){
-        def changes = entry.task.commits*.coreChanges?.flatten()?.findAll{ it.type == DiffEntry.ChangeType.DELETE }
-        def result = changes?.collect{ entry.task.gitRepository.name + File.separator+it.path }?.unique()?.sort()
+    private static extractRemovedFiles(def entry) {
+        def changes = entry.task.commits*.coreChanges?.flatten()?.findAll { it.type == DiffEntry.ChangeType.DELETE }
+        def result = changes?.collect { entry.task.gitRepository.name + File.separator + it.path }?.unique()?.sort()
         if (result?.empty) result = ""
         result
     }
 
-    private static writeResult(List<String[]> entries, def writer){
-        entries.each{ entry ->
+    private static writeResult(List<String[]> entries, def writer) {
+        entries.each { entry ->
             def itest = "no", ireal = "no"
-            if(entry[IREAL_INDEX].empty) ireal = "yes"
-            if(entry[ITEST_INDEX].empty) itest = "yes"
+            if (entry[IREAL_INDEX].empty) ireal = "yes"
+            if (entry[ITEST_INDEX].empty) itest = "yes"
             String[] headers = entry + [itest, ireal]
             writer.writeNext(headers)
         }
     }
 
-    private static saveResultForSimilarityAnalysis(String filename, String[] header, List<String[]> entries){
+    private static saveResultForSimilarityAnalysis(String filename, String[] header, List<String[]> entries) {
         def writer = new CSVWriter(new FileWriter(filename))
         String[] text = ["Tasks (the ones that have Gherkin test)", entries.size()]
         writer.writeNext(text)
@@ -131,47 +132,48 @@ class DataManager {
         writer.close()
     }
 
-    private static List<String[]> readInputCSV(String filename){
+    private static List<String[]> readInputCSV(String filename) {
         List<String[]> entries = []
-        try{
+        try {
             CSVReader reader = new CSVReader(new FileReader(filename))
             entries = reader.readAll()
             reader.close()
             entries.remove(0) //ignore header
-        } catch (Exception ex){
+        } catch (Exception ex) {
             log.error ex.message
         }
-        entries.unique{ it[2] } //bug: input csv can contain duplicated values; task id is used to identify them.
+        entries.unique { it[2] } //bug: input csv can contain duplicated values; task id is used to identify them.
     }
 
-    private static writeHeaderOrganizedResult(CSVWriter writer, def previousAnalysisData){
-        previousAnalysisData.subList(0,5).each{ data ->
-            String[] value = data.findAll{!it.allWhitespace}
+    private static writeHeaderOrganizedResult(CSVWriter writer, def previousAnalysisData) {
+        previousAnalysisData.subList(0, 5).each { data ->
+            String[] value = data.findAll { !it.allWhitespace }
             writer.writeNext(value)
         }
     }
 
-    private static organizeAllResult(String evaluationFile, String organizedFile, String similarityFile, boolean similarityAnalysis){
-        if(!evaluationFile || evaluationFile.empty) return
+    private
+    static organizeAllResult(String evaluationFile, String organizedFile, String similarityFile, boolean similarityAnalysis) {
+        if (!evaluationFile || evaluationFile.empty) return
         List<String[]> entries = readAllResult(evaluationFile)
-        if(entries.size() <= 5) return
+        if (entries.size() <= 5) return
 
         CSVWriter writer = new CSVWriter(new FileWriter(organizedFile))
         writeHeaderOrganizedResult(writer, entries)
 
-        String[] resultHeader1 = entries.get(5).findAll{!it.allWhitespace}
+        String[] resultHeader1 = entries.get(5).findAll { !it.allWhitespace }
         String[] resultHeader2 = resultHeader1 + ["Empty_ITest", "Empty_IReal"]
-        entries = entries.subList(6,entries.size())
+        entries = entries.subList(6, entries.size())
 
-        def emptyIReal = entries.findAll{ it[IREAL_INDEX].empty }
+        def emptyIReal = entries.findAll { it[IREAL_INDEX].empty }
         entries = entries - emptyIReal
-        def hasGherkinTest = entries.findAll{ (it[6] as int)>0 }
-        def hasStepTest = entries.findAll{ (it[7] as int)>0 }
-        def noTest = entries - (hasGherkinTest+hasStepTest).unique()
+        def hasGherkinTest = entries.findAll { (it[6] as int) > 0 }
+        def hasStepTest = entries.findAll { (it[7] as int) > 0 }
+        def noTest = entries - (hasGherkinTest + hasStepTest).unique()
         def validTasks = entries - noTest
-        def emptyITest = validTasks.findAll{ it[ITEST_INDEX].empty }
+        def emptyITest = validTasks.findAll { it[ITEST_INDEX].empty }
         def others = validTasks - emptyITest
-        def zeroPrecisionAndRecall = others.findAll{ it[PRECISION_INDEX] == "0.0" && it[RECALL_INDEX] == "0.0" }
+        def zeroPrecisionAndRecall = others.findAll { it[PRECISION_INDEX] == "0.0" && it[RECALL_INDEX] == "0.0" }
 
         String[] text = ["Valid tasks (ones that have acceptance test and no empty IReal)", validTasks.size()]
         writer.writeNext(text)
@@ -182,9 +184,9 @@ class DataManager {
         text = ["Tasks that have no empty ITest and precision e recall 0.0", zeroPrecisionAndRecall.size()]
         writer.writeNext(text)
 
-        double[] precisionValues = entries.collect{ it[PRECISION_INDEX] as double }
+        double[] precisionValues = entries.collect { it[PRECISION_INDEX] as double }
         def itestStatistics = new DescriptiveStatistics(precisionValues)
-        double[] recallValues = entries.collect{ it[RECALL_INDEX] as double }
+        double[] recallValues = entries.collect { it[RECALL_INDEX] as double }
         def irealStatistics = new DescriptiveStatistics(recallValues)
 
         text = ["Precision mean", itestStatistics.mean]
@@ -203,11 +205,11 @@ class DataManager {
         writer.writeNext(resultHeader2)
         writeResult(emptyITest, writer)
         writeResult(zeroPrecisionAndRecall, writer)
-        writeResult(others-zeroPrecisionAndRecall, writer)
+        writeResult(others - zeroPrecisionAndRecall, writer)
         writer.close()
 
-        if(similarityAnalysis) {
-            def tasks = entries.findAll{ !it[IREAL_INDEX].empty && (it[6] as int)>0 }
+        if (similarityAnalysis) {
+            def tasks = entries.findAll { !it[IREAL_INDEX].empty && (it[6] as int) > 0 }
             saveResultForSimilarityAnalysis(similarityFile, resultHeader1, tasks)
         }
 
@@ -219,95 +221,96 @@ class DataManager {
      *           "changed_production_files","changed_test_files","commits_message".
      * @return a list of tasks.
      */
-    static extractProductionAndTestTasks(String filename){
+    static extractProductionAndTestTasks(String filename) {
         List<String[]> entries = readInputCSV(filename)
-        List<String[]> relevantEntries = entries.findAll{ !it[4].equals("[]") && !it[5].equals("[]") }
+        List<String[]> relevantEntries = entries.findAll { it[4] != "[]" && it[5] != "[]" }
         List<DoneTask> tasks = []
-        try{
+        try {
             relevantEntries.each { entry ->
-                if(entry[2].size()>4){
+                if (entry[2].size() > 4) {
                     def hashes = entry[3].tokenize(',[]')*.trim()
                     tasks += new DoneTask(entry[1], entry[2], hashes)
                 }
             }
-        } catch(Exception ex){
+        } catch (Exception ex) {
             log.error ex.message
-            return [relevantTasks: [], allTasksQuantity:0]
+            return [relevantTasks: [], allTasksQuantity: 0]
         }
-        [relevantTasks:tasks.sort{it.id}, allTasksQuantity:entries.size()]
+        [relevantTasks: tasks.sort { it.id }, allTasksQuantity: entries.size()]
     }
 
-    static extractProductionAndTestTasks(){
+    static extractProductionAndTestTasks() {
         extractProductionAndTestTasks(Util.TASKS_FILE)
     }
 
     static saveAllResult(def filename, def url, def allTasksCounter, def relevantTasksCounter, def stepDefTasksCounter,
-                         def gherkinTasksCounter, def taskData){
+                         def gherkinTasksCounter, def taskData) {
         CSVWriter writer = new CSVWriter(new FileWriter(filename))
         writeHeaderAllResult(writer, url, allTasksCounter, relevantTasksCounter, stepDefTasksCounter, gherkinTasksCounter)
 
         def saveText = false
-        if(taskData && taskData.size()>1) saveText = true
+        if (taskData && taskData.size() > 1) saveText = true
 
-        taskData?.each{ entry ->
+        taskData?.each { entry ->
             def itestSize = entry.itest.findAllFiles().size()
             def irealSize = entry.ireal.findAllFiles().size()
             def precision = TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)
             def recall = TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)
-            def dates =  extractDates(entry)
+            def dates = extractDates(entry)
             def devs = entry?.task?.commits*.author?.flatten()?.unique()?.size()
             def msgs = extractMessages(entry)
             def stepErrors = extractStepErrors(entry)
             def compilationErrors = extractCompilationErrors(entry)
             def renames = entry.task.renamedFiles
             def removes = extractRemovedFiles(entry)
-            if(renames.empty) renames = ""
+            if (renames.empty) renames = ""
             def views = entry.itest.notFoundViews
-            if(views.empty) views = ""
+            if (views.empty) views = ""
             String[] line = [entry.task.id, dates, entry.task.days, entry.task.commitsQuantity, msgs, devs,
                              entry.task.gherkinTestQuantity, entry.task.stepDefQuantity, entry.methods, entry.stepCalls,
                              stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
-                             renames, removes, views, views.size(), itestSize, irealSize, entry.itest, entry.ireal, precision, recall, entry.task.commits*.hash]
+                             renames, removes, views, views.size(), itestSize, irealSize, entry.itest, entry.ireal,
+                             precision, recall, entry.task.commits*.hash, entry.timestamp]
             writer.writeNext(line)
-            if(saveText) writeITextFile(filename, entry) //dealing with long textual description of a task
+            if (saveText) writeITextFile(filename, entry) //dealing with long textual description of a task
         }
 
         writer.close()
     }
 
-    static List<String[]> readAllResult(String filename){
+    static List<String[]> readAllResult(String filename) {
         List<String[]> entries = []
-        try{
+        try {
             CSVReader reader = new CSVReader(new FileReader(filename))
             entries = reader.readAll()
             reader.close()
-        } catch (Exception ex){
+        } catch (Exception ex) {
             log.error ex.message
         }
         entries
     }
 
-    static organizeResult(String evaluationFile, String organizedFile){
+    static organizeResult(String evaluationFile, String organizedFile) {
         organizeAllResult(evaluationFile, organizedFile, null, false)
     }
 
-    static organizeResultForSimilarityAnalysis(String evaluationFile, String organizedFile, String similarityFile){
+    static organizeResultForSimilarityAnalysis(String evaluationFile, String organizedFile, String similarityFile) {
         organizeAllResult(evaluationFile, organizedFile, similarityFile, true)
     }
 
-    static analyseSimilarity(String filteredFile, String similarityFile){
-        if(!filteredFile || filteredFile.empty) return
+    static analyseSimilarity(String filteredFile, String similarityFile) {
+        if (!filteredFile || filteredFile.empty) return
         List<String[]> entries = readAllResult(filteredFile)
-        if(entries.size() <= 4) return
+        if (entries.size() <= 4) return
 
         CSVWriter writer = new CSVWriter(new FileWriter(similarityFile))
         writer.writeNext(entries.get(0))
 
-        String[] resultHeader = ["Task_A", "Task_B", "Text", "Test_Jaccard", "Real_Jaccard" , "Test_Cosine", "Real_Cosine"]
+        String[] resultHeader = ["Task_A", "Task_B", "Text", "Test_Jaccard", "Real_Jaccard", "Test_Cosine", "Real_Cosine"]
         writer.writeNext(resultHeader)
 
-        def allTasks = entries.subList(2,entries.size())
-        if(allTasks.size()<=1) return
+        def allTasks = entries.subList(2, entries.size())
+        if (allTasks.size() <= 1) return
         def taskPairs = computePairs(allTasks)
         List<String[]> lines = []
         taskPairs?.each { item ->
@@ -345,22 +348,22 @@ class DataManager {
         writer.close()
     }
 
-    static organizeSimilarityResult(String similarityFile, String organizedFile){
-        if(!similarityFile || similarityFile.empty) return
+    static organizeSimilarityResult(String similarityFile, String organizedFile) {
+        if (!similarityFile || similarityFile.empty) return
         List<String[]> entries = readAllResult(similarityFile)
-        if(entries.size() <= 2) return
+        if (entries.size() <= 2) return
 
         CSVWriter writer = new CSVWriter(new FileWriter(organizedFile))
         writer.writeNext(entries.get(0))
-        String[] resultHeader1 = entries.get(1).findAll{!it.allWhitespace}
+        String[] resultHeader1 = entries.get(1).findAll { !it.allWhitespace }
         entries = entries.subList(2, entries.size())
 
         //Positions: 2-text; 3-test; 4-real
-        def zeroReal = entries.findAll{ it[4] == "0.0" }.sort{ it[3] as BigDecimal }
+        def zeroReal = entries.findAll { it[4] == "0.0" }.sort { it[3] as BigDecimal }
         entries = entries - zeroReal
-        def oneReal = entries.findAll{ it[4] == "1.0"}.sort{ -(it[3] as BigDecimal) }
+        def oneReal = entries.findAll { it[4] == "1.0" }.sort { -(it[3] as BigDecimal) }
         entries = entries - oneReal
-        def others = entries.sort{ -(it[4] as BigDecimal) }.sort{ -(it[3] as BigDecimal) }
+        def others = entries.sort { -(it[4] as BigDecimal) }.sort { -(it[3] as BigDecimal) }
 
         writer.writeNext(resultHeader1)
         writer.writeAll(zeroReal)

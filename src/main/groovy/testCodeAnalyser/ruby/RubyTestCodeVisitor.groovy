@@ -141,13 +141,13 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         if (methodsToVisit.empty) {
             if (RubyUtil.isRouteMethod(name)) {
                 taskInterface.calledPageMethods += [file: RubyUtil.ROUTES_ID, name: name - RubyUtil.ROUTE_SUFIX, args: []]
-                //log.info "param is (undefined) route method call: $name"
+                //log.info "visit param is a route method call: $name"
             }
-            //else log.info "param is (undefined) method call: $name"
+            //else log.info "visit param is a undefined method call: $name"
         } else {
-            //log.info "param is (defined) method call: $name"
             def args = []
             if (stepDefinitionMethod) args = stepDefinitionMethod.args
+            //log.info "visit param is defined method call: $name; args: $args"
             methodsToVisit?.each { m ->
                 taskInterface.calledPageMethods += [file: m.path, name: m.name, args: args]
             }
@@ -196,7 +196,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
              verify_current_path(path)
         end
         P.S.: The solution does not deal with the example, because it is not a step definition. */
-
     private registryVisitCall(LocalVarNode node) {
         //log.info "param is a local variable: ${node.name}"
         if (stepDefinitionMethod && !stepDefinitionMethod.args.empty) {
@@ -217,7 +216,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     * */
 
     private registryVisitCall(InstVarNode node) {
-        //log.info "param is a instance variable: ${node.name}"
+        log.info "param is a instance variable: ${node.name}"
     }
 
     /* https://github.com/leihs/leihs/blob/8fb0eace3f441320b6aa70980acf5ee1d279dc6c/features/
@@ -234,7 +233,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                 end
         end
     */
-
     private registryVisitCall(CaseNode node) {
         //log.info "param is a case node"
         def args = []
@@ -255,13 +253,11 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     /* Representing a simple String literal */
-
     private registryVisitCall(StrNode node) {
         registryVisitStringArg(node.value)
     }
 
     /* A string which contains some dynamic elements which needs to be evaluated (introduced by #) */
-
     private registryVisitCall(DStrNode node) {
         registryVisitDynamicStringArg(node)
     }
@@ -272,7 +268,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             visit path
           end
     * */
-
     private registryVisitCall(DVarNode node) {
         //log.info "param is a dynamic variable: ${node.name}"
         if (stepDefinitionMethod && !stepDefinitionMethod.args.empty) {
@@ -285,29 +280,25 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
     /* If the argument is a method call (VCallNode, CallNode, FCallNode) that returns a literal, we understand the view was found.
        Otherwise, it is not possible to extract it and find the view. */
-
     private registryVisitCall(VCallNode node) {
         registryMethodCallVisitArg(node.name)
     }
 
     /* If the argument is a method call (VCallNode, CallNode, FCallNode) that returns a literal, we understand the view was found.
        Otherwise, it is not possible to extract it and find the view. */
-
     private registryVisitCall(CallNode node) {
         registryMethodCallVisitArg(node.name)
     }
 
     /* If the argument is a method call (VCallNode, CallNode, FCallNode) that returns a literal, we understand the view was found.
        Otherwise, it is not possible to extract it and find the view. */
-
     private registryVisitCall(FCallNode node) {
         registryMethodCallVisitArg(node.name)
     }
 
     /* default case */
-
     private registryVisitCall(Node node) {
-        //log.info "information about argument of visit call:"
+        log.info "information about argument of visit call:"
         node.properties.each { k, v -> log.info "$k: $v" }
     }
 
@@ -393,7 +384,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     private registry(CallNode iVisited, Node receiver) {
-        def excluded = [ArrayNode, NewlineNode, StrNode, DStrNode, FixnumNode, OrNode, IfNode, CaseNode]
+        def excluded = [ArrayNode, NewlineNode, StrNode, DStrNode, FixnumNode, OrNode, IfNode, CaseNode, NthRefNode]
         if (receiver instanceof GlobalVarNode) {
             log.warn "CALL BY GLOBAL VARIABLE \nPROPERTIES:"
             receiver.properties.each { k, v -> log.warn "$k: $v" }

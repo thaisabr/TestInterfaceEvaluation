@@ -3,6 +3,7 @@ package testCodeAnalyser.ruby.routes
 import org.jruby.embed.PathType
 import org.jruby.embed.ScriptingContainer
 import util.Util
+import util.ruby.RubyUtil
 
 
 class Inflector {
@@ -15,7 +16,7 @@ class Inflector {
         container.loadPaths.add(Util.GEMS_PATH)
         container.loadPaths.add(Util.ACTIVESUPPORT_INFLECTOR_PATH)
         container.loadPaths.add(Util.I18N_PATH)
-        receiver = container.runScriptlet(PathType.ABSOLUTE, "inflector.rb")
+        receiver = container.runScriptlet(PathType.ABSOLUTE, RubyUtil.INFLECTOR_FILE)
     }
 
     String pluralize(String word) {

@@ -6,7 +6,6 @@ import util.RegexUtil
 import util.Util
 
 import java.util.regex.Matcher
-import java.util.regex.Pattern
 
 @Slf4j
 class RubyUtil extends Util {
@@ -14,45 +13,9 @@ class RubyUtil extends Util {
     public static final String ROUTES_FILE = File.separator + "config" + File.separator + "routes.rb"
     public static final String ROUTES_ID = "ROUTES"
     public static final String ROUTE_SUFIX = "_path"
+    public static final String INFLECTOR_FILE = "inflector.rb"
     public static
     final EXCLUDED_PATH_METHODS = ["current_path", "recognize_path", "assert_routing", "assert_recognizes", " assert_response"]
-
-    private static routeIsFile(String name) {
-        name.contains(".") && !name.contains("*")
-    }
-
-    private static routeIsAction(String name) {
-        name.contains("#")
-    }
-
-    private static routeIsFolderOrStringOrRegex(String name) {
-        name.contains(File.separator)
-    }
-
-    private static extractViewFromAction(String name, List viewFiles) {
-        def result = []
-        def index = name.indexOf("#")
-        def controller = name.substring(0, index)
-        def action = name.substring(index + 1, name.length())
-        if (controller && action) {
-            result += searchViewFor(controller, action, viewFiles)
-        }
-        result
-    }
-
-    private static extractViewFromOther(String name, List viewFiles) {
-        def result = []
-        def matches = viewFiles?.findAll { it ==~ /.*${Pattern.quote(name)}.*/ }
-        if (matches && matches.size() > 0) {
-            if (matches.size() == 1) result = matches
-            else {
-                def match = matches.find { it.contains("index") }
-                if (match) result += match
-                else result = matches
-            }
-        }
-        result
-    }
 
     static List<String> searchViewFor(String controller, String action, List viewFiles) {
         def result = []
@@ -62,25 +25,6 @@ class RubyUtil extends Util {
             def matches = viewFiles?.findAll { it.contains("views${File.separator}$controller") }
             if (matches && !matches.empty) result += matches
         }
-        result
-    }
-
-    static List<String> findViewPathForRailsProjects(String resourcePath, List viewFiles) {
-        def result = []
-        if (!resourcePath || resourcePath.empty || resourcePath.allWhitespace) return result
-        def name = resourcePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        if (routeIsFile(name)) {
-            def match = viewFiles?.findAll { it.contains(name) }
-            if (match) result += match
-        } else if (routeIsAction(name)) {
-            result += extractViewFromAction(name, viewFiles)
-            if (result.empty) log.info "no view match for ${resourcePath} (controller#action)"
-        } else if (routeIsFolderOrStringOrRegex(name)) {
-            result += extractViewFromOther(name, viewFiles)
-        } else {
-            log.warn "The searched views is unexpected: $name" //or is an unknown string
-        }
-        log.info "view match for ${resourcePath}: ${result}"
         result
     }
 

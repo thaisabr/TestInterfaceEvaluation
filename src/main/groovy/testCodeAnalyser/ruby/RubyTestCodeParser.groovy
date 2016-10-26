@@ -86,87 +86,93 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         this.routes = visitor?.routingMethods
     }
 
-    private String extractValueFromRouteMethod(String name) {
-        def route = this.routes?.find { it.name ==~ /${name}e?/ || name ==~ /${it.value}/ }
-        def result = name
-        if (route) {
-            if (route.arg && route.arg != "") result = route.arg
-            else if (route.value && route.value != "") result = route.value
-            //com isso, o valor retornado por esse metodo pode ser uma regex
-        }
-        return result //if the route was not found, searches for path directly
-    }
-
-    private identifyRoutes(def f) { //f keywords: file, name, args
+    private extractMethodReturnUsingArgs(def pageMethod){ //keywords: file, name, args
         def result = []
-        if (f.file == RubyUtil.ROUTES_ID) { //search for route
-            log.info "searching route by routes configuration: ${f.name}"
-            result += extractValueFromRouteMethod(f.name)
-        } else { //it was used an auxiliary method; the view path must be extracted
-            def failed = false
-            if (!f.args.empty) {
-                //tries to extract a specific method return according to the argument; if it is not possible, failed is true
-                def valueExtracted = false
-                def pageVisitor = new RubyConditionalVisitor(f.name, f.args)
-                generateAst(f.file)?.accept(pageVisitor)
+        def pageVisitor = new RubyConditionalVisitor(pageMethod.name, pageMethod.args)
+        this.generateAst(pageMethod.file)?.accept(pageVisitor)
+        result += pageVisitor.pages
+        result += pageVisitor.auxiliaryMethods
+        result
+    }
 
-                if (pageVisitor.pages.empty && pageVisitor.auxiliaryMethods.empty) failed = true
-                else if (!pageVisitor.pages.empty) {
-                    log.info "Pages: ${pageVisitor.pages}"
-                    pageVisitor.pages.each { page ->
-                        result += extractValueFromRouteMethod(page)
-                        valueExtracted = true
-                    }
-                } else if (!pageVisitor.auxiliaryMethods.empty) {
-                    log.info "Auxiliary methods: ${pageVisitor.auxiliaryMethods}"
-                    pageVisitor.auxiliaryMethods.each {
-                        if (RubyUtil.isRouteMethod(it)) {
-                            result += extractValueFromRouteMethod(it - RubyUtil.ROUTE_SUFIX)
-                            valueExtracted = true
-                        }
-                    }
-                }
-                if (!valueExtracted) failed = true
+    private extractAllPossibleReturnFromMethod(def pageMethod){ //keywords: file, name, args
+        def pageVisitor = new RubyMethodReturnVisitor(pageMethod.name, pageMethod.args)
+        generateAst(pageMethod.file)?.accept(pageVisitor) //extracts path from method
+        pageVisitor.values
+    }
+
+    private extractDataFromAuxiliaryMethod(def pageMethod) { //keywords: file, name, args
+        def result = [] as Set
+        def specificFailed = false
+        def extractSpecificReturn = !(pageMethod.args.empty)
+        if (extractSpecificReturn) {
+            log.info "extracting a specific return..."
+            result += this.extractMethodReturnUsingArgs(pageMethod)
+            if(result?.empty) specificFailed = true
+        }
+        if (!extractSpecificReturn || specificFailed) { //tries to extract all possible return values
+            log.info "extracting all possible returns..."
+            result += this.extractAllPossibleReturnFromMethod(pageMethod)
+        }
+
+        [result: result, specificReturn:extractSpecificReturn, specificFailed:specificFailed]
+    }
+
+    private static routeIsFile(String name) {
+        name.contains(".") && !name.contains("*")
+    }
+
+    private static routeIsAction(String name) {
+        name.contains("#")
+    }
+
+    private registryMethodCallAndViewAccessFromRoute(TestCodeVisitor visitor, String path) {
+        def registryMethodCall = false
+        def foundView = false
+
+        if(routeIsFile(path)){
+            def views = viewFiles?.findAll { it.contains(path) }
+            if(views && !views.empty){
+                visitor?.taskInterface?.referencedPages += views
+                foundView = true
             }
-            if (f.args.empty || failed) { //tries to extract all possible return values
-                log.info "extracting all possible returns..."
-                def pageVisitor = new RubyPageVisitor(f.name, f.args)
-                generateAst(f.file)?.accept(pageVisitor) //extracts path from method
-                if (!pageVisitor.pages.empty) {
-                    pageVisitor.pages.each { page ->
-                        def route = this.routes?.find { page == it.name || page ==~ /${it.value}/ }
-                        if (route) {
-                            result += route.arg
-                        } else {
-                            result += page //if the route was not found, searches for path directly
+            //how to find controller and action by view?
+        }
+        else if(routeIsAction(path)){
+            def data = this.registryControllerAndActionUsage(visitor, path)
+            registryMethodCall = data.registry
+            if(registryMethodCall) {
+                def viewData = this.registryViewRelatedToAction(visitor, data.controller, data.action)
+                foundView = viewData.found
+            }
+        } else {
+            log.info "PATH: $path"
+
+            def candidates = this.routes.findAll{path == it.value || path ==~ /${it.value}/}
+            if(candidates.empty){
+                def viewData = this.registryViewRelatedToPath(visitor, path)
+                foundView = viewData.found
+            }
+            else{
+                candidates.each{ candidate ->
+                    log.info "CANDIDATE: $candidate"
+                    if(candidate.arg && !candidate.arg.empty) {
+                        def data = this.registryControllerAndActionUsage(visitor, candidate.arg)
+                        registryMethodCall = data.registry
+                        if(registryMethodCall) {
+                            def viewData = registryViewRelatedToAction(visitor, data.controller, data.action)
+                            foundView = viewData.found
                         }
+
                     }
                 }
             }
         }
 
-        def finalResult = []
-        result.each { r ->
-            if (r ==~ RegexUtil.FILE_SEPARATOR_REGEX) {
-                def newRoute = extractValueFromRouteMethod("root")
-                if (newRoute && newRoute != "root") r = newRoute
-            } else if (r.startsWith(File.separator)) { //dealing with redirects (to validate)
-                def newRoute = extractValueFromRouteMethod(r.substring(1))
-                if (newRoute && newRoute != r.substring(1)) r = newRoute
-            }
-            finalResult += r
-        }
-
-        finalResult
+        [path:path, call:registryMethodCall, view:foundView]
     }
 
-    private identifyActionFromRoute(TestCodeVisitor visitor, String controller, String action) {
-        def className = RubyUtil.underscoreToCamelCase(controller + "_controller")
-        def path = RubyUtil.getClassPathForRubyClass(className, this.projectFiles)
-        if (path) visitor?.taskInterface?.methods += [name: action, type: className, file: path]
-    }
-
-    private static extractActionFromRoute(String route) {
+    private static extractControllerAndActionFromPath(String route) {
         def result = null
         def name = route.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         if (name.contains("#")) {
@@ -178,49 +184,158 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         result
     }
 
-    private matchRouteAndView(TestCodeVisitor visitor, Set calledViews) {
-        log.info "All pages to identify: $calledViews"
-        def actionOnly = []
-        def founded = []
-        calledViews?.each { page ->
-            def result = extractActionFromRoute(page)
-            if (result) identifyActionFromRoute(visitor, result.controller, result.action)
-            def foundPages = RubyUtil.findViewPathForRailsProjects(page, this.viewFiles)
-            if (foundPages && !foundPages.empty) {
-                visitor?.taskInterface?.referencedPages += foundPages
-                founded += page
-            }
-            if (result && (!foundPages || foundPages.empty)) actionOnly += page
-
-
+    private registryUsedPaths(TestCodeVisitor visitor, Set<String> usedPaths) {
+        log.info "All used paths: $usedPaths"
+        if(!usedPaths || usedPaths.empty) return
+        def result = []
+        usedPaths?.each { path ->
+            result += this.registryMethodCallAndViewAccessFromRoute(visitor, path)
         }
-        log.info "Pages with no views (controller#action case): $actionOnly"
+        def methodCall = result.findAll{ it.call }*.path
+        def view = result.findAll{ it.view }*.path
+        def problematic = result.findAll{ !it.call && !it.view }*.path
+
+        log.info "Paths with method call: $methodCall"
+        log.info "Paths with view: $view"
         log.info "All founded views: ${visitor?.taskInterface?.referencedPages}"
-        def problematicViews = calledViews - founded - actionOnly
-        log.info "Not identified pages (excluding controller#action case): $problematicViews"
-        notFoundViews += problematicViews
+        log.info "Paths with no data: $problematic"
+        this.notFoundViews += problematic
+    }
+
+    private registryControllerAndActionUsage(TestCodeVisitor visitor, String value){
+        def controller = null
+        def action = null
+        def registryMethodCall = false
+        def data = extractControllerAndActionFromPath(value)
+        if (data) {
+            registryMethodCall = true
+            def className = RubyUtil.underscoreToCamelCase(data.controller + "_controller")
+            def filePath = RubyUtil.getClassPathForRubyClass(className, this.projectFiles)
+            visitor?.taskInterface?.methods += [name: data.action, type: className, file: filePath]
+            controller = data.controller
+            action = data.action
+        }
+        [controller:controller, action:action, registry:registryMethodCall]
+    }
+
+    private registryViewRelatedToAction(TestCodeVisitor visitor, String controller, String action){
+        def foundView = false
+        def views = RubyUtil.searchViewFor(controller, action, this.viewFiles)
+        if(views && !views.empty) {
+            visitor?.taskInterface?.referencedPages += views
+            foundView = true
+        }
+        [views: views, found:foundView]
+    }
+
+    private registryViewRelatedToPath(TestCodeVisitor visitor, String path){
+        def foundView = false
+        def views = []
+        def matches = viewFiles?.findAll { it ==~ /.*$path.*/ }
+        if (matches && matches.size() > 0) {
+            if (matches.size() == (1 as int)) views = matches
+            else {
+                def match = matches.find { it.contains("index") }
+                if (match) views += match
+                else views = matches
+            }
+        }
+        if(views && !views.empty) {
+            visitor?.taskInterface?.referencedPages += views
+            foundView = true
+        }
+        [views: views, found:foundView]
+    }
+
+    private registryUsedRailsPaths(TestCodeVisitor visitor, Set<String> railsPathMethods){
+        log.info "All used rails path methods: $railsPathMethods"
+        if(!railsPathMethods || railsPathMethods.empty) return
+        def methodCall = []
+        def view = []
+        def foundViews = []
+
+        railsPathMethods?.each{ method -> //it was used some *_path method generated by Rails
+            def registryMethodCall = false
+            def foundView = false
+            def views = []
+            def route = this.routes?.find { it.name ==~ /${method}e?/ }
+            if (route){
+                if (route.arg && route.arg != "") { //there is controller#action related to path method
+                    def data = this.registryControllerAndActionUsage(visitor, route.arg)
+                    registryMethodCall = data.registry
+                    if(registryMethodCall) {
+                        methodCall += method
+
+                        //tries to find view file
+                        def viewData = registryViewRelatedToAction(visitor, data.controller, data.action)
+                        foundView = viewData.found
+                        if(foundView){
+                            view += method
+                            views = viewData.views
+                        }
+                    }
+                }
+                else if (route.value && route.value != "" && !foundView) { //tries to extract data from path
+                    def viewData = registryViewRelatedToPath(visitor, route.value)
+                    foundView = viewData.found
+                    if(foundView){
+                        view += method
+                        views = viewData.views
+                    }
+                }
+            }
+            foundViews += views
+            log.info "Found route related to rails path method '${method}': ${registryMethodCall || foundView}"
+        }
+
+        def problematic = railsPathMethods - ((methodCall + view)?.unique())
+        this.notFoundViews += problematic
+
+        log.info "Path methods with method call: $methodCall"
+        log.info "Path methods with view: $view"
+        log.info "All founded views from path methods: ${foundViews}"
+        log.info "Path methods with no data: $problematic"
     }
 
     @Override
     void findAllPages(TestCodeVisitor visitor) {
         /* generates all routes according to config/routes.rb file */
-        this.generateProjectRoutes()
-        log.info "All routes:"
-        this.routes.each { log.info it.toString() }
-
-        def routes = [] as Set
-        def filesToVisit = visitor?.taskInterface?.calledPageMethods
-
-        //it could be null if the test code references a class or file that does not exist
-        filesToVisit = filesToVisit.findAll { it != null }
-
-        filesToVisit?.each { f ->
-            log.info "FIND_ALL_PAGES; visiting file '${f.file}' and method '${f.name} (${f.args})'"
-            routes += identifyRoutes(f)
+        if(this.routes.empty) {
+            this.generateProjectRoutes()
+            log.info "All project routes:"
+            this.routes.each { log.info it.toString() }
         }
 
-        routes = routes.unique()
-        matchRouteAndView(visitor, routes)
+        /* identifies used routes */
+        def calledPaths = visitor?.taskInterface?.calledPageMethods
+        calledPaths.removeAll([null])  //it is null if test code references a class or file that does not exist
+        def usedPaths = [] as Set
+
+        def auxiliaryMethods =  calledPaths.findAll{ it.file != RubyUtil.ROUTES_ID }
+        def railsPathMethods = (calledPaths - auxiliaryMethods)?.findAll{ !it.name.contains("/") }
+        def explicityPaths = calledPaths - (auxiliaryMethods + railsPathMethods)
+        usedPaths += explicityPaths*.name
+
+        /* identifies used routes (by auxiliary methods) */
+        def usedRoutesByAuxMethods = [] as Set
+        auxiliaryMethods?.each{ auxMethod -> //it was used an auxiliary method; the view path must be extracted
+            log.info "FIND_ALL_PAGES; visiting file '${auxMethod.file}' and method '${auxMethod.name} (${auxMethod.args})'"
+            def data = this.extractDataFromAuxiliaryMethod(auxMethod)
+            usedRoutesByAuxMethods += data.result
+            def allReturn = false
+            if(!data.specificReturn || (data.specificReturn && data.specificFailed) ) allReturn = true
+            log.info "Found route related to auxiliary path method '${auxMethod.name}': ${!data.result.empty} (all return: $allReturn)"
+        }
+
+        /* dealing with rails *_path methods */
+        def pathMethodsReturnedByAuxMethods = usedRoutesByAuxMethods.findAll{ it.contains(RubyUtil.ROUTE_SUFIX) }
+        usedPaths += usedRoutesByAuxMethods - pathMethodsReturnedByAuxMethods
+        railsPathMethods = railsPathMethods*.name
+        railsPathMethods += pathMethodsReturnedByAuxMethods?.collect{ it - RubyUtil.ROUTE_SUFIX }
+
+        /* extract data from used routes */
+        this.registryUsedPaths(visitor, usedPaths)
+        this.registryUsedRailsPaths(visitor, railsPathMethods as Set)
     }
 
     /***

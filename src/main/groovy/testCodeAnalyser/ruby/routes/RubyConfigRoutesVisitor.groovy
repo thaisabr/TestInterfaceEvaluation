@@ -166,7 +166,7 @@ class RubyConfigRoutesVisitor {
         node.accept(argsVisitor)
         def args = argsVisitor.organizedValues
         return [nestedResourcesList: nestedResourcesList, nestedResourceList: nestedResourceList, args: args,
-                collectionRoutes   : collectionData*.route, memberRoutes: memberData*.route]
+                collectionRoutes   : collectionData*.route as Set, memberRoutes: memberData*.route as Set]
     }
 
     private static extractArgValues(List args) {
@@ -199,8 +199,34 @@ class RubyConfigRoutesVisitor {
     /***
      * @param args [as="", member=[line, position, value], collection=[], only=[], except=[], controller:""]
      */
-    private static resourceArgsIsEmpty(def args) {
-        args.as.empty && args.controller.empty && args.member.empty && args.collection.empty && args.only.empty && args.except.empty
+    private static resourceArgsIsEmpty(Map args) {
+        def result = true
+        def e = args.values().find{ it != null && !it.empty }
+        if(e) result = false
+        result
+    }
+
+    private static configurePath(def args, Set<Route> routes, String original){
+        if(args.path && !args.path.value.empty){
+            routes = routes.collect{ route ->
+                route.value = route.value.replace("/$original", "/${args.path.value}")
+                route
+            }
+        }
+    }
+
+    private static configureAlias(String alias, String singular, Set<Route> memberRoutes, Set<Route> collectionRoutes){
+        if (alias != singular) {
+            memberRoutes = memberRoutes?.collect{ route ->
+                route.name = route.name.replace(singular, alias)
+                route
+            }
+
+            collectionRoutes = collectionRoutes?.collect{ route ->
+                route.name = route.name.replace(singular, alias)
+                route
+            }
+        }
     }
 
     private generateResourcesRoutes(Node node, String namespaceValue, String indexName, String original, String plural,
@@ -209,23 +235,15 @@ class RubyConfigRoutesVisitor {
         String aliasSingular = singular
         def args = resourcesData.args
         if (resourceArgsIsEmpty(args)) {
-            configureResourcesDefaultRoute(namespaceValue, indexName, original, controllerName, aliasSingular)
-            routingMethods += resourcesData.memberRoutes
-            routingMethods += resourcesData.collectionRoutes
+            configureResourcesDefaultRoute(namespaceValue, indexName, original, controllerName, aliasSingular, "")
         } else {
             def alias = generateBasicResourcesRoutes(args, namespaceValue, indexName, original, singular, controllerName)
-            if (alias != singular) {
-                resourcesData.memberRoutes?.each { route ->
-                    routingMethods += route.name.replace(singular, alias)
-                }
-                resourcesData.collectionRoutes?.each { route ->
-                    routingMethods += route.name.replace(singular, alias)
-                }
-            } else {
-                routingMethods += resourcesData.memberRoutes
-                routingMethods += resourcesData.collectionRoutes
-            }
+            configureAlias(alias, singular, resourcesData.memberRoutes, resourcesData.collectionRoutes)
+            configurePath(args, resourcesData.memberRoutes, original)
+            configurePath(args, resourcesData.collectionRoutes, original)
         }
+        routingMethods += resourcesData.memberRoutes
+        routingMethods += resourcesData.collectionRoutes
 
         def parentNameSingular = singular
         def parentNamePlural = plural
@@ -247,7 +265,11 @@ class RubyConfigRoutesVisitor {
     private generateBasicResourcesRoutes(def args, String prefix, String indexName, String original, String singular,
                                          String controllerName) {
         String aliasSingular = singular
+        String path = ""
 
+        if(!args.path.empty){
+            path = args.path.value
+        }
         if (!args.as.empty) {
             def plural = args.as.value
             aliasSingular = inflector.singularize(plural)
@@ -257,13 +279,13 @@ class RubyConfigRoutesVisitor {
         if (!args.member.empty) {
             def values = extractArgValues(args.member)*.value
             values.each { value ->
-                generateResourcesMemberRoute(value, prefix, aliasSingular, controllerName)
+                generateResourcesMemberRoute(value, prefix, original, aliasSingular, controllerName, path)
             }
         }
         if (!args.collection.empty) {
             def values = extractArgValues(args.collection)*.value
             values.each { value ->
-                generateResourcesCollectionRoute(value, prefix, original, indexName, controllerName)
+                generateResourcesCollectionRoute(value, prefix, original, indexName, controllerName, path)
             }
         }
         if (!args.only.empty) {
@@ -277,10 +299,10 @@ class RubyConfigRoutesVisitor {
             generateResourcesExceptRoutes(values, prefix, original, controllerName, indexName, aliasSingular)
         }
         if (args.except.empty && args.only.empty) {
-            configureResourcesDefaultRoute(prefix, indexName, original, controllerName, aliasSingular)
+            configureResourcesDefaultRoute(prefix, indexName, original, controllerName, aliasSingular, path)
         }
 
-        return aliasSingular
+        aliasSingular
     }
 
     private generateResourcesExceptRoutes(def except, String prefix, String original, String controllerName,
@@ -311,18 +333,18 @@ class RubyConfigRoutesVisitor {
                 case "edit":
                     if (prefix) {
                         routingMethods += new Route(name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                           value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit")
+                                           value: "/${prefix}/$original(/.*)?/edit", arg: "${prefix}/$controllerName#edit")
                     } else {
-                        routingMethods += new Route(name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)/edit",
+                        routingMethods += new Route(name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)?/edit",
                                            arg : "$controllerName#edit")
                     }
                     break
                 case "show":
                     if (prefix) {
                         routingMethods += new Route(name : "${formatedPrefix}_${alias}", file: RubyUtil.ROUTES_ID,
-                                           value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show")
+                                           value: "/${prefix}/$original/.*", arg: "${prefix}/$controllerName#show")
                     } else {
-                        routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
+                        routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/.*",
                                            arg : "$controllerName#show")
                     }
                     break
@@ -355,18 +377,18 @@ class RubyConfigRoutesVisitor {
             case "edit":
                 if (prefix) {
                     routingMethods += new Route(name : "edit_${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit")
+                                       value: "/${prefix}/$original(/.*)?/edit", arg: "${prefix}/$controllerName#edit")
                 } else {
-                    routingMethods += new Route(name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)/edit",
+                    routingMethods += new Route(name: "edit_$alias", file: RubyUtil.ROUTES_ID, value: "/$original(/.*)?/edit",
                                        arg : "$controllerName#edit")
                 }
                 break
             case "show":
                 if (prefix) {
                     routingMethods += new Route(name : "${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show")
+                                       value: "/${prefix}/$original/.*", arg: "${prefix}/$controllerName#show")
                 } else {
-                    routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
+                    routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/.*",
                                        arg : "$controllerName#show")
                 }
                 break
@@ -374,7 +396,10 @@ class RubyConfigRoutesVisitor {
     }
 
     private generateResourceOnlyRoutes(def value, String prefix, String original, String controllerName,
-                                       String indexName, String alias) {
+                                       String indexName, String alias, String path) {
+        if(path && !path.empty) {
+            original = path
+        }
         def formatedPrefix = prefix?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
         switch (value) {
             case "index":
@@ -407,28 +432,31 @@ class RubyConfigRoutesVisitor {
             case "show":
                 if (prefix) {
                     routingMethods += new Route(name : "${formatedPrefix}_$alias", file: RubyUtil.ROUTES_ID,
-                                       value: "/${prefix}/$original", arg: "${prefix}/$controllerName#show")
+                                       value: "/${prefix}/$original/.*", arg: "${prefix}/$controllerName#show")
                 } else {
-                    routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original",
+                    routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/.*",
                                        arg : "$controllerName#show")
                 }
                 break
         }
     }
 
-    private generateResourcesMemberRoute(def actionName, String prefix, String aliasSingular, String controllerName) {
+    private generateResourcesMemberRoute(def actionName, String prefix, String original, String aliasSingular,
+                                         String controllerName, String path) {
         def nameSufix
         def pathValuePrefix
         def argsPrefix
-        def original = inflector.pluralize(aliasSingular)
+        if(path && !path.empty) {
+            original = path
+        }
         if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             nameSufix = "_${formatedPrefix}_$aliasSingular"
-            pathValuePrefix = "/${prefix}/$original(/.*)/"
+            pathValuePrefix = "/${prefix}/$original(/.*)?/"
             argsPrefix = "${prefix}/$controllerName#"
         } else {
             nameSufix = "_$aliasSingular"
-            pathValuePrefix = "/$original(/.*)/"
+            pathValuePrefix = "/$original(/.*)?/"
             argsPrefix = "$controllerName#"
         }
         routingMethods += new Route(name: "$actionName$nameSufix", file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName",
@@ -436,10 +464,13 @@ class RubyConfigRoutesVisitor {
     }
 
     private generateResourcesCollectionRoute(def actionName, String prefix, String original, String indexName,
-                                             String controllerName) {
+                                             String controllerName, String path) {
         def nameSufix
         def pathValuePrefix
         def argsPrefix
+        if(path && !path.empty) {
+            original = path
+        }
         if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             nameSufix = "_${formatedPrefix}_$indexName"
@@ -455,7 +486,9 @@ class RubyConfigRoutesVisitor {
     }
 
     private configureResourcesDefaultRoute(String prefix, String indexName, String original, String controllerName,
-                                           String aliasSingular) {
+                                           String aliasSingular, String path) {
+        if(!path.empty) original = path
+
         if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             routingMethods += new Route(name : "${formatedPrefix}_$indexName", file: RubyUtil.ROUTES_ID,
@@ -463,23 +496,26 @@ class RubyConfigRoutesVisitor {
             routingMethods += new Route(name : "new_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
                                value: "/${prefix}/$original/new", arg: "${prefix}/$controllerName#new")
             routingMethods += new Route(name : "edit_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
-                               value: "/${prefix}/$original(/.*)/edit", arg: "${prefix}/$controllerName#edit")
+                               value: "/${prefix}/$original(/.*)?/edit", arg: "${prefix}/$controllerName#edit")
             routingMethods += new Route(name : "${formatedPrefix}_${aliasSingular}", file: RubyUtil.ROUTES_ID,
-                               value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show")
+                               value: "/${prefix}/$original/.*", arg: "${prefix}/$controllerName#show")
         } else {
             routingMethods += new Route(name: indexName, file: RubyUtil.ROUTES_ID, value: "/$original",
                     arg: "$controllerName#index")
             routingMethods += new Route(name: "new_$aliasSingular", file: RubyUtil.ROUTES_ID,
                     value: "/$original/new", arg: "$controllerName#new")
             routingMethods += new Route(name: "edit_$aliasSingular", file: RubyUtil.ROUTES_ID,
-                    value: "/$original(/.*)/edit", arg: "$controllerName#edit")
-            routingMethods += new Route(name: aliasSingular, file: RubyUtil.ROUTES_ID, value: "/$original/",
+                    value: "/$original(/.*)?/edit", arg: "$controllerName#edit")
+            routingMethods += new Route(name: aliasSingular, file: RubyUtil.ROUTES_ID, value: "/$original/.*",
                     arg: "$controllerName#show")
         }
     }
 
     private generateResourceExceptRoutes(
-            def except, String prefix, String original, String controllerName, String alias) {
+            def except, String prefix, String original, String controllerName, String alias, String path) {
+        if(path && !path.empty) {
+            original = path
+        }
         def all = ["edit", "new", "show"]
         def routesToGenerate = all - except
         def formatedPrefix = prefix?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
@@ -506,9 +542,9 @@ class RubyConfigRoutesVisitor {
                 case "show":
                     if (prefix) {
                         routingMethods += new Route(name : "${formatedPrefix}_${alias}", file: RubyUtil.ROUTES_ID,
-                                           value: "/${prefix}/$original/", arg: "${prefix}/$controllerName#show")
+                                           value: "/${prefix}/$original/.*", arg: "${prefix}/$controllerName#show")
                     } else {
-                        routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/",
+                        routingMethods += new Route(name: alias, file: RubyUtil.ROUTES_ID, value: "/$original/.*",
                                            arg : "$controllerName#show")
                     }
                     break
@@ -518,43 +554,50 @@ class RubyConfigRoutesVisitor {
 
     private generateBasicResourceRoutes(def args, String prefix, String indexName, String original, String singular,
                                         String controllerName) {
-        String aliasSingular = singular
+        String aliasSingular = indexName
+        String path = ""
+
+        if(!args.path.empty){
+            path = args.path.value
+        }
 
         if (!args.as.empty) {
-            def plural = args.as.value
-            aliasSingular = inflector.singularize(plural)
             indexName = args.as.value
         }
         if (!args.controller.empty) controllerName = args.controller.value
         if (!args.member.empty) {
             def values = extractArgValues(args.member)*.value
             values.each { value ->
-                generateResourcesMemberRoute(value, prefix, aliasSingular, controllerName)
+                generateResourcesMemberRoute(value, prefix, original, aliasSingular, controllerName, path)
             }
         }
         if (!args.collection.empty) {
             def values = extractArgValues(args.collection)*.value
             values.each { value ->
-                generateResourcesCollectionRoute(value, prefix, original, indexName, controllerName)
+                generateResourcesCollectionRoute(value, prefix, original, indexName, controllerName, path)
             }
         }
         if (!args.only.empty) {
             def values = args.only*.value
             values.each { value ->
-                generateResourceOnlyRoutes(value, prefix, original, controllerName, indexName, aliasSingular)
+                generateResourceOnlyRoutes(value, prefix, original, controllerName, indexName, aliasSingular, path)
             }
         }
         if (!args.except.empty) {
             def values = args.except*.value
-            generateResourceExceptRoutes(values, prefix, original, controllerName, aliasSingular)
+            generateResourceExceptRoutes(values, prefix, original, controllerName, aliasSingular, path)
         }
         if (args.except.empty && args.only.empty) {
-            configureResourceDefaultRoute(prefix, original, controllerName, aliasSingular)
+            configureResourceDefaultRoute(prefix, original, controllerName, indexName, path)
         }
         return aliasSingular
     }
 
-    private configureResourceDefaultRoute(String prefix, String original, String controllerName, String aliasSingular) {
+    private configureResourceDefaultRoute(String prefix, String original, String controllerName, String aliasSingular,
+                                          String path) {
+        if(path && !path.empty) {
+            original = path
+        }
         if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             routingMethods += new Route(name : "new_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
@@ -562,13 +605,13 @@ class RubyConfigRoutesVisitor {
             routingMethods += new Route(name : "edit_${formatedPrefix}_$aliasSingular", file: RubyUtil.ROUTES_ID,
                                value: "/${prefix}/$original/edit", arg: "${prefix}/$controllerName#edit")
             routingMethods += new Route(name : "${formatedPrefix}_${aliasSingular}", file: RubyUtil.ROUTES_ID,
-                               value: "/${prefix}/$original", arg: "${prefix}/$controllerName#show")
+                               value: "/${prefix}/$original/.*", arg: "${prefix}/$controllerName#show")
         } else {
             routingMethods += new Route(name: "new_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original/new",
                     arg: "$controllerName#new")
             routingMethods += new Route(name: "edit_$aliasSingular", file: RubyUtil.ROUTES_ID, value: "/$original/edit",
                     arg: "$controllerName#edit")
-            routingMethods += new Route(name: aliasSingular, file: RubyUtil.ROUTES_ID, value: "/$original",
+            routingMethods += new Route(name: aliasSingular, file: RubyUtil.ROUTES_ID, value: "/$original/.*",
                     arg: "$controllerName#show")
         }
 
@@ -577,26 +620,17 @@ class RubyConfigRoutesVisitor {
     private generateResourceRoutes(Node node, String namespaceValue, String indexName, String original, String plural,
                                    String singular, String controllerName) {
         def resourcesData = extractResourcesData(node, namespaceValue, original, singular, controllerName, indexName)
-        String aliasSingular = singular
         def args = resourcesData.args
         if (resourceArgsIsEmpty(args)) {
-            configureResourceDefaultRoute(namespaceValue, original, controllerName, aliasSingular)
-            routingMethods += resourcesData.memberRoutes
-            routingMethods += resourcesData.collectionRoutes
+            configureResourceDefaultRoute(namespaceValue, original, controllerName, indexName, "")
         } else {
             def alias = generateBasicResourceRoutes(args, namespaceValue, indexName, original, singular, controllerName)
-            if (alias != singular) {
-                resourcesData.memberRoutes?.each { route ->
-                    routingMethods += route.name.replace(singular, alias)
-                }
-                resourcesData.collectionRoutes?.each { route ->
-                    routingMethods += route.name.replace(singular, alias)
-                }
-            } else {
-                routingMethods += resourcesData.memberRoutes
-                routingMethods += resourcesData.collectionRoutes
-            }
+            configureAlias(alias, singular, resourcesData.memberRoutes, resourcesData.collectionRoutes)
+            configurePath(args, resourcesData.memberRoutes, original)
+            configurePath(args, resourcesData.collectionRoutes, original)
         }
+        routingMethods += resourcesData.memberRoutes
+        routingMethods += resourcesData.collectionRoutes
 
         def parentNameSingular = singular
         def parentNamePlural = plural
@@ -653,7 +687,7 @@ class RubyConfigRoutesVisitor {
             //Confirmable
             routingMethods += new Route(name : "new_${singular}_confirmation", file: RubyUtil.ROUTES_ID,
                                value: "/$plural/confirmation/new", arg: "devise/confirmations#new")
-            routingMethods += new Route(name: "${singular}_confirmation", file: RubyUtil.ROUTES_ID, value: "/$plural/confirmation",
+            routingMethods += new Route(name: "${singular}_confirmation", file: RubyUtil.ROUTES_ID, value: "/$plural/confirmation/.*",
                                arg : "devise/confirmations#show")
             //Registerable
             routingMethods += new Route(name : "new_${singular}_registration", file: RubyUtil.ROUTES_ID,
@@ -695,7 +729,7 @@ class RubyConfigRoutesVisitor {
                 indexName = "${parentNameSingular.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$original"
                 singular = "${parentNameSingular.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$singular"
                 plural = "${parentNamePlural.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$plural"
-                original = "${originalParentName}(/.*)/$original"
+                original = "${originalParentName}(/.*)?/$original"
             }
 
             generateResourcesRoutes(iVisited, namespaceValue, indexName, original, plural, singular, controllerName)
@@ -718,7 +752,7 @@ class RubyConfigRoutesVisitor {
                 indexName = "${parentNameSingular.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$original"
                 singular = "${parentNameSingular.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$singular"
                 plural = "${parentNamePlural.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}_$plural"
-                original = "${originalParentName}(/.*)/$original"
+                original = "${originalParentName}(/.*)?/$original"
             }
 
             generateResourceRoutes(iVisited, namespaceValue, indexName, original, plural, singular, controllerName)

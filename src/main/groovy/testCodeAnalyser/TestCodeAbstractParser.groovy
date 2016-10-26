@@ -1,6 +1,7 @@
 package testCodeAnalyser
 
 import gherkin.ast.Scenario
+import gherkin.ast.ScenarioDefinition
 import gherkin.ast.ScenarioOutline
 import gherkin.ast.Step
 import groovy.util.logging.Slf4j
@@ -85,7 +86,7 @@ abstract class TestCodeAbstractParser {
 
             /* finds step code of changed scenario definitions from a Gherkin file */
             gherkinFile?.changedScenarioDefinitions?.each { definition ->
-                def test = configureAcceptanceTest(definition, gherkinFile.path)
+                def test = configureAcceptanceTest(definition, gherkinFile.path) //groovy dynamic method dispatch
                 if (test) {
                     if (!backgroundCode.empty) {
                         test.stepCodes = (test.stepCodes + backgroundCode).unique()
@@ -344,7 +345,7 @@ abstract class TestCodeAbstractParser {
         if (stepCodeMatch && stepCodeMatch.size() > 0) { //step code was found
             def args = []
             if (extractArgs) args = extractArgsFromStepText(step.text, stepCodeMatch.get(0).value)
-            if (stepCodeMatch.size() == 1) {
+            if (stepCodeMatch.size() == 1 as int) {
                 stepCodeMatch = stepCodeMatch.get(0)
                 code += new StepCode(step: step, codePath: stepCodeMatch.path, line: stepCodeMatch.line, args: args)
             } else {
@@ -374,7 +375,7 @@ abstract class TestCodeAbstractParser {
         def result = []
         def stepCodeMatch = regexList?.findAll { step.regex == it.value }
         if (stepCodeMatch && stepCodeMatch.size() > 0) { //step code was found
-            if (stepCodeMatch.size() == 1) {
+            if (stepCodeMatch.size() == 1 as int) {
                 stepCodeMatch = stepCodeMatch.get(0)
                 result += [path: stepCodeMatch.path, line: stepCodeMatch.line]
             } else {
@@ -474,9 +475,13 @@ abstract class TestCodeAbstractParser {
             calledSteps += testCodeVisitor.calledSteps
 
             /* searches for view files */
-            log.info "calledPageMethods:"
-            testCodeVisitor?.taskInterface?.calledPageMethods?.each { log.info it.toString() }
-            if(!testCodeVisitor?.taskInterface?.calledPageMethods?.empty) findAllPages(testCodeVisitor)
+            if(!testCodeVisitor?.taskInterface?.calledPageMethods?.empty) {
+                log.info "calledPageMethods:"
+                testCodeVisitor?.taskInterface?.calledPageMethods?.each { log.info it.toString() }
+                findAllPages(testCodeVisitor)
+            } else {
+                log.info "calledPageMethods: []"
+            }
 
             /* updates task interface */
             interfaces += testCodeVisitor.taskInterface

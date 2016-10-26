@@ -6,25 +6,25 @@ import org.jrubyparser.util.NoopVisitor
 import util.ruby.RubyUtil
 
 @Slf4j
-class RubyPageVisitor extends NoopVisitor {
+class RubyMethodReturnVisitor extends NoopVisitor {
 
-    Set<String> pages
+    Set<String> values
     String methodName
     List<String> args
     def returnNodes //keys: line, value
 
-    public RubyPageVisitor(String name, List<String> args) {
-        this.pages = [] as Set
+    public RubyMethodReturnVisitor(String name, List<String> args) {
+        this.values = [] as Set
         this.methodName = name
         this.args = args
         this.returnNodes = []
     }
 
     private extractViewPathFromNode(MethodDefNode iVisited) {
-        if (iVisited.name == methodName) {
+        if (iVisited.name == this.methodName) {
             def lines = iVisited.position.startLine..iVisited.position.endLine
-            def nodes = returnNodes?.findAll { it.line in lines }
-            pages = nodes*.value
+            def nodes = this.returnNodes?.findAll { it.line in lines }
+            this.values = nodes*.value
         }
     }
 
@@ -37,7 +37,7 @@ class RubyPageVisitor extends NoopVisitor {
         switch (iVisited.value.class) {
             case StrNode: //Representing a simple String literal
                 def node = (StrNode) iVisited.value
-                returnNodes += [line: iVisited.position.startLine, value: node.value]
+                this.returnNodes += [line: iVisited.position.startLine, value: node.value]
                 break
             case DStrNode: //A string which contains some dynamic elements which needs to be evaluated (introduced by #)
                 def name = ""
@@ -45,7 +45,7 @@ class RubyPageVisitor extends NoopVisitor {
                 def index = name.indexOf("?")
                 if (index > 0) name = name.substring(0, index)//ignoring params
                 if (!name.contains("//")) {
-                    returnNodes += [line: iVisited.position.startLine, value: name]
+                    this.returnNodes += [line: iVisited.position.startLine, value: name]
                 }
                 break
             case FCallNode: //Method call with self as an implicit receiver
@@ -53,8 +53,7 @@ class RubyPageVisitor extends NoopVisitor {
             case CallNode: //Method call
                 def value = iVisited.value.name
                 if (value.contains(RubyUtil.ROUTE_SUFIX)) { //it is a path helper method
-                    value -= RubyUtil.ROUTE_SUFIX
-                    returnNodes += [line: iVisited.position.startLine, value: value]
+                    this.returnNodes += [line: iVisited.position.startLine, value: value]
                 }
                 break
         }
@@ -68,14 +67,14 @@ class RubyPageVisitor extends NoopVisitor {
     @Override
     Object visitDefnNode(DefnNode iVisited) {
         super.visitDefnNode(iVisited)
-        extractViewPathFromNode(iVisited)
+        this.extractViewPathFromNode(iVisited)
         return iVisited
     }
 
     @Override
     Object visitDefsNode(DefsNode iVisited) {
         super.visitDefsNode(iVisited)
-        extractViewPathFromNode(iVisited)
+        this.extractViewPathFromNode(iVisited)
         return iVisited
     }
 

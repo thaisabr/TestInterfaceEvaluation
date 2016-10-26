@@ -1,6 +1,7 @@
 package testCodeAnalyser.ruby
 
 import org.jrubyparser.ast.*
+import org.jrubyparser.ast.Node
 import org.jrubyparser.util.NoopVisitor
 
 import java.nio.charset.StandardCharsets
@@ -22,7 +23,7 @@ class RubyConditionalVisitor extends NoopVisitor {
 
     }
 
-    private static extractIfResult(org.jrubyparser.ast.Node node) {
+    private static extractIfResult(Node node) {
         null //we cannot deal with a result that is neither a string or method call
     }
 
@@ -45,6 +46,7 @@ class RubyConditionalVisitor extends NoopVisitor {
     private static extractIfResult(DStrNode node) {
         def name = ""
         node.childNodes().each { c -> if (c instanceof StrNode) name += c.value.trim() }
+        name = name.replaceAll("//", "(/.*)?/")
         [name: name, isMethod: false]
     }
 
@@ -68,7 +70,7 @@ class RubyConditionalVisitor extends NoopVisitor {
         [exp: node.value]
     }
 
-    private static boolean isOfInterest(org.jrubyparser.ast.Node node) {
+    private static boolean isOfInterest(Node node) {
         return node instanceof StrNode || node instanceof DStrNode || node instanceof VCallNode ||
                 node instanceof CallNode || node instanceof FCallNode
     }

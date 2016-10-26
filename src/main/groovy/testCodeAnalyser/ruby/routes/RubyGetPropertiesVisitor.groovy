@@ -51,11 +51,11 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         if (prefix) {
             def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             nameSufix = "_${formatedPrefix}_$aliasSingular"
-            pathValuePrefix = "/${prefix}/$original(/.*)/"
+            pathValuePrefix = "/${prefix}/$original(/.*)?/"
             argsPrefix = "${prefix}/$controllerName#"
         } else {
             nameSufix = "_$aliasSingular"
-            pathValuePrefix = "/$original(/.*)/"
+            pathValuePrefix = "/$original(/.*)?/"
             argsPrefix = "$controllerName#"
         }
 

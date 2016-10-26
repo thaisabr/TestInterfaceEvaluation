@@ -23,12 +23,12 @@ class RubyRootPropertiesVisitor extends NoopVisitor {
         String controllerActionString = null
         def result //name, value, method
 
-        if (values.size() == 0) return null
-        if (values.size() == 1) {
+        if (values.size() == (0 as int)) return null
+        if (values.size() == (1 as int)) {
             controllerActionString = values.get(0).value
         } else {
-            //relevant nodes: to, as, controller, action, via, defaults, constraints
-            //TO REMEMBER: via, defaults e contraints sao conjuntos de valores sem relevancia nesse ponto e por isso nao sao extraidos
+            //relevant nodes: to, as, controller, action
+            //Others, like: via, defaults and contraints are not relevant at this point. For this reason, we ignore them.
             def indexTo = values.findIndexOf { it.value == "to" }
             def indexAs = values.findIndexOf { it.value == "as" }
             def indexController = values.findIndexOf { it.value == "controller" }

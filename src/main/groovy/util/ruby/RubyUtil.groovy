@@ -16,6 +16,7 @@ class RubyUtil extends Util {
     public static final String INFLECTOR_FILE = "inflector.rb"
     public static
     final EXCLUDED_PATH_METHODS = ["current_path", "recognize_path", "assert_routing", "assert_recognizes", " assert_response"]
+    public static final REQUEST_TYPES = ["get", "post", "put", "patch", "delete"]
 
     static List<String> searchViewFor(String controller, String action, List viewFiles) {
         def result = []

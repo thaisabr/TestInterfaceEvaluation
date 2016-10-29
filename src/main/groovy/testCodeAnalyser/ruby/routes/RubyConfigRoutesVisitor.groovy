@@ -36,7 +36,7 @@ class RubyConfigRoutesVisitor {
         iVisited?.childNodes()?.each {
             it.accept(argsVisitor)
             def values = argsVisitor.values
-            if (values && !values?.empty) args = argsVisitor.values
+            if (values && !values?.empty) args = values
         }
         args
     }
@@ -139,10 +139,11 @@ class RubyConfigRoutesVisitor {
     private generateNonResourcefulRoute(Node iVisited, def argsVisitor, String namespace) {
         def args = extractArgs(iVisited, argsVisitor)
         if (!args) return
+        if(!args.value.startsWith("/")) args.value = "/" + args.value
         if (namespace) {
             def formatedPrefix = namespace.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             this.routingMethods += new Route(name: "${formatedPrefix}_${args.name}", file: RubyUtil.ROUTES_ID,
-                    value: "${namespace}/${args.value}", arg: "$namespace/${args.arg}")
+                    value: "${namespace}${args.value}", arg: "$namespace/${args.arg}")
         } else {
             this.routingMethods += new Route(name: args.name, file: RubyUtil.ROUTES_ID, value: args.value, arg: args.arg)
         }
@@ -276,6 +277,68 @@ class RubyConfigRoutesVisitor {
             configureAliasAndPath(args, alias, singular, original, resourcesData)
         }
         registryRoutes(resourcesData, namespace, original, plural, singular)
+
+        def internals = nodes.findAll{ it.position.startLine >= node.position.startLine && it.position.startLine <= node.position.endLine }
+        def internalMatchNodes = internals.findAll{ it.name == "match" }
+        def internalGetNodes = internals.findAll{ it.name == "get" }
+
+        /* extracting get */
+        internalGetNodes?.each{ generateResourcefulGetRoute(it, namespace, original, singular) }
+        nodes = nodes - internalGetNodes
+
+        /* extracting match*/
+        internalMatchNodes?.each{ generateResourcefulMatchRoute(it, namespace, original, singular) }
+        nodes = nodes - internalMatchNodes
+    }
+
+    private generateResourcefulGetRoute(Node iVisited, String namespace, String resources, String singular) {
+        def argsVisitor = new RubyNonResourcefulPropertiesVisitor()
+        def args = extractArgs(iVisited, argsVisitor)
+        if (!args) return
+        if(!args.value.startsWith("/")) args.value = "/" + args.value
+
+        String routeName = args.name
+        String value = args.value
+        String routeArg = args.arg
+        if(namespace && !namespace.empty) {
+            routeName = "${namespace}_${singular}_${routeName}"
+            value = "/${namespace}/${resources}/.*${value}"
+            if(routeArg && routeArg.empty) routeArg = "${namespace}/${resources}#${routeName}"
+            else routeArg = "$namespace/${routeArg}"
+        } else {
+            routeName = "${singular}_${routeName}"
+            value = "/${resources}/.*${value}"
+            if(routeArg && routeArg.empty) routeArg = "${resources}#${routeName}"
+        }
+
+        def route = new Route(name:routeName, file:RubyUtil.ROUTES_ID, value:value, arg:routeArg)
+        this.routingMethods += route
+    }
+
+    private generateResourcefulMatchRoute(Node iVisited, String namespace, String resources, String singular) {
+        def name = iVisited?.name
+        if (name == "match") name = null
+        def argsVisitor = new RubyMatchPropertiesVisitor(name)
+        def args = extractArgs(iVisited, argsVisitor)
+        if (!args) return
+        if(!args.value.startsWith("/")) args.value = "/" + args.value
+
+        String routeName = args.name
+        String value = args.value
+        String routeArg = args.arg
+        if(namespace && !namespace.empty) {
+            routeName = "${namespace}_${singular}_${routeName}"
+            value = "/${namespace}/${resources}/.*${value}"
+            if(!routeArg || routeArg.empty) routeArg = "${namespace}/${resources}#${routeName}"
+            else routeArg = "$namespace/${routeArg}"
+        } else {
+            routeName = "${singular}_${routeName}"
+            value = "/${resources}/.*${value}"
+            if(routeArg && routeArg.empty) routeArg = "${resources}#${routeName}"
+        }
+
+        def route = new Route(name:routeName, file:RubyUtil.ROUTES_ID, value:value, arg:routeArg)
+        this.routingMethods += route
     }
 
     private generateResourceRoutes(Node node, String namespace, String index, String original, String plural,
@@ -289,6 +352,68 @@ class RubyConfigRoutesVisitor {
             configureAliasAndPath(args, alias, singular, original, resourcesData)
         }
         registryRoutes(resourcesData, namespace, original, plural, singular)
+
+        def internals = nodes.findAll{ it.position.startLine >= node.position.startLine && it.position.startLine <= node.position.endLine }
+        def internalMatchNodes = internals.findAll{ it.name == "match" }
+        def internalGetNodes = internals.findAll{ it.name == "get" }
+
+        /* extracting get */
+        internalGetNodes?.each{ generateSingularResourcefulGetRoute(it, namespace, original) }
+        nodes = nodes - internalGetNodes
+
+        /* extracting match*/
+        internalMatchNodes?.each{ generateSingularResourcefulMatchRoute(it, namespace, original) }
+        nodes = nodes - internalMatchNodes
+    }
+
+    private generateSingularResourcefulGetRoute(Node iVisited, String namespace, String resource) {
+        def argsVisitor = new RubyNonResourcefulPropertiesVisitor()
+        def args = extractArgs(iVisited, argsVisitor)
+        if (!args) return
+        if(!args.value.startsWith("/")) args.value = "/" + args.value
+
+        String routeName = args.name
+        String value = args.value
+        String routeArg = args.arg
+        if(namespace && !namespace.empty) {
+            routeName = "${routeName}_${namespace}_${resource}"
+            value = "${namespace}/${resource}${value}"
+            if(routeArg && routeArg.empty) routeArg = "${namespace}/${resource}#${routeName}"
+            else routeArg = "$namespace/${routeArg}"
+        } else {
+            routeName = "${routeName}_${resource}"
+            value = "/${resource}${value}"
+            if(routeArg && routeArg.empty) routeArg = "${resource}#${routeName}"
+        }
+
+        def route = new Route(name:routeName, file:RubyUtil.ROUTES_ID, value:value, arg:routeArg)
+        this.routingMethods += route
+    }
+
+    private generateSingularResourcefulMatchRoute(Node iVisited, String namespace, String resource) {
+        def name = iVisited?.name
+        if (name == "match") name = null
+        def argsVisitor = new RubyMatchPropertiesVisitor(name)
+        def args = extractArgs(iVisited, argsVisitor)
+        if (!args) return
+        if(!args.value.startsWith("/")) args.value = "/" + args.value
+
+        String routeName = args.name
+        String value = args.value
+        String routeArg = args.arg
+        if(namespace && !namespace.empty) {
+            routeName = "${routeName}_${namespace}_${resource}"
+            value = "${namespace}/${resource}${value}"
+            if(!routeArg || routeArg.empty) routeArg = "${namespace}/${resource}#${routeName}"
+            else routeArg = "$namespace/${routeArg}"
+        } else {
+            routeName = "${routeName}_${resource}"
+            value = "/${resource}${value}"
+            if(routeArg && routeArg.empty) routeArg = "${resource}#${routeName}"
+        }
+
+        def route = new Route(name:routeName, file:RubyUtil.ROUTES_ID, value:value, arg:routeArg)
+        this.routingMethods += route
     }
 
     private generateCommonRoutes(def args, String prefix, String index, String original, String aliasSingular,

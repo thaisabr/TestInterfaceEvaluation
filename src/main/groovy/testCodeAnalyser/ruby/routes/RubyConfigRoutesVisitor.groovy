@@ -161,14 +161,24 @@ class RubyConfigRoutesVisitor {
         generateNonResourcefulRoute(iVisited, argsVisitor, namespace)
     }
 
-    private registryRootRoute(Node iVisited, String prefix) {
+    private registryRootRoute(Node iVisited, String namespace) {
         def argsVisitor = new RubyRootPropertiesVisitor(iVisited?.name)
         def args = extractArgs(iVisited, argsVisitor)
         if (!args) return
-        if (prefix) {
-            def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
+        if(!args.value.startsWith("/")) args.value = "/" + args.value
+        def isRedirect = false
+        if(args.arg.contains("/") && !args.arg.contains("#")){
+            def controller = args.arg
+            def action = "index"
+            args.arg = "${controller}#${action}"
+            isRedirect = true
+        }
+        if (namespace) {
+            def formatedPrefix = namespace.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
+            def arg = args.arg
+            if(!isRedirect) arg = "$namespace/${args.arg}"
             this.routingMethods += new Route(name: "${formatedPrefix}_${iVisited.name}", file: RubyUtil.ROUTES_ID,
-                    value: "${prefix}/", arg: "$prefix/${args.arg}")
+                    value: "${namespace}/", arg: arg)
         } else {
             this.routingMethods += new Route(name: iVisited?.name, file: RubyUtil.ROUTES_ID, value: "/", arg: args.arg)
         }

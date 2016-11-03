@@ -22,23 +22,27 @@ class RubyCollectionAndMemberVisitor extends NoopVisitor {
     }
 
     def getMemberValues() {
-        def values = []
+        def getAndPostValues = []
+        def otherValues = []
         if (memberNode) {
-            def getVisitor = new RubyGetVisitor(memberNode, allNodes)
+            def getVisitor = new RubyGetPostDeleteVisitor(memberNode, allNodes)
             memberNode.accept(getVisitor)
-            values = getVisitor.nodes
+            getAndPostValues = getVisitor.nodes
+            otherValues = getVisitor.otherNodes
         }
-        return values
+        [gets:getAndPostValues, others:otherValues]
     }
 
     def getCollectionValues() {
-        def values = []
+        def getAndPostValues = []
+        def otherValues = []
         if (collectionNode) {
-            def getVisitor = new RubyGetVisitor(collectionNode, allNodes)
+            def getVisitor = new RubyGetPostDeleteVisitor(collectionNode, allNodes)
             collectionNode.accept(getVisitor)
-            values = getVisitor.nodes
+            getAndPostValues = getVisitor.nodes
+            otherValues = getVisitor.otherNodes
         }
-        return values
+        [gets:getAndPostValues, others:otherValues]
     }
 
     @Override

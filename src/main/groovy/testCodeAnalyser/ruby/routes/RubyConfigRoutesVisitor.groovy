@@ -184,51 +184,50 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private extractResourcesData(Node node, String prefix, String original, String aliasSingular, String controller,
-                                 String index) {
-        def nestedResourcesVisitor = new RubyNestedResourcesVisitor(node)
-        node.accept(nestedResourcesVisitor)
-
-        def nestedResourcesList = nestedResourcesVisitor.resources
-        this.nodes = this.nodes - nestedResourcesList
-        def rangesOfNestedResources = nestedResourcesList.collect { it.position.startLine..it.position.endLine }
-
-        def nestedResourceList = nestedResourcesVisitor.resource
-        this.nodes = this.nodes - nestedResourceList
-        def rangesOfNestedResource = nestedResourceList.collect { it.position.startLine..it.position.endLine }
-
-        /* extracting collection and member (CallNode or FCallNode) */
+    private registryMemberAndCollectionRoutes(Node node, String prefix, String original, String aliasSingular, String controller,
+                                              String index, def rangesOfNestedResources, def rangesOfNestedResource){
         def alreadyVisitedNodes = []
-
-        def collectionAndMemberVisitor = new RubyCollectionAndMemberVisitor(node, rangesOfNestedResources + rangesOfNestedResource, this.nodes)
-        node.accept(collectionAndMemberVisitor)
-        List<Node> collectionValues = collectionAndMemberVisitor.collectionValues
-        if (collectionAndMemberVisitor.collectionNode) alreadyVisitedNodes += collectionAndMemberVisitor.collectionNode
-        alreadyVisitedNodes += collectionValues
+        def memberData = []
         def collectionData = []
-        collectionValues.each { getNode ->
+
+        def visitor = new RubyCollectionAndMemberVisitor(node, rangesOfNestedResources + rangesOfNestedResource, nodes)
+        node.accept(visitor)
+
+        def collectionNodes = visitor.collectionValues
+        List<Node> collectionValues = collectionNodes.gets
+        if (visitor.collectionNode) alreadyVisitedNodes += visitor.collectionNode
+        alreadyVisitedNodes += collectionValues
+        collectionValues?.each { getNode ->
             def getPropertiesVisitor = new RubyGetPropertiesVisitor(false, true, prefix, original, aliasSingular, controller, index)
             getNode.accept(getPropertiesVisitor)
-            collectionData += [node: getNode, route: getPropertiesVisitor.route]
+            def route = getPropertiesVisitor.route
+            if(route) collectionData += route
         }
 
-        List<Node> memberValues = collectionAndMemberVisitor.memberValues
-        if (collectionAndMemberVisitor.memberNode) alreadyVisitedNodes += collectionAndMemberVisitor.memberNode
+        def memberNodes = visitor.memberValues
+        List<Node> memberValues = memberNodes.gets
+        if (visitor.memberNode) alreadyVisitedNodes += visitor.memberNode
         alreadyVisitedNodes += memberValues
-        def memberData = []
-        memberValues.each { getNode ->
+        memberValues?.each { getNode ->
             def getPropertiesVisitor = new RubyGetPropertiesVisitor(true, false, prefix, original, aliasSingular, controller, index)
             getNode.accept(getPropertiesVisitor)
-            memberData += [node: getNode, route: getPropertiesVisitor.route]
+            def route = getPropertiesVisitor.route
+            if(route) memberData += route
         }
+        [visited:alreadyVisitedNodes, members:memberData, collection:collectionData, otherNodes:collectionNodes.others+memberNodes.others]
+    }
 
-        /* extracting get on member or collection */
+    private registryMemberAndCollectionRoutesAlternativeSyntax(Node node, String prefix, String original, String aliasSingular, String controller,
+                                                               String index){
+        def alreadyVisitedNodes = []
+        def memberData = []
+        def collectionData = []
         def memberNodeValue = null
         def collectionNodeValue = null
-        def getVisitor = new RubyGetVisitor(node, this.nodes)
+        def getVisitor = new RubyGetPostDeleteVisitor(node, nodes)
         node.accept(getVisitor)
         def getNodes = getVisitor.nodes
-        getNodes.each { getNode ->
+        getNodes?.each { getNode ->
             def visitor = new RubyGetPropertiesVisitor()
             getNode.accept(visitor)
             if (visitor.onValue == "member") {
@@ -236,23 +235,74 @@ class RubyConfigRoutesVisitor {
                 alreadyVisitedNodes += getNode
                 def getPropertiesVisitor = new RubyGetPropertiesVisitor(true, false, prefix, original, aliasSingular, controller, index)
                 getNode.accept(getPropertiesVisitor)
-                memberData += [node: getNode, route: getPropertiesVisitor.route]
+                def route = getPropertiesVisitor.route
+                if(route) memberData += route
             } else if (visitor.onValue == "collection") {
                 collectionNodeValue = getNode
                 alreadyVisitedNodes += getNode
                 def getPropertiesVisitor = new RubyGetPropertiesVisitor(false, true, prefix, original, aliasSingular, controller, index)
                 getNode.accept(getPropertiesVisitor)
-                collectionData += [node: getNode, route: getPropertiesVisitor.route]
+                def route = getPropertiesVisitor.route
+                if(route) collectionData += route
             }
         }
+        [visited:alreadyVisitedNodes, members:memberData, collection:collectionData, otherNodes:getVisitor.otherNodes]
+    }
 
-        this.nodes = this.nodes - alreadyVisitedNodes
+    private static generatePostAndDeleteRoutes(def deleteNodes, String prefix, String original, String aliasSingular, String controller,
+                                               String index){
+        def alreadyVisitedNodes = []
+        def routes = []
+
+        deleteNodes?.each { node ->
+            def visitor = new RubyGetPropertiesVisitor(false, false, prefix, original, aliasSingular, controller, index)
+            node.accept(visitor)
+            def route = visitor.route
+            if(route) routes += route
+        }
+
+        [visited:alreadyVisitedNodes, routes:routes]
+    }
+
+    private extractResourcesData(Node node, String prefix, String original, String aliasSingular, String controller,
+                                 String index) {
+        def nestedResourcesVisitor = new RubyNestedResourcesVisitor(node)
+        node.accept(nestedResourcesVisitor)
+
+        def nestedResourcesList = nestedResourcesVisitor.resources
+        nodes = nodes - nestedResourcesList
+        def rangesOfNestedResources = nestedResourcesList.collect { it.position.startLine..it.position.endLine }
+
+        def nestedResourceList = nestedResourcesVisitor.resource
+        nodes = nodes - nestedResourceList
+        def rangesOfNestedResource = nestedResourceList.collect { it.position.startLine..it.position.endLine }
+
+        /* extracting collection and member (CallNode or FCallNode) */
+        def return1 = registryMemberAndCollectionRoutes(node, prefix, original, aliasSingular, controller,
+                index, rangesOfNestedResources, rangesOfNestedResource)
+        def alreadyVisitedNodes = return1.visited
+        def memberData = return1.members
+        def collectionData = return1.collection
+
+        /* extracting get on member or collection (alternative syntax) */
+        def return2 = registryMemberAndCollectionRoutesAlternativeSyntax(node, prefix, original, aliasSingular, controller, index)
+        alreadyVisitedNodes += return2.visited
+        memberData += return2.members
+        collectionData += return2.collection
+
+        /* dealing with delete and post nodes inside member or collection nodes */
+        def otherNodes = return1.otherNodes + return2.otherNodes
+        def return3 = generatePostAndDeleteRoutes(otherNodes, prefix, original, aliasSingular, controller, index)
+        alreadyVisitedNodes += return3.visited
+
+        nodes = nodes - alreadyVisitedNodes
 
         def argsVisitor = new RubyResourcesPropertiesVisitor(node, rangesOfNestedResources, rangesOfNestedResource, alreadyVisitedNodes)
         node.accept(argsVisitor)
         def args = argsVisitor.organizedValues
         return [nestedResourcesList: nestedResourcesList, nestedResourceList: nestedResourceList, args: args,
-                collectionRoutes   : collectionData*.route as Set, memberRoutes: memberData*.route as Set]
+                collectionRoutes   : collectionData as Set, memberRoutes: memberData as Set,
+                otherRoutes: return3.routes]
     }
 
     private generateNestedResourcesRoute(
@@ -271,6 +321,7 @@ class RubyConfigRoutesVisitor {
     }
 
     private registryRoutes(def resourcesData, String namespace, String original, String plural, String singular) {
+        this.routingMethods += resourcesData.otherRoutes
         this.routingMethods += resourcesData.memberRoutes
         this.routingMethods += resourcesData.collectionRoutes
         generateNestedResourcesRoute(resourcesData, namespace, original, plural, singular)

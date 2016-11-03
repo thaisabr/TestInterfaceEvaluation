@@ -10,7 +10,7 @@ import util.ruby.RubyUtil
 
 class RubyGetPropertiesVisitor extends NoopVisitor {
 
-    static propertiesOfInterest = ["get", "to", "as", "controller", "action", "via", "on", "defaults", "constraints"]
+    static propertiesOfInterest = ["get", "post", "delete", "to", "as", "controller", "action", "via", "on", "defaults", "constraints"]
     boolean isMember
     boolean isCollection
     def propsValues = []
@@ -131,7 +131,8 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         }
 
         //configures route
-        if (isMember) generateResourcesMemberRoute(actionName, actionValue, controllerActionString, pathMethodName)
+        if (!isMember && !isCollection) generateResourcesMemberRoute(actionName, actionValue, controllerActionString, pathMethodName)
+        else if (isMember) generateResourcesMemberRoute(actionName, actionValue, controllerActionString, pathMethodName)
         else if (isCollection) generateResourcesCollectionRoute(actionName, actionValue, controllerActionString, pathMethodName)
         else null
     }

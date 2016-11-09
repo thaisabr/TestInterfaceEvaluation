@@ -48,8 +48,10 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     private registryMethodCall(CallNode iVisited) {
-        def path = RubyUtil.getClassPathForRubyClass(iVisited.receiver.name, projectFiles)
-        if (path) taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
+        def paths = RubyUtil.getClassPathForRubyClass(iVisited.receiver.name, projectFiles)
+        paths.each{ path ->
+            taskInterface.methods += [name: iVisited.name, type: iVisited.receiver.name, file: path]
+        }
     }
 
     private static int countArgsMethodCall(def iVisited) {
@@ -99,18 +101,18 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     private registryMethodCallFromInstanceVariable(CallNode iVisited) {
-        def path = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.receiver.name, projectFiles)
-        if (path) {
+        def paths = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.receiver.name, projectFiles)
+        if (paths) {
             /* Checks if the method really exists. There are methods that are generated automatically by Rails.
             * In any case, the call is registered.*/
             def matches = searchForMethodMatch(iVisited)
             if (matches.empty) {
-                registryClassUsageUsingFilename(path)
+                this.registryClassUsageUsingFilename(paths)
                 log.warn "The method called by instance variable was not found: " +
                         "${iVisited.receiver.name}.${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1})"
                 /* Examples: @mobilization.hashtag; mobilization.save! */
             } else {
-                taskInterface.methods += [name: iVisited.name, type: RubyUtil.getClassName(path), file: path]
+                paths.each{ path -> taskInterface.methods += [name: iVisited.name, type: RubyUtil.getClassName(path), file: path] }
             }
         } else { //it seems it never has happened
             taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
@@ -118,19 +120,23 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     private registryClassUsage(String name) {
-        def path = RubyUtil.getClassPathForRubyClass(name, projectFiles)
-        if (path) taskInterface.classes += [name: name, file: path]
-        else if (Util.FRAMEWORK_FILES.findAll { it.contains(name) }.empty) {
-            taskInterface.classes += [name: name, file: path]
+        def paths = RubyUtil.getClassPathForRubyClass(name, projectFiles)
+        if(paths.empty && Util.FRAMEWORK_FILES.findAll { it.contains(name) }.empty){
+            taskInterface.classes += [name: name, file: null]
+        }
+        else {
+            paths.each{ path -> taskInterface.classes += [name: name, file: path] }
         }
     }
 
-    private registryClassUsageUsingFilename(String path) {
-        if (path.contains(Util.VIEWS_FILES_RELATIVE_PATH)) {
-            def index = path.lastIndexOf(File.separator)
-            taskInterface.classes += [name: path.substring(index + 1), file: path]
-        } else {
-            taskInterface.classes += [name: RubyUtil.getClassName(path), file: path]
+    private registryClassUsageUsingFilename(List<String> paths) {
+        paths.each{ path ->
+            if (path?.contains(Util.VIEWS_FILES_RELATIVE_PATH)) {
+                def index = path?.lastIndexOf(File.separator)
+                taskInterface.classes += [name: path?.substring(index + 1), file: path]
+            } else {
+                taskInterface.classes += [name: RubyUtil.getClassName(path), file: path]
+            }
         }
     }
 
@@ -470,8 +476,8 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     @Override
     Object visitInstAsgnNode(InstAsgnNode iVisited) {
         super.visitInstAsgnNode(iVisited)
-        def className = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.name, projectFiles)
-        if (className && !className.empty) registryClassUsageUsingFilename(className)
+        def classNames = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.name, projectFiles)
+        if (classNames && !classNames.empty) registryClassUsageUsingFilename(classNames)
         iVisited
     }
 
@@ -481,8 +487,8 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     @Override
     Object visitInstVarNode(InstVarNode iVisited) {
         super.visitInstVarNode(iVisited)
-        def className = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.name, projectFiles)
-        if (className && !className.empty) registryClassUsageUsingFilename(className)
+        def classNames = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.name, projectFiles)
+        if (classNames && !classNames.empty) registryClassUsageUsingFilename(classNames)
         iVisited
     }
 

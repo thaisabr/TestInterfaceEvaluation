@@ -110,8 +110,9 @@ class DoneTask extends Task {
 
     private TaskInterface identifyProductionChangedFiles() {
         /* Identifies all project files */
+        def canonicalPath = Util.getRepositoriesCanonicalPath()
         def currentFiles = Util.findFilesFromDirectory(gitRepository.localPath).collect {
-            it - (Util.getRepositoriesCanonicalPath() + gitRepository.name + File.separator)
+            it - (canonicalPath + gitRepository.name + File.separator)
         }
 
         /* Identifies all changed files by task */

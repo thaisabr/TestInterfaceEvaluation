@@ -74,7 +74,8 @@ class TaskInterface {
         //filtering result to only identify view files
         //files = files?.findAll{ it?.contains("${Util.VIEWS_FILES_RELATIVE_PATH}${File.separator}") }
 
-        files?.findResults { i -> i ? i - Util.getRepositoriesCanonicalPath() : null } as Set
+        def canonicalPath = Util.getRepositoriesCanonicalPath()
+        files?.findResults { i -> i ? i - canonicalPath : null } as Set
     }
 
     def colapseInterfaces(TaskInterface task) {

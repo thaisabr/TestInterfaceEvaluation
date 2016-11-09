@@ -1,13 +1,10 @@
 package util.ruby
 
-import groovy.util.logging.Slf4j
 import util.ConstantData
-import util.RegexUtil
 import util.Util
 
 import java.util.regex.Matcher
 
-@Slf4j
 class RubyUtil extends Util {
 
     public static final String ROUTES_FILE = File.separator + "config" + File.separator + "routes.rb"
@@ -43,24 +40,15 @@ class RubyUtil extends Util {
         else false
     }
 
-    /***
-     * Provides the file path of a Ruby class or module.
-     *
-     * @param className class or module short name
-     * @param projectFiles list of file names
-     * @return the file name that matches to the class or module name
-     */
-    static String getClassPathForRubyClass(String className, Collection<String> projectFiles) {
-        def underscore = camelCaseToUnderscore(className)
-        def name = (underscore + ConstantData.RUBY_EXTENSION).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        def regex_expression = ".*${Matcher.quoteReplacement(File.separator)}$name"
-        projectFiles?.find { it ==~ /$regex_expression/ }
+    static List<String> getClassPathForRubyClass(String original, Collection<String> projectFiles) {
+        def underscore = camelCaseToUnderscore(original)
+        getClassPathForRubyInstanceVariable(underscore, projectFiles)
     }
 
-    static String getClassPathForRubyInstanceVariable(String varName, Collection<String> projectFiles) {
-        def name = varName + ConstantData.RUBY_EXTENSION
-        def regex_expression = ".*${Matcher.quoteReplacement(File.separator)}$name"
-        projectFiles?.find { it ==~ /$regex_expression/ }
+    static List<String> getClassPathForRubyInstanceVariable(String original, Collection<String> projectFiles) {
+        def name = original + ConstantData.RUBY_EXTENSION
+        def exp = ".*$File.separator$name".replace(File.separator, Matcher.quoteReplacement(File.separator))
+        projectFiles?.findAll { it ==~ /$exp/ }
     }
 
 }

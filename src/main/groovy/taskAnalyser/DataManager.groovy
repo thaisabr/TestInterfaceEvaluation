@@ -18,20 +18,38 @@ class DataManager {
     static
     final String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests", "#StepDef",
                              "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
-                             "#AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views", "#Views", "#ITest", "#IReal",
-                             "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp"]
+                             "#AST_Errors", "Gherkin_AST_Errors", "#Gherkin_AST_Errors", "Steps_AST_Errors",
+                             "#Steps_AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views", "#Views", "#ITest",
+                             "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp"]
     static final int RECALL_INDEX = HEADER.size() - 3
     static final int PRECISION_INDEX = RECALL_INDEX - 1
     static final int IREAL_INDEX = PRECISION_INDEX - 1
     static final int ITEST_INDEX = IREAL_INDEX - 1
 
+    private static List<String[]> readAllResult(String filename) {
+        List<String[]> entries = []
+        try {
+            CSVReader reader = new CSVReader(new FileReader(filename))
+            entries = reader.readAll()
+            reader.close()
+        } catch (Exception ex) {
+            log.error ex.message
+        }
+        entries
+    }
+
+    private static List<String[]> readInputCSV(String filename) {
+        List<String[]> entries = readAllResult(filename)
+        entries.remove(0) //ignore header
+        entries.unique { it[2] } //bug: input csv can contain duplicated values; task id is used to identify them.
+    }
 
     private static computePairs(def set) {
         def result = [] as Set
         if (!set || set.empty || set.size() == 1) return set
         set.eachWithIndex { v, k ->
             def next = set.drop(k + 1)
-            result.add([task: v, pairs: next]) //next.each{ n -> result.add([v, n]) }
+            result.add([task: v, pairs: next])
         }
         result
     }
@@ -98,12 +116,24 @@ class DataManager {
     private static extractCompilationErrors(def entry) {
         def compilationErrors = entry.itest.compilationErrors
         def compErrorsQuantity = 0
+        def gherkinQuantity = 0
+        def stepsQuantity = 0
+        def gherkin = ""
+        def steps = ""
         if (compilationErrors.empty) compilationErrors = ""
         else {
             compErrorsQuantity = compilationErrors*.msgs.flatten().size()
+            gherkin = compilationErrors.findAll{ Util.isGherkinCode(it.path) }
+            gherkinQuantity = gherkin.size()
+            if(gherkin.empty) gherkin = ""
+            steps = compilationErrors.findAll{ Util.isStepDefinitionCode(it.path) }
+            stepsQuantity = steps.size()
+            if(steps.empty) steps = ""
             compilationErrors = compilationErrors.toString()
         }
-        [text: compilationErrors, quantity: compErrorsQuantity]
+
+        [text: compilationErrors, quantity: compErrorsQuantity, gherkin:gherkin, quantityGherkin:gherkinQuantity,
+         steps:steps, stepsQuantity:stepsQuantity]
     }
 
     private static extractRemovedFiles(def entry) {
@@ -130,19 +160,6 @@ class DataManager {
         writer.writeNext(header)
         writeResult(entries, writer)
         writer.close()
-    }
-
-    private static List<String[]> readInputCSV(String filename) {
-        List<String[]> entries = []
-        try {
-            CSVReader reader = new CSVReader(new FileReader(filename))
-            entries = reader.readAll()
-            reader.close()
-            entries.remove(0) //ignore header
-        } catch (Exception ex) {
-            log.error ex.message
-        }
-        entries.unique { it[2] } //bug: input csv can contain duplicated values; task id is used to identify them.
     }
 
     private static writeHeaderOrganizedResult(CSVWriter writer, def previousAnalysisData) {
@@ -234,13 +251,9 @@ class DataManager {
             }
         } catch (Exception ex) {
             log.error ex.message
-            return [relevantTasks: [], allTasksQuantity: 0]
+            return [tasks: [], allTasksQuantity: 0]
         }
-        [relevantTasks: tasks.sort { it.id }, allTasksQuantity: entries.size()]
-    }
-
-    static extractProductionAndTestTasks() {
-        extractProductionAndTestTasks(Util.TASKS_FILE)
+        [tasks: tasks.sort { it.id }, allTasksQuantity: entries.size()]
     }
 
     static saveAllResult(def filename, def url, def allTasksCounter, def relevantTasksCounter, def stepDefTasksCounter,
@@ -269,25 +282,15 @@ class DataManager {
             String[] line = [entry.task.id, dates, entry.task.days, entry.task.commitsQuantity, msgs, devs,
                              entry.task.gherkinTestQuantity, entry.task.stepDefQuantity, entry.methods, entry.stepCalls,
                              stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
-                             renames, removes, views, views.size(), itestSize, irealSize, entry.itest, entry.ireal,
-                             precision, recall, entry.task.commits*.hash, entry.timestamp]
+                             compilationErrors.gherkin, compilationErrors.quantityGherkin, compilationErrors.steps,
+                             compilationErrors.stepsQuantity, renames, removes, views, views.size(), itestSize,
+                             irealSize, entry.itest, entry.ireal, precision, recall, entry.task.commits*.hash, entry.timestamp]
+
             writer.writeNext(line)
             if (saveText) writeITextFile(filename, entry) //dealing with long textual description of a task
         }
 
         writer.close()
-    }
-
-    static List<String[]> readAllResult(String filename) {
-        List<String[]> entries = []
-        try {
-            CSVReader reader = new CSVReader(new FileReader(filename))
-            entries = reader.readAll()
-            reader.close()
-        } catch (Exception ex) {
-            log.error ex.message
-        }
-        entries
     }
 
     static organizeResult(String evaluationFile, String organizedFile) {

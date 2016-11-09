@@ -10,7 +10,17 @@ import util.Util
 @Slf4j
 class TaskAnalyser {
 
-    private static computeTaskData(List<DoneTask> tasks) {
+    String path
+    File file
+    List<DoneTask> tasks
+
+    TaskAnalyser(String tasksFile) {
+        path = tasksFile
+        file = new File(tasksFile)
+        tasks = []
+    }
+
+    private computeTaskData() {
         log.info "Number of tasks: ${tasks.size()}"
         def stepCounter = 0
         def gherkinCounter = 0
@@ -41,16 +51,16 @@ class TaskAnalyser {
         [stepCounter: stepCounter, gherkinCounter: gherkinCounter, data: result]
     }
 
-    private static generateResultForProject(String allTasksFile, String evaluationFile) {
-        def result1 = DataManager.extractProductionAndTestTasks(allTasksFile)
-        def result2 = computeTaskData(result1.relevantTasks)
-        def url = result1.relevantTasks?.first()?.testCodeParser?.repositoryPath
-        DataManager.saveAllResult(evaluationFile, url, result1.allTasksQuantity, result1.relevantTasks.size(), result2.stepCounter,
-                result2.gherkinCounter, result2.data)
+    private generateResultForProject(String tasksFile, String evaluationFile) {
+        def r1 = DataManager.extractProductionAndTestTasks(tasksFile)
+        tasks = r1.tasks
+        def r2 = computeTaskData()
+        def url = r1.tasks?.first()?.testCodeParser?.repositoryPath
+        DataManager.saveAllResult(evaluationFile, url, r1.allTasksQuantity, tasks.size(), r2.stepCounter, r2.gherkinCounter, r2.data)
     }
 
-    static analyseAllForProject(String allTasksFile) {
-        File file = new File(allTasksFile)
+    private analyseAllForProject(String tasksFile) {
+        File file = new File(tasksFile)
         def evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER + File.separator + file.name
         def name = evaluationFile - ConstantData.CSV_FILE_EXTENSION
         def organizedFile = name + ConstantData.ORGANIZED_FILE_SUFIX
@@ -58,8 +68,8 @@ class TaskAnalyser {
         def similarityFile = name + ConstantData.SIMILARITY_FILE_SUFIX
         def similarityOrganizedFile = name + ConstantData.SIMILARITY_ORGANIZED_FILE_SUFIX
 
-        log.info "<  Analysing tasks from '$allTasksFile'  >"
-        generateResultForProject(allTasksFile, evaluationFile)
+        log.info "<  Analysing tasks from '$tasksFile'  >"
+        generateResultForProject(tasksFile, evaluationFile)
         log.info "The results were saved!"
 
         log.info "<  Organizing tasks from '$evaluationFile'  >"
@@ -75,26 +85,27 @@ class TaskAnalyser {
         log.info "The results were saved!"
     }
 
-    static analyseAllForMultipleProjects(def folder) {
-        def cvsFiles = Util.findFilesFromDirectory(folder).findAll { it.endsWith(ConstantData.CSV_FILE_EXTENSION) }
-        cvsFiles?.each {
-            analyseAllForProject(it)
-        }
-    }
-
-    static analysePrecisionAndRecallForProject(String allTasksFile) {
-        File file = new File(allTasksFile)
+    private analysePrecisionAndRecallForProject(String tasksFile) {
+        File file = new File(tasksFile)
         def evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER + File.separator + file.name
         def organizedFile = evaluationFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.ORGANIZED_FILE_SUFIX
-        generateResultForProject(allTasksFile, evaluationFile)
+        generateResultForProject(tasksFile, evaluationFile)
         DataManager.organizeResult(evaluationFile, organizedFile)
     }
 
-    static analysePrecisionAndRecallForMultipleProjects(String folder) {
-        def cvsFiles = Util.findFilesFromDirectory(folder).findAll { it.endsWith(ConstantData.CSV_FILE_EXTENSION) }
-        cvsFiles?.each {
-            analysePrecisionAndRecallForProject(it)
-        }
+    def analyseAll(){
+        if(file.isDirectory()){
+            def cvsFiles = Util.findFilesFromDirectory(path).findAll { it.endsWith(ConstantData.CSV_FILE_EXTENSION) }
+            cvsFiles?.each { analyseAllForProject(it) }
+        } else analyseAllForProject(path)
+
+    }
+
+    def analysePrecisionAndRecall(){
+        if(file.isDirectory()){
+            def cvsFiles = Util.findFilesFromDirectory(path).findAll { it.endsWith(ConstantData.CSV_FILE_EXTENSION) }
+            cvsFiles?.each { analysePrecisionAndRecallForProject(it) }
+        } else analysePrecisionAndRecallForProject(path)
     }
 
 }

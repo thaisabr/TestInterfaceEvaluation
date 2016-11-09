@@ -36,7 +36,7 @@ class RoutesAnalysisMain {
         def cvsFiles = Util.findFilesFromDirectory(folder).findAll { it.endsWith(ConstantData.CSV_FILE_EXTENSION) }
         cvsFiles?.each {
             def result1 = DataManager.extractProductionAndTestTasks(it)
-            computeTaskData(result1.relevantTasks, it)
+            computeTaskData(result1.tasks, it)
         }
     }
 

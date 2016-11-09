@@ -36,12 +36,12 @@ class RubyWhenNodeVisitor extends NoopVisitor {
         result
     }
 
-    private static boolean isOfInterest(org.jrubyparser.ast.Node node) {
+    private static boolean isOfInterest(Node node) {
         return node instanceof StrNode || node instanceof DStrNode || node instanceof VCallNode ||
                 node instanceof CallNode || node instanceof FCallNode
     }
 
-    private static extractIfResult(org.jrubyparser.ast.Node node) {
+    private static extractIfResult(Node node) {
         null //we cannot deal with a result that is neither a string or method call
     }
 

@@ -32,6 +32,7 @@ class Util {
     static {
         properties = new Properties()
         loadProperties()
+
         configureRailsPaths()
         FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
@@ -87,9 +88,9 @@ class Util {
     }
 
     private static loadProperties() {
-        ClassLoader loader = Thread.currentThread().getContextClassLoader()
-        InputStream is = loader.getResourceAsStream(ConstantData.PROPERTIES_FILE_NAME)
-        properties.load(is)
+        File configFile = new File(ConstantData.PROPERTIES_FILE_NAME)
+        FileInputStream resourceStream = new FileInputStream(configFile)
+        properties.load(resourceStream)
     }
 
     private static configureTasksFilePath() {
@@ -228,7 +229,7 @@ class Util {
         f?.eachFile {
             if (it.isFile()) files += it.absolutePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         }
-        files
+        files.sort()
     }
 
     static String underscoreToCamelCase(String underscore) {

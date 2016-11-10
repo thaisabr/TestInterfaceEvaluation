@@ -13,8 +13,8 @@ class Inflector {
     Inflector() {
         container = new ScriptingContainer()
         container.loadPaths.add(Util.GEMS_PATH)
-        container.loadPaths.add(Util.ACTIVESUPPORT_INFLECTOR_PATH)
-        container.loadPaths.add(Util.I18N_PATH)
+        container.loadPaths.add(Util.GEM_INFLECTOR)
+        container.loadPaths.add(Util.GEM_I18N)
 
         ClassLoader loader = Thread.currentThread().getContextClassLoader()
         InputStream is = loader.getResourceAsStream(RubyUtil.INFLECTOR_FILE)

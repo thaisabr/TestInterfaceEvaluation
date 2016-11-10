@@ -1,18 +1,16 @@
 package util
 
-import org.springframework.util.ClassUtils
 import util.exception.InvalidLanguageException
 
 import java.util.regex.Matcher
 
-class Util {
+abstract class Util {
 
-    public static String FRAMEWORK_PATH
-    public static String GEMS_PATH
-    public static String ACTIVESUPPORT_INFLECTOR_PATH
-    public static String I18N_PATH
-    public static final List<String> FRAMEWORK_FILES
+    static final String GEM_SUFFIX = Matcher.quoteReplacement(File.separator) + "lib"
+    static final Properties properties
+    public static final String TASKS_FILE
     public static final String REPOSITORY_FOLDER_PATH
+    protected static final LanguageOption CODE_LANGUAGE
     public static final String GHERKIN_FILES_RELATIVE_PATH
     public static final String STEPS_FILES_RELATIVE_PATH
     public static final String UNIT_TEST_FILES_RELATIVE_PATH
@@ -21,35 +19,102 @@ class Util {
     public static final String CONTROLLER_FILES_RELATIVE_PATH
     public static final String MODEL_FILES_RELATIVE_PATH
     public static final String LIB_RELATIVE_PATH
-    public static final String TASKS_FILE
+    public static final String FRAMEWORK_PATH
+    public static final List<String> FRAMEWORK_FILES
     public static final List<String> VALID_FOLDERS
-    protected static final String VALID_EXTENSION
-    protected static final List<String> VALID_EXTENSIONS
-    protected static final List<String> VALID_VIEW_FILES
-    protected static final LanguageOption CODE_LANGUAGE
-    protected static final Properties properties
+    public static final String VALID_EXTENSION
+    public static final List<String> VALID_EXTENSIONS
+    public static final List<String> VALID_VIEW_FILES
+    public static final String GEMS_PATH
+    public static final String GEM_INFLECTOR
+    public static final String GEM_I18N
+    public static final String GEM_PARSER_PATH
+    public static final String GEM_AST
+
+    private static loadProperties() {
+        File configFile = new File(ConstantData.PROPERTIES_FILE_NAME)
+        FileInputStream resourceStream = new FileInputStream(configFile)
+        properties.load(resourceStream)
+    }
+
+    private static configureMandatoryProperties(String value, String defaultValue) {
+        if (!value || value.empty) value = defaultValue
+        value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+    }
+
+    private static configureTasksFilePath() {
+        configureMandatoryProperties(properties.(ConstantData.PROP_TASK_FILE), ConstantData.DEFAULT_TASK_FILE)
+    }
+
+    private static configureRepositoryFolderPath() {
+        def value = configureMandatoryProperties(properties.(ConstantData.PROP_REPOSITORY), ConstantData.DEFAULT_REPOSITORY_FOLDER)
+        if (!value.endsWith(File.separator)) value += File.separator
+        value
+    }
+
+    private static configureLanguage(){
+        def value = configureMandatoryProperties(properties.(ConstantData.PROP_CODE_LANGUAGE), ConstantData.DEFAULT_LANGUAGE)
+        value.trim().toUpperCase() as LanguageOption
+    }
+
+    private static configureGherkin(){
+        configureMandatoryProperties(properties.(ConstantData.PROP_GHERKIN), ConstantData.DEFAULT_GHERKIN_FOLDER)
+    }
+
+    private static configureSteps(){
+        configureMandatoryProperties(properties.(ConstantData.PROP_STEPS), ConstantData.DEFAULT_STEPS_FOLDER)
+    }
+
+    private static configureUnitTest(){
+        configureMandatoryProperties(properties.(ConstantData.PROP_UNIT_TEST), ConstantData.DEFAULT_UNITY_FOLDER)
+    }
+
+    private static configureProduction(){
+        configureMandatoryProperties(properties.(ConstantData.PROP_PRODUCTION), ConstantData.DEFAULT_PRODUCTION_FOLDER)
+    }
+
+    private static configureFramework(){
+        configureMandatoryProperties(properties.(ConstantData.PROP_FRAMEWORK), "")
+    }
+
+    private static configureGem(String value, String defaultValue){
+        def folder = configureMandatoryProperties(value, defaultValue)
+        GEMS_PATH + Matcher.quoteReplacement(File.separator) + folder + GEM_SUFFIX
+    }
+
+    private static configureGemInflector(){
+        configureGem(properties.(ConstantData.PROP_GEM_INFLECTOR), ConstantData.DEFAULT_GEM_INFLECTOR)
+    }
+
+    private static configureGemI18n(){
+        configureGem(properties.(ConstantData.PROP_GEM_I18N), ConstantData.DEFAULT_GEM_I18N_FOLDER)
+    }
+
+    private static configureGemParser(){
+        configureGem(properties.(ConstantData.PROP_GEM_PARSER), ConstantData.DEFAULT_GEM_PARSER_FOLDER)
+    }
+
+    private static configureGemAst(){
+        configureGem(properties.(ConstantData.PROP_GEM_AST), ConstantData.DEFAULT_GEM_AST_FOLDER)
+    }
 
     static {
         properties = new Properties()
         loadProperties()
-
-        configureRailsPaths()
-        FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
-        REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
         TASKS_FILE = configureTasksFilePath()
-        GHERKIN_FILES_RELATIVE_PATH = (properties.'spgroup.gherkin.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
-        STEPS_FILES_RELATIVE_PATH = (properties.'spgroup.steps.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
-        UNIT_TEST_FILES_RELATIVE_PATH = (properties.'spgroup.unit.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
-        PRODUCTION_FILES_RELATIVE_PATH = (properties.'spgroup.production.files.relative.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
-        VIEWS_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "views"
-        CONTROLLER_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "controllers"
-        MODEL_FILES_RELATIVE_PATH = PRODUCTION_FILES_RELATIVE_PATH + File.separator + "models"
-        CODE_LANGUAGE = (properties.'spgroup.language').trim().toUpperCase() as LanguageOption
+        REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
+        CODE_LANGUAGE = configureLanguage()
+        GHERKIN_FILES_RELATIVE_PATH = configureGherkin()
+        STEPS_FILES_RELATIVE_PATH = configureSteps()
+        UNIT_TEST_FILES_RELATIVE_PATH = configureUnitTest()
+        PRODUCTION_FILES_RELATIVE_PATH = configureProduction()
+        VIEWS_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}views"
+        CONTROLLER_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}controllers"
+        MODEL_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}models"
+        FRAMEWORK_PATH = configureFramework()
+        FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
 
+        //configure language dependents
         switch (CODE_LANGUAGE) {
             case LanguageOption.RUBY:
                 VALID_EXTENSION = ConstantData.RUBY_EXTENSION
@@ -69,43 +134,15 @@ class Util {
         }
 
         VALID_EXTENSIONS = [VALID_EXTENSION] + VALID_VIEW_FILES + [ConstantData.FEATURE_FILENAME_EXTENSION]
-        VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, UNIT_TEST_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH, LIB_RELATIVE_PATH]
-    }
+        VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, UNIT_TEST_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH,
+                         LIB_RELATIVE_PATH]
 
-    private static configureRailsPaths() {
-        FRAMEWORK_PATH = (properties.'spgroup.framework.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
+        GEMS_PATH = (properties.(ConstantData.PROP_GEMS)).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                 Matcher.quoteReplacement(File.separator))
-        GEMS_PATH = (properties.'spgroup.gems.path').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
-        def inflectorFolder = (properties.'spgroup.gems.activesupport-inflector.folder').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
-        ACTIVESUPPORT_INFLECTOR_PATH = GEMS_PATH + Matcher.quoteReplacement(File.separator) +
-                inflectorFolder + Matcher.quoteReplacement(File.separator) + "lib"
-        def i18nFolder = (properties.'spgroup.gems.i18n.folder').replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
-        I18N_PATH = GEMS_PATH + Matcher.quoteReplacement(File.separator) + i18nFolder +
-                Matcher.quoteReplacement(File.separator) + "lib"
-    }
-
-    private static loadProperties() {
-        File configFile = new File(ConstantData.PROPERTIES_FILE_NAME)
-        FileInputStream resourceStream = new FileInputStream(configFile)
-        properties.load(resourceStream)
-    }
-
-    private static configureTasksFilePath() {
-        String value = properties.'spgroup.task.file.path'
-        if (value != null && !value.isEmpty()) return value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        else return ConstantData.DEFAULT_TASK_FILE
-    }
-
-    private static configureRepositoryFolderPath() {
-        String value = properties.'spgroup.task.repositories.path'
-        if (value != null && !value.isEmpty()) {
-            value = value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-            if (!value.endsWith(File.separator)) value += File.separator
-        } else value = "repositories${File.separator}"
-        return value
+        GEM_INFLECTOR = configureGemInflector()
+        GEM_I18N = configureGemI18n()
+        GEM_PARSER_PATH = configureGemParser()
+        GEM_AST = configureGemAst()
     }
 
     static String configureGitRepositoryName(String url) {
@@ -117,23 +154,10 @@ class Util {
         new File(".").getCanonicalPath() + File.separator + REPOSITORY_FOLDER_PATH
     }
 
-    /***
-     * Finds all production files among a list of files.
-     *
-     * @param files a list of file paths
-     * @return a list of production file paths
-     */
     static Collection<String> findAllProductionFiles(Collection<String> files) {
         files?.findAll { isCoreCode(it) }
     }
 
-    /***
-     * Checks if a local file contains test code based on its path.
-     * The criteria used (file type to ignore and test path) is defined at configuration.properties file.
-     *
-     * @param path the file path
-     * @return true if the file contains test code. Otherwise, it returns false
-     */
     static boolean isTestCode(String path) {
         if (path?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) ||
                 path?.contains(GHERKIN_FILES_RELATIVE_PATH + File.separator) ||
@@ -170,11 +194,6 @@ class Util {
         else false
     }
 
-    /**
-     * Empties a folder.
-     *
-     * @param folder folder's path.
-     */
     static emptyFolder(String folder) {
         def dir = new File(folder)
         def files = dir.listFiles()
@@ -187,14 +206,8 @@ class Util {
     }
 
     static deleteFolder(String folder) {
+        emptyFolder(folder)
         def dir = new File(folder)
-        def files = dir.listFiles()
-        if (files != null) {
-            files.each { f ->
-                if (f.isDirectory()) emptyFolder(f.getAbsolutePath())
-                else f.delete()
-            }
-        }
         dir.deleteDir()
     }
 
@@ -213,6 +226,10 @@ class Util {
             default: throw new InvalidLanguageException()
         }
         return files
+    }
+
+    private static files(){
+
     }
 
     static List<String> findFilesFromDirectory(String directory) {
@@ -246,12 +263,6 @@ class Util {
     static findJarFilesFromDirectory(String directory) {
         def files = findFilesFromDirectory(directory)
         files.findAll { it.contains(ConstantData.JAR_FILENAME_EXTENSION) }
-    }
-
-    private static getClassPath(String className, String extension, Collection<String> projectFiles) {
-        def name = ClassUtils.convertClassNameToResourcePath(className) + extension
-        name = name.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        projectFiles?.find { it.endsWith(File.separator + name) }
     }
 
 }

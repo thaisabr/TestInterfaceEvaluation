@@ -7,14 +7,6 @@ import java.util.regex.Matcher
 
 class RubyUtil extends Util {
 
-    public static final String ROUTES_FILE = File.separator + "config" + File.separator + "routes.rb"
-    public static final String ROUTES_ID = "ROUTES"
-    public static final String ROUTE_SUFIX = "_path"
-    public static final String INFLECTOR_FILE = "inflector.rb"
-    public static
-    final EXCLUDED_PATH_METHODS = ["current_path", "recognize_path", "assert_routing", "assert_recognizes", " assert_response"]
-    public static final REQUEST_TYPES = ["get", "post", "put", "patch", "delete"]
-
     static List<String> searchViewFor(String controller, String action, List viewFiles) {
         def result = []
         def match = viewFiles?.findAll { it.contains("views${File.separator}$controller${File.separator}$action") }
@@ -36,7 +28,7 @@ class RubyUtil extends Util {
     }
 
     static boolean isRouteMethod(String name) {
-        if (!(name in EXCLUDED_PATH_METHODS) && name.endsWith(ROUTE_SUFIX)) true
+        if (!(name in RubyConstantData.EXCLUDED_PATH_METHODS) && name.endsWith(RubyConstantData.ROUTE_SUFIX)) true
         else false
     }
 

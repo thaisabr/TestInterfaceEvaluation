@@ -3,7 +3,7 @@ package testCodeAnalyser.ruby
 import groovy.util.logging.Slf4j
 import org.jrubyparser.ast.*
 import org.jrubyparser.util.NoopVisitor
-import util.ruby.RubyUtil
+import util.ruby.RubyConstantData
 
 @Slf4j
 class RubyMethodReturnVisitor extends NoopVisitor {
@@ -52,7 +52,7 @@ class RubyMethodReturnVisitor extends NoopVisitor {
             case VCallNode: //Method call without any arguments
             case CallNode: //Method call
                 def value = iVisited.value.name
-                if (value.contains(RubyUtil.ROUTE_SUFIX)) { //it is a path helper method
+                if (value.contains(RubyConstantData.ROUTE_SUFIX)) { //it is a path helper method
                     this.returnNodes += [line: iVisited.position.startLine, value: value]
                 }
                 break

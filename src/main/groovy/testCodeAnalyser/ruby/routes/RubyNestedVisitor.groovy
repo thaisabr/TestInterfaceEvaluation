@@ -4,7 +4,7 @@ import org.jrubyparser.ast.ArrayNode
 import org.jrubyparser.ast.StrNode
 import org.jrubyparser.ast.SymbolNode
 import org.jrubyparser.util.NoopVisitor
-import util.ruby.RubyUtil
+import util.ruby.RubyConstantData
 
 class RubyNestedVisitor extends NoopVisitor {
 
@@ -32,7 +32,7 @@ class RubyNestedVisitor extends NoopVisitor {
                 else if (previous instanceof SymbolNode) actionName = previous.name
 
                 if (actionName) {
-                    def route = [name: "$actionName$nameSufix", file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: "$argsPrefix$actionName"]
+                    def route = [name: "$actionName$nameSufix", file: RubyConstantData.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: "$argsPrefix$actionName"]
                     routes += route
                 }
             }

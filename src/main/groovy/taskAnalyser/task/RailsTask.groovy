@@ -3,7 +3,7 @@ package taskAnalyser.task
 import groovy.util.logging.Slf4j
 import util.RegexUtil
 import util.exception.CloningRepositoryException
-import util.ruby.RubyUtil
+import util.ruby.RubyConstantData
 
 import java.util.regex.Matcher
 
@@ -18,10 +18,10 @@ class RailsTask extends DoneTask {
         def identity = ""
         def taskChanged = false
         def otherTaskChanged = false
-        def routesFileName = RubyUtil.ROUTES_FILE.substring(1).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
+        def routesFileName = RubyConstantData.ROUTES_FILE.substring(1).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
 
         def files = commits*.coreChanges*.path?.flatten()?.unique()?.sort()
-        def find = files.find { it.endsWith(RubyUtil.ROUTES_FILE.substring(1)) }
+        def find = files.find { it.endsWith(RubyConstantData.ROUTES_FILE.substring(1)) }
         if (find) {
             taskChanged = true
             log.info "Task ${id} changed routes file"

@@ -17,6 +17,7 @@ import testCodeAnalyser.ruby.routes.RubyConfigRoutesVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecFileVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
 import util.RegexUtil
+import util.ruby.RubyConstantData
 import util.ruby.RubyUtil
 
 import java.util.regex.Matcher
@@ -29,7 +30,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     RubyTestCodeParser(String repositoryPath) {
         super(repositoryPath)
-        this.routesFile = repositoryPath + RubyUtil.ROUTES_FILE
+        this.routesFile = repositoryPath + RubyConstantData.ROUTES_FILE
         this.routes = [] as Set
     }
 
@@ -327,7 +328,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         calledPaths.removeAll([null])  //it is null if test code references a class or file that does not exist
         def usedPaths = [] as Set
 
-        def auxiliaryMethods =  calledPaths.findAll{ it.file != RubyUtil.ROUTES_ID }
+        def auxiliaryMethods =  calledPaths.findAll{ it.file != RubyConstantData.ROUTES_ID }
         def railsPathMethods = (calledPaths - auxiliaryMethods)?.findAll{ !it.name.contains("/") }
         def explicityPaths = calledPaths - (auxiliaryMethods + railsPathMethods)
         usedPaths += explicityPaths*.name
@@ -344,10 +345,10 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         }
 
         /* dealing with rails *_path methods */
-        def pathMethodsReturnedByAuxMethods = usedRoutesByAuxMethods.findAll{ it.contains(RubyUtil.ROUTE_SUFIX) }
+        def pathMethodsReturnedByAuxMethods = usedRoutesByAuxMethods.findAll{ it.contains(RubyConstantData.ROUTE_SUFIX) }
         usedPaths += usedRoutesByAuxMethods - pathMethodsReturnedByAuxMethods
         railsPathMethods = railsPathMethods*.name
-        railsPathMethods += pathMethodsReturnedByAuxMethods?.collect{ it - RubyUtil.ROUTE_SUFIX }
+        railsPathMethods += pathMethodsReturnedByAuxMethods?.collect{ it - RubyConstantData.ROUTE_SUFIX }
 
         /* extract data from used routes */
         this.registryUsedPaths(visitor, usedPaths)

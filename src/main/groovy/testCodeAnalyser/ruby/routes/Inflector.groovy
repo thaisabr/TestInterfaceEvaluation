@@ -1,9 +1,8 @@
 package testCodeAnalyser.ruby.routes
 
 import org.jruby.embed.ScriptingContainer
+import util.ConstantData
 import util.Util
-import util.ruby.RubyUtil
-
 
 class Inflector {
 
@@ -17,8 +16,8 @@ class Inflector {
         container.loadPaths.add(Util.GEM_I18N)
 
         ClassLoader loader = Thread.currentThread().getContextClassLoader()
-        InputStream is = loader.getResourceAsStream(RubyUtil.INFLECTOR_FILE)
-        receiver = container.runScriptlet(is, RubyUtil.INFLECTOR_FILE)
+        InputStream is = loader.getResourceAsStream(ConstantData.INFLECTOR_FILE)
+        receiver = container.runScriptlet(is, ConstantData.INFLECTOR_FILE)
     }
 
     String pluralize(String word) {

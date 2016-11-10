@@ -28,7 +28,7 @@ abstract class Util {
     public static final String GEMS_PATH
     public static final String GEM_INFLECTOR
     public static final String GEM_I18N
-    public static final String GEM_PARSER_PATH
+    public static final String GEM_PARSER
     public static final String GEM_AST
 
     static {
@@ -74,7 +74,7 @@ abstract class Util {
                 Matcher.quoteReplacement(File.separator))
         GEM_INFLECTOR = configureGemInflector()
         GEM_I18N = configureGemI18n()
-        GEM_PARSER_PATH = configureGemParser()
+        GEM_PARSER = configureGemParser()
         GEM_AST = configureGemAst()
     }
 

@@ -6,7 +6,7 @@ import org.jrubyparser.ast.StrNode
 import org.jrubyparser.ast.SymbolNode
 import org.jrubyparser.util.NoopVisitor
 import util.RegexUtil
-import util.ruby.RubyUtil
+import util.ruby.RubyConstantData
 
 class RubyGetPropertiesVisitor extends NoopVisitor {
 
@@ -65,7 +65,7 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         def arg = "$argsPrefix$actionValue"
         if (argValue) arg = argValue
 
-        return new Route(name: methodName, file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: arg)
+        return new Route(name: methodName, file: RubyConstantData.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: arg)
     }
 
     private Route generateResourcesCollectionRoute(String actionName, String actionValue, String argValue,
@@ -90,7 +90,7 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         def arg = "$argsPrefix$actionValue"
         if (argValue) arg = argValue
 
-        return new Route(name: methodName, file: RubyUtil.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: arg)
+        return new Route(name: methodName, file: RubyConstantData.ROUTES_ID, value: "$pathValuePrefix$actionName", arg: arg)
     }
 
     Route getRoute() {

@@ -4,12 +4,11 @@ import org.jrubyparser.ast.StrNode
 import org.jrubyparser.ast.SymbolNode
 import org.jrubyparser.util.NoopVisitor
 import util.RegexUtil
-import util.ruby.RubyUtil
-
+import util.ruby.RubyConstantData
 
 class RubyMatchPropertiesVisitor extends NoopVisitor {
 
-    static List NON_RESOURCEFUL_IDENTIFIERS = RubyUtil.REQUEST_TYPES + ["match"]
+    static List NON_RESOURCEFUL_IDENTIFIERS = RubyConstantData.REQUEST_TYPES + ["match"]
     def nodeName
     def argsNodes = []
 

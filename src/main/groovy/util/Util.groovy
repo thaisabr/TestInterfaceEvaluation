@@ -31,6 +31,53 @@ abstract class Util {
     public static final String GEM_PARSER_PATH
     public static final String GEM_AST
 
+    static {
+        properties = new Properties()
+        loadProperties()
+        TASKS_FILE = configureTasksFilePath()
+        REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
+        CODE_LANGUAGE = configureLanguage()
+        GHERKIN_FILES_RELATIVE_PATH = configureGherkin()
+        STEPS_FILES_RELATIVE_PATH = configureSteps()
+        UNIT_TEST_FILES_RELATIVE_PATH = configureUnitTest()
+        PRODUCTION_FILES_RELATIVE_PATH = configureProduction()
+        VIEWS_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}views"
+        CONTROLLER_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}controllers"
+        MODEL_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}models"
+        FRAMEWORK_PATH = configureFramework()
+        FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
+
+        //configure language dependents
+        switch (CODE_LANGUAGE) {
+            case LanguageOption.RUBY:
+                VALID_EXTENSION = ConstantData.RUBY_EXTENSION
+                VALID_VIEW_FILES = [".html", ".html.haml", ".html.erb", ".html.slim"]
+                LIB_RELATIVE_PATH = "lib"
+                break
+            case LanguageOption.GROOVY:
+                VALID_EXTENSION = ConstantData.GROOVY_EXTENSION
+                VALID_VIEW_FILES = []
+                LIB_RELATIVE_PATH = ""
+                break
+            case LanguageOption.JAVA:
+                VALID_EXTENSION = ConstantData.JAVA_EXTENSION
+                VALID_VIEW_FILES = []
+                LIB_RELATIVE_PATH = ""
+                break
+        }
+
+        VALID_EXTENSIONS = [VALID_EXTENSION] + VALID_VIEW_FILES + [ConstantData.FEATURE_FILENAME_EXTENSION]
+        VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, UNIT_TEST_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH,
+                         LIB_RELATIVE_PATH]
+
+        GEMS_PATH = (properties.(ConstantData.PROP_GEMS)).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
+                Matcher.quoteReplacement(File.separator))
+        GEM_INFLECTOR = configureGemInflector()
+        GEM_I18N = configureGemI18n()
+        GEM_PARSER_PATH = configureGemParser()
+        GEM_AST = configureGemAst()
+    }
+
     private static loadProperties() {
         File configFile = new File(ConstantData.PROPERTIES_FILE_NAME)
         FileInputStream resourceStream = new FileInputStream(configFile)
@@ -96,53 +143,6 @@ abstract class Util {
 
     private static configureGemAst(){
         configureGem(properties.(ConstantData.PROP_GEM_AST), ConstantData.DEFAULT_GEM_AST_FOLDER)
-    }
-
-    static {
-        properties = new Properties()
-        loadProperties()
-        TASKS_FILE = configureTasksFilePath()
-        REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
-        CODE_LANGUAGE = configureLanguage()
-        GHERKIN_FILES_RELATIVE_PATH = configureGherkin()
-        STEPS_FILES_RELATIVE_PATH = configureSteps()
-        UNIT_TEST_FILES_RELATIVE_PATH = configureUnitTest()
-        PRODUCTION_FILES_RELATIVE_PATH = configureProduction()
-        VIEWS_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}views"
-        CONTROLLER_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}controllers"
-        MODEL_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}models"
-        FRAMEWORK_PATH = configureFramework()
-        FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
-
-        //configure language dependents
-        switch (CODE_LANGUAGE) {
-            case LanguageOption.RUBY:
-                VALID_EXTENSION = ConstantData.RUBY_EXTENSION
-                VALID_VIEW_FILES = [".html", ".html.haml", ".html.erb", ".html.slim"]
-                LIB_RELATIVE_PATH = "lib"
-                break
-            case LanguageOption.GROOVY:
-                VALID_EXTENSION = ConstantData.GROOVY_EXTENSION
-                VALID_VIEW_FILES = []
-                LIB_RELATIVE_PATH = ""
-                break
-            case LanguageOption.JAVA:
-                VALID_EXTENSION = ConstantData.JAVA_EXTENSION
-                VALID_VIEW_FILES = []
-                LIB_RELATIVE_PATH = ""
-                break
-        }
-
-        VALID_EXTENSIONS = [VALID_EXTENSION] + VALID_VIEW_FILES + [ConstantData.FEATURE_FILENAME_EXTENSION]
-        VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, UNIT_TEST_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH,
-                         LIB_RELATIVE_PATH]
-
-        GEMS_PATH = (properties.(ConstantData.PROP_GEMS)).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
-        GEM_INFLECTOR = configureGemInflector()
-        GEM_I18N = configureGemI18n()
-        GEM_PARSER_PATH = configureGemParser()
-        GEM_AST = configureGemAst()
     }
 
     static String configureGitRepositoryName(String url) {
@@ -226,10 +226,6 @@ abstract class Util {
             default: throw new InvalidLanguageException()
         }
         return files
-    }
-
-    private static files(){
-
     }
 
     static List<String> findFilesFromDirectory(String directory) {

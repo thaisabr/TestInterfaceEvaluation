@@ -16,7 +16,9 @@ import testCodeAnalyser.ruby.routes.Route
 import testCodeAnalyser.ruby.routes.RubyConfigRoutesVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecFileVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
+import testCodeAnalyser.ruby.views.ErbAnalyser
 import util.RegexUtil
+import util.Util
 import util.ruby.RubyConstantData
 import util.ruby.RubyUtil
 
@@ -25,6 +27,7 @@ import java.util.regex.Matcher
 @Slf4j
 class RubyTestCodeParser extends TestCodeAbstractParser {
 
+    static ErbAnalyser erbAnalyser = new ErbAnalyser()
     String routesFile
     Set<Route> routes
 
@@ -344,15 +347,65 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             log.info "Found route related to auxiliary path method '${auxMethod.name}': ${!data.result.empty} (all return: $allReturn)"
         }
 
-        /* dealing with rails *_path methods */
+        /* deals with rails *_path methods */
         def pathMethodsReturnedByAuxMethods = usedRoutesByAuxMethods.findAll{ it.contains(RubyConstantData.ROUTE_SUFIX) }
         usedPaths += usedRoutesByAuxMethods - pathMethodsReturnedByAuxMethods
         railsPathMethods = railsPathMethods*.name
         railsPathMethods += pathMethodsReturnedByAuxMethods?.collect{ it - RubyConstantData.ROUTE_SUFIX }
 
-        /* extract data from used routes */
+        /* extracts data from used routes */
         this.registryUsedPaths(visitor, usedPaths)
         this.registryUsedRailsPaths(visitor, railsPathMethods as Set)
+
+        /* extracts data from erb files (this code must be moved in the future) */
+        this.registryCallsFromErb(visitor)
+    }
+
+    private static extractCallsFromErb(TestCodeVisitor visitor){
+        def erbs = visitor.taskInterface.findAllFiles().findAll{ Util.isErbFile(it) }
+        def calls = []
+        erbs?.each{ erb ->
+            String code = erbAnalyser.extractCode(Util.REPOSITORY_FOLDER_PATH + File.separator +erb)
+            code.eachLine { line ->
+                calls += Eval.me(line)
+            }
+        }
+        calls.unique()
+    }
+
+    private registryCallsFromErb(TestCodeVisitor visitor){
+        if(!(visitor instanceof RubyTestCodeVisitor)) return
+
+        def calls = extractCallsFromErb(visitor)
+
+        //access to files or paths
+        def usedPaths = calls?.findAll{ it.receiver.empty && it.name.contains("/") }
+        def paths = usedPaths*.name
+        this.registryUsedPaths(visitor, paths as Set)
+
+        //rails path methods
+        def railsPathMethods = (calls - usedPaths)?.findAll{ it.receiver.empty && it.name.contains("_path") }
+        def railsMethods = (railsPathMethods*.name)?.collect{ it - RubyConstantData.ROUTE_SUFIX }
+        this.registryUsedRailsPaths(visitor, railsMethods as Set)
+
+        def others = (calls - usedPaths - railsPathMethods)
+
+        //class usage only
+        def classesOnly = others?.findAll{ it.name.empty && !it.receiver.empty }
+        def rubyVisitor = (RubyTestCodeVisitor) visitor
+        classesOnly?.each{
+            String name = it.name
+            if(name.startsWith("@")) name = name.substring(1)
+            rubyVisitor.registryClassUsage(name)
+        }
+
+        //method call
+        def methods = others?.findAll{ !it.receiver.empty && !it.name.empty }
+        methods?.each{
+            String name = it.name
+            if(name.startsWith("@")) name = name.substring(1)
+            rubyVisitor.registryCallFromInstanceVariable(name, 0, it.receiver)
+        }
     }
 
     /***

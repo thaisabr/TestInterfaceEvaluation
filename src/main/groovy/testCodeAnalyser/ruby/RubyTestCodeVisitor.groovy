@@ -74,6 +74,14 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         matches
     }
 
+    private searchForMethodMatch(String method, int argsCounter) {
+        def matches = []
+        matches = projectMethods.findAll {
+            it.name == method && argsCounter <= it.args && argsCounter >= it.args - it.optionalArgs
+        }
+        matches
+    }
+
     private registryMethodCallFromUnknownReceiver(Node iVisited, boolean hasArgs) {
         def matches = []
         if (hasArgs) matches = searchForMethodMatch(iVisited)
@@ -117,16 +125,6 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             }
         } else { //it seems it never has happened
             taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
-        }
-    }
-
-    private registryClassUsage(String name) {
-        def paths = RubyUtil.getClassPathForRubyClass(name, projectFiles)
-        if(paths.empty && Util.FRAMEWORK_FILES.findAll { it.contains(name) }.empty){
-            taskInterface.classes += [name: name, file: null]
-        }
-        else {
-            paths.each{ path -> taskInterface.classes += [name: name, file: path] }
         }
     }
 
@@ -399,6 +397,33 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         } else if (!(receiver.class in excluded)) {
             log.warn "RECEIVER DEFAULT! called: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1}); " +
                     "Receiver type: ${iVisited.receiver.class}"
+        }
+    }
+
+    def registryClassUsage(String name) {
+        def paths = RubyUtil.getClassPathForRubyClass(name, projectFiles)
+        if(paths.empty && Util.FRAMEWORK_FILES.findAll { it.contains(name) }.empty){
+            taskInterface.classes += [name: name, file: null]
+        }
+        else {
+            paths.each{ path -> taskInterface.classes += [name: name, file: path] }
+        }
+    }
+
+    def registryCallFromInstanceVariable(String method, int argsCounter, String receiver) {
+        def paths = RubyUtil.getClassPathForRubyInstanceVariable(receiver, projectFiles)
+        if (paths) {
+            /* Checks if the method really exists. There are methods that are generated automatically by Rails.
+            * In any case, the call is registered.*/
+            def matches = searchForMethodMatch(method, argsCounter)
+            if (matches.empty) {
+                this.registryClassUsageUsingFilename(paths)
+                /* Examples: @mobilization.hashtag; mobilization.save! */
+            } else {
+                paths.each{ path -> taskInterface.methods += [name:method, type: RubyUtil.getClassName(path), file: path] }
+            }
+        } else { //it seems it never has happened
+            taskInterface.methods += [name:method, type: "Object", file: null]
         }
     }
 

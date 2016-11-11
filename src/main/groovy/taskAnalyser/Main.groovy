@@ -13,10 +13,10 @@ class Main {
         analyser1.analyseAll()
         //analyser1.analysePrecisionAndRecall()
 
-        /* analyse a set of csv files *
+        /* analyse a set of csv files */
         TaskAnalyser analyser2 = new TaskAnalyser(ConstantData.DEFAULT_TASKS_FOLDER)
-        analyser2.analyseAll()
-        analyser2.analysePrecisionAndRecall()*/
+        //analyser2.analyseAll()
+       // analyser2.analysePrecisionAndRecall()
 
     }
 

@@ -171,7 +171,7 @@ class DataManager {
 
     private
     static organizeAllResult(String evaluationFile, String organizedFile, String similarityFile, boolean similarityAnalysis) {
-        if (!evaluationFile || evaluationFile.empty) return
+        if (!evaluationFile || evaluationFile.empty || !(new File(evaluationFile).exists())) return
         List<String[]> entries = readAllResult(evaluationFile)
         if (entries.size() <= 5) return
 
@@ -240,7 +240,11 @@ class DataManager {
      */
     static extractProductionAndTestTasks(String filename) {
         List<String[]> entries = readInputCSV(filename)
+
+        //deveria ser ||, deixo o && porque tem tarefa que tem um conjunto tão grande de arquivos alterados, que há perda de dados
+        //alterar no projeto de mineração para, ao invés de listar os arquivos alterados, identificar apenas a quantidade
         List<String[]> relevantEntries = entries.findAll { it[4] != "[]" && it[5] != "[]" }
+
         List<DoneTask> tasks = []
         try {
             relevantEntries.each { entry ->
@@ -302,7 +306,7 @@ class DataManager {
     }
 
     static analyseSimilarity(String filteredFile, String similarityFile) {
-        if (!filteredFile || filteredFile.empty) return
+        if (!filteredFile || filteredFile.empty || !(new File(filteredFile).exists())) return
         List<String[]> entries = readAllResult(filteredFile)
         if (entries.size() <= 4) return
 
@@ -352,7 +356,7 @@ class DataManager {
     }
 
     static organizeSimilarityResult(String similarityFile, String organizedFile) {
-        if (!similarityFile || similarityFile.empty) return
+        if (!similarityFile || similarityFile.empty || !(new File(similarityFile).exists())) return
         List<String[]> entries = readAllResult(similarityFile)
         if (entries.size() <= 2) return
 

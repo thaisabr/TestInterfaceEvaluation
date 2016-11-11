@@ -63,10 +63,10 @@ class TaskInterface {
      */
     Set<String> findAllFiles() {
         //production classes
-        def classes = (classes?.findAll { Util.isCoreCode(it.file) })*.file
+        def classes = (classes?.findAll { Util.isProductionCode(it.file) })*.file
 
         //production methods
-        def methodFiles = methods?.findAll { it.type != null && !it.type.empty && Util.isCoreCode(it.file) }*.file
+        def methodFiles = methods?.findAll { it.type != null && !it.type.empty && Util.isProductionCode(it.file) }*.file
 
         //production files
         def files = ((classes + methodFiles + referencedPages) as Set)?.sort()

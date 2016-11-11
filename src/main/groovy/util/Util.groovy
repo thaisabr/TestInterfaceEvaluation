@@ -66,12 +66,11 @@ abstract class Util {
                 break
         }
 
-        VALID_EXTENSIONS = [VALID_EXTENSION] + VALID_VIEW_FILES + [ConstantData.FEATURE_FILENAME_EXTENSION]
+        VALID_EXTENSIONS = [VALID_EXTENSION] + VALID_VIEW_FILES + [ConstantData.FEATURE_EXTENSION]
         VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, UNIT_TEST_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH,
                          LIB_RELATIVE_PATH]
 
-        GEMS_PATH = (properties.(ConstantData.PROP_GEMS)).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
-                Matcher.quoteReplacement(File.separator))
+        GEMS_PATH = (properties.(ConstantData.PROP_GEMS)).replace(File.separator, Matcher.quoteReplacement(File.separator))
         GEM_INFLECTOR = configureGemInflector()
         GEM_I18N = configureGemI18n()
         GEM_PARSER = configureGemParser()
@@ -155,7 +154,7 @@ abstract class Util {
     }
 
     static Collection<String> findAllProductionFiles(Collection<String> files) {
-        files?.findAll { isCoreCode(it) }
+        files?.findAll { isProductionCode(it) }
     }
 
     static boolean isTestCode(String path) {
@@ -180,7 +179,7 @@ abstract class Util {
     }
 
     static boolean isGherkinCode(String path) {
-        if (path?.endsWith(ConstantData.FEATURE_FILENAME_EXTENSION)) true
+        if (path?.endsWith(ConstantData.FEATURE_EXTENSION)) true
         else false
     }
 
@@ -189,8 +188,13 @@ abstract class Util {
         else false
     }
 
-    static boolean isCoreCode(String path) {
+    static boolean isProductionCode(String path) {
         if (isValidCode(path) && !isTestCode(path)) true
+        else false
+    }
+
+    static boolean isErbFile(String path){
+        if (path?.contains(VIEWS_FILES_RELATIVE_PATH + File.separator) && path?.endsWith(ConstantData.ERB_EXTENSION)) true
         else false
     }
 
@@ -258,7 +262,7 @@ abstract class Util {
 
     static findJarFilesFromDirectory(String directory) {
         def files = findFilesFromDirectory(directory)
-        files.findAll { it.contains(ConstantData.JAR_FILENAME_EXTENSION) }
+        files.findAll { it.contains(ConstantData.JAR_EXTENSION) }
     }
 
 }

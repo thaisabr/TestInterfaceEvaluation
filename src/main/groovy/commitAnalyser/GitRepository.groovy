@@ -314,7 +314,7 @@ class GitRepository {
                     }
                     break
                 case DiffEntry.ChangeType.DELETE: //the file size is already known
-                    if (Util.isCoreCode(entry.oldPath)) {
+                    if (Util.isProductionCode(entry.oldPath)) {
                         def result = extractFileContent(parent, entry.oldPath)
                         codeChanges += new CoreChange(path: entry.oldPath, type: entry.changeType, lines: 0..<result.readLines().size())
                     }

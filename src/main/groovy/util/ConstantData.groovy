@@ -42,9 +42,10 @@ interface ConstantData {
     String SIMILARITY_ORGANIZED_FILE_SUFIX = "-similarityOrganized.csv"
 
     String NON_PRIMITIVE_ARRAY_PREFIX = "[L"
+    String ERB_EXTENSION = ".erb"
     String CSV_FILE_EXTENSION = ".csv"
-    String FEATURE_FILENAME_EXTENSION = ".feature"
-    String JAR_FILENAME_EXTENSION = ".jar"
+    String FEATURE_EXTENSION = ".feature"
+    String JAR_EXTENSION = ".jar"
     String GROOVY_EXTENSION = ".groovy"
     String JAVA_EXTENSION = ".java"
     String RUBY_EXTENSION = ".rb"

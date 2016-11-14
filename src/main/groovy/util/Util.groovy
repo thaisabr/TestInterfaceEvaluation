@@ -10,7 +10,7 @@ abstract class Util {
     static final Properties properties
     public static final String TASKS_FILE
     public static final String REPOSITORY_FOLDER_PATH
-    protected static final LanguageOption CODE_LANGUAGE
+    public static final LanguageOption CODE_LANGUAGE
     public static final String GHERKIN_FILES_RELATIVE_PATH
     public static final String STEPS_FILES_RELATIVE_PATH
     public static final String UNIT_TEST_FILES_RELATIVE_PATH

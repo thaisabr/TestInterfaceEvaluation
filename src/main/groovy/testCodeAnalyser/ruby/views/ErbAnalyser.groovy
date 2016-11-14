@@ -26,7 +26,7 @@ class ErbAnalyser {
 
     String extractCode(String path){
         log.info "Extract ERBS from: $path"
-        container.callMethod(receiver, "grab_controllers", path)
+        container.callMethod(receiver, "extract_production_code", path)
     }
 
 }

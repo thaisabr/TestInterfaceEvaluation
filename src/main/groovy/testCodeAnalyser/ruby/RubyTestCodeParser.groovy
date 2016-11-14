@@ -27,9 +27,10 @@ import java.util.regex.Matcher
 @Slf4j
 class RubyTestCodeParser extends TestCodeAbstractParser {
 
-    static ErbAnalyser erbAnalyser = new ErbAnalyser()
     String routesFile
     Set<Route> routes
+    static ErbAnalyser erbAnalyser = new ErbAnalyser()
+    static counter = 1
 
     RubyTestCodeParser(String repositoryPath) {
         super(repositoryPath)
@@ -365,9 +366,18 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         def erbs = visitor.taskInterface.findAllFiles().findAll{ Util.isErbFile(it) }
         def calls = []
         erbs?.each{ erb ->
-            String code = erbAnalyser.extractCode(Util.REPOSITORY_FOLDER_PATH + File.separator +erb)
-            code.eachLine { line ->
-                calls += Eval.me(line)
+            def path = Util.REPOSITORY_FOLDER_PATH + File.separator +erb
+            try{
+                String code = erbAnalyser.extractCode(path)
+                code.eachLine { line ->
+                    calls += Eval.me(line)
+                }
+            } catch(Exception ex){
+                def src = new File(path)
+                def dst = new File("error" + File.separator + src.name + counter)
+                dst << src.text
+                log.error "Error to extract code from erb: $path"
+                counter ++
             }
         }
         calls.unique()

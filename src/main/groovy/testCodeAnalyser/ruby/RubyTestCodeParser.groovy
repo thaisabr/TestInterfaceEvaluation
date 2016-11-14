@@ -366,7 +366,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         def erbs = visitor.taskInterface.findAllFiles().findAll{ Util.isErbFile(it) }
         def calls = []
         erbs?.each{ erb ->
-            def path = Util.REPOSITORY_FOLDER_PATH + File.separator +erb
+            def path = Util.REPOSITORY_FOLDER_PATH + erb
             try{
                 String code = erbAnalyser.extractCode(path)
                 code.eachLine { line ->
@@ -376,7 +376,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                 def src = new File(path)
                 def dst = new File("error" + File.separator + src.name + counter)
                 dst << src.text
-                log.error "Error to extract code from erb: $path"
+                log.error "Error to extract code from erb: $path (${ex.message})"
                 counter ++
             }
         }

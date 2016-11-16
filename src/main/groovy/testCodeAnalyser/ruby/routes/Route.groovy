@@ -1,11 +1,14 @@
 package testCodeAnalyser.ruby.routes
 
+import util.ruby.RequestType
+
 class Route {
 
     String name
     String file
     String value
     String arg
+    String type = RequestType.GET
 
     public void setName(String name){
         this.name = name.replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*/", "/.*/").replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*[^/()]", "/.*")
@@ -16,7 +19,8 @@ class Route {
         return "[name: '" + name + '\'' +
                 ", file: '" + file + '\'' +
                 ", value: '" + value + '\'' +
-                ", arg: '" + arg + '\'' + ']'
+                ", arg: '" + arg + '\'' +
+                ", type: '" + type + '\'' + ']'
     }
 
     @Override
@@ -30,6 +34,7 @@ class Route {
         if (file != route.file) return false
         if (name != route.name) return false
         if (value != route.value) return false
+        if (type != route.type) return false
 
         return true
     }
@@ -41,6 +46,7 @@ class Route {
         result = 31 * result + file.hashCode()
         result = 31 * result + value.hashCode()
         result = 31 * result + arg.hashCode()
+        result = 31 * result + type.hashCode()
         return result
     }
 

@@ -15,6 +15,7 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
     boolean isCollection
     def propsValues = []
     String prefix
+    String formatedPrefix
     String original
     String aliasSingular
     String controllerName
@@ -25,10 +26,11 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
     }
 
     RubyGetPropertiesVisitor(boolean isMember, boolean isCollection, String prefix, String original, String aliasSingular,
-                             String controllerName, String indexName) {
+                             String controllerName, String indexName, String formatedPrefix) {
         this.isMember = isMember
         this.isCollection = isCollection
         this.prefix = prefix
+        this.formatedPrefix = formatedPrefix
         this.original = original
         this.aliasSingular = aliasSingular
         this.controllerName = controllerName
@@ -49,7 +51,6 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         def argsPrefix
 
         if (prefix) {
-            def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             nameSufix = "_${formatedPrefix}_$aliasSingular"
             pathValuePrefix = "/${prefix}/$original(/.*)?/"
             argsPrefix = "${prefix}/$controllerName#"
@@ -74,7 +75,6 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         def pathValuePrefix
         def argsPrefix
         if (prefix) {
-            def formatedPrefix = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             nameSufix = "_${formatedPrefix}_$indexName"
             pathValuePrefix = "/${prefix}/$original/"
             argsPrefix = "${prefix}/$controllerName#"
@@ -99,8 +99,7 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
 
         String actionName = values.get(1).value
         if (actionName.startsWith("/:")) actionName = actionName.replace("/:", "/")
-        actionName = actionName.replaceAll("/:.*\$", "/.*")
-        actionName = actionName.replaceAll("/:.*/", "/.*/")
+        actionName = actionName.replaceAll("/:.*\$", "/.*").replaceAll("/:.*/", "/.*/")
 
         def actionValue = actionName //action que sera realmente chamada
         String controllerActionString = null

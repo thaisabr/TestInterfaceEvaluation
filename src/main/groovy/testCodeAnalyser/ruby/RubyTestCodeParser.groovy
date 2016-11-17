@@ -29,6 +29,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     String routesFile
     Set<Route> routes
+    Set<Route> problematicRoutes
     static ErbAnalyser erbAnalyser = new ErbAnalyser()
     static counter = 1
 
@@ -36,6 +37,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         super(repositoryPath)
         this.routesFile = repositoryPath + RubyConstantData.ROUTES_FILE
         this.routes = [] as Set
+        this.problematicRoutes = [] as Set
     }
 
     /***
@@ -76,7 +78,11 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     private generateProjectRoutes() {
         def node = this.generateAst(routesFile)
         RubyConfigRoutesVisitor visitor = new RubyConfigRoutesVisitor(node)
-        routes = visitor?.routingMethods
+        def allRoutes = visitor?.routingMethods
+        problematicRoutes = allRoutes.findAll{
+            !it.arg.contains("#") || (it.name!="root" && it.value==~/[\/\\(?\.*\\)?]+/ && it.value!="/")
+        }
+        routes = allRoutes - problematicRoutes
     }
 
     private extractMethodReturnUsingArgs(def pageMethod){ //keywords: file, name, args
@@ -325,6 +331,8 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             this.generateProjectRoutes()
             log.info "All project routes:"
             this.routes.each { log.info it.toString() }
+            log.info "Problematic routes:"
+            this.problematicRoutes.each{ log.info it.toString() }
         }
 
         /* identifies used routes */

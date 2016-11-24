@@ -395,6 +395,8 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         if(!(visitor instanceof RubyTestCodeVisitor)) return
 
         def calls = extractCallsFromErb(visitor)
+        log.info "method call from ERB file(s):"
+        calls?.each{ log.info it.toString() }
 
         //access to files or paths
         def usedPaths = calls?.findAll{ it.receiver.empty && it.name.contains("/") }

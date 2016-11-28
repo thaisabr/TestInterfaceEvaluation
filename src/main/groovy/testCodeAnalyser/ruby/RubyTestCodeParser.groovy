@@ -45,7 +45,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
      * @param path path of interest file
      * @return the root node of the AST
      */
-    private Node generateAst(def reader, String path){
+    private Node generateAst(reader, String path){
         Parser rubyParser = new Parser()
         CompatVersion version = CompatVersion.RUBY2_0
         ParserConfiguration config = new ParserConfiguration(0, version)
@@ -85,7 +85,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         routes = allRoutes - problematicRoutes
     }
 
-    private extractMethodReturnUsingArgs(def pageMethod){ //keywords: file, name, args
+    private extractMethodReturnUsingArgs(pageMethod){ //keywords: file, name, args
         def result = []
         def pageVisitor = new RubyConditionalVisitor(pageMethod.name, pageMethod.args)
         this.generateAst(pageMethod.file)?.accept(pageVisitor)
@@ -94,13 +94,13 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         result
     }
 
-    private extractAllPossibleReturnFromMethod(def pageMethod){ //keywords: file, name, args
+    private extractAllPossibleReturnFromMethod(pageMethod){ //keywords: file, name, args
         def pageVisitor = new RubyMethodReturnVisitor(pageMethod.name, pageMethod.args)
         generateAst(pageMethod.file)?.accept(pageVisitor) //extracts path from method
         pageVisitor.values
     }
 
-    private extractDataFromAuxiliaryMethod(def pageMethod) { //keywords: file, name, args
+    private extractDataFromAuxiliaryMethod(pageMethod) { //keywords: file, name, args
         def result = [] as Set
         def specificFailed = false
         def extractSpecificReturn = !(pageMethod.args.empty)
@@ -482,7 +482,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
      * @param visitor visitor to visit method bodies
      */
     @Override
-    def visitFile(def file, TestCodeVisitor visitor) {
+    def visitFile(file, TestCodeVisitor visitor) {
         def node = this.generateAst(file.path)
         visitor.lastVisitedFile = file.path
         def auxVisitor = new RubyMethodVisitor(file.methods, (RubyTestCodeVisitor) visitor)

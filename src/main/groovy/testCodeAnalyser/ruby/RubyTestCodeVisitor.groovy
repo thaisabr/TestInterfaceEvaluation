@@ -327,17 +327,32 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             } else if (child instanceof StrNode) argValue += child.value.trim()
         }
 
-        argValue?.readLines()?.each {
-            if (!it.startsWith("|")) {
-                def stepText = it.trim()
-                for (def i = 0; i < ConstantData.STEP_KEYWORDS.size(); i++) {
-                    def keyword = ConstantData.STEP_KEYWORDS.get(i)
-                    if (stepText.startsWith(keyword)) {
-                        stepText = stepText.replaceFirst(keyword, "").trim()
-                        break
-                    }
-                }
-                calledSteps += new StepCall(text: stepText, path: lastVisitedFile, line: iVisited.position.startLine)
+        def lines = argValue?.readLines()?.collect{ it.replaceAll(/[ \t]+/, " ").replaceAll(/[ ]+/, " ").trim() }
+        if(lines.empty) return
+        if(lines.any{ it.contains("<") && it.contains(">")}){ //scenario outline
+            log.info "called step is scenario outline"
+            /*def argsTable = lines.findAll{ it.startsWith("|") }
+            argsTable -= argsTable.first()
+            argsTable.each{ argsTableLine ->
+                def values = argsTableLine.split("\\|")*.replaceAll("\\|", "")*.trim()
+                values = values?.findResults { i -> i.empty ? null : i } as Set
+            }*/
+        } else if( lines.any{ it.startsWith("|")} ){ //datatable
+            log.info "called step is datatable"
+            lines = lines.findAll{ !it.startsWith("|") }
+            registryCall(lines, iVisited)
+        } else { //regular scenario
+            log.info "called step is a regular scenario"
+            registryCall(lines, iVisited)
+        }
+    }
+
+    private registryCall(lines, FCallNode iVisited){
+        lines.each{ step ->
+            if(!step.empty){
+                def keyword = ConstantData.STEP_KEYWORDS.find{ step.startsWith(it) }
+                if(keyword) step = step.replaceFirst(keyword, "").trim()
+                calledSteps += new StepCall(text: step, path: lastVisitedFile, line: iVisited.position.startLine)
             }
         }
     }

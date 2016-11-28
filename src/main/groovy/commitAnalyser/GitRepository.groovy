@@ -40,8 +40,10 @@ class GitRepository {
     String name
     String localPath
     String lastCommit //used only to reset the repository for the original state after checkout command
+    Set removedSteps
 
     private GitRepository(String path) throws CloningRepositoryException {
+        this.removedSteps = [] as Set
         if (path.startsWith("http")) {
             this.url = path + ConstantData.GIT_EXTENSION
             this.name = Util.configureGitRepositoryName(url)
@@ -61,7 +63,7 @@ class GitRepository {
     }
 
     static GitRepository getRepository(String url) throws CloningRepositoryException {
-        def repository = repositories.find { (it.url - ConstantData.GIT_EXTENSION).equals(url) }
+        def repository = repositories.find { ((it.url - ConstantData.GIT_EXTENSION) == url) }
         if (!repository) {
             repository = new GitRepository(url)
             repositories += repository
@@ -230,7 +232,13 @@ class GitRepository {
                 } else {//scenario definition was changed
                     changedScenarioDefinitions += foundScenDef
                 }
-            } //if a scenario definition was removed, it was not relevant for the task
+            } else { //if a scenario definition was removed, it was not relevant for the task
+                log.info "commit ${commit.name} removed scenario from ${entry.newPath}:\n ${oldScenDef.name}"
+                oldScenDef.steps.each{
+                    log.info "${it.text}; ${entry.newPath} (${it.location.line})"
+                    removedSteps += [path: entry.newPath, text: it.text]
+                }
+            }
         }
 
         //searches for added scenario definitions
@@ -246,7 +254,7 @@ class GitRepository {
             GherkinManager.extractTextFromGherkin(newFeature, changedScenarioDefinitions, newVersion, changedGherkinFile)
         }
 
-        changedGherkinFile
+        return changedGherkinFile
     }
 
     /***

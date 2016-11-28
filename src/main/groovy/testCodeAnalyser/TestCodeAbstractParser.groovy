@@ -48,14 +48,15 @@ abstract class TestCodeAbstractParser {
         notFoundViews.sort()
     }
 
-    private organizeMatchStepErrors() {
+    private organizeMatchStepErrors(Set removedSteps) {
         def result = [] as Set
-        def files = matchStepErrors*.path.unique()
+        def errors = matchStepErrors - removedSteps
+        def files = errors*.path.unique()
         files.each { file ->
             def index = file.indexOf(repositoryPath)
             def name = index >= 0 ? file.substring(index) - (repositoryPath + File.separator) : file
-            def lines = matchStepErrors.findAll { it.path == file }*.line
-            result += [path: name, lines: lines.unique().sort()]
+            def texts = (matchStepErrors.findAll{it.path == file}*.text)?.unique()?.sort()
+            result += [path:name, text:texts, size:texts.size()]
         }
         result
     }
@@ -156,7 +157,8 @@ abstract class TestCodeAbstractParser {
             }
         } else {
             log.warn "Step code was not found: ${call.text}; ${call.path} (${call.line})"
-            matchStepErrors += [path: call.path, line: call.line]
+            def text = call.text.replaceAll(/".+"/,"\"\"").replaceAll(/'.+'/,"\'\'")
+            matchStepErrors += [path: call.path, text: text]
         }
 
         /* organizes step declarations in files */
@@ -357,7 +359,8 @@ abstract class TestCodeAbstractParser {
             }
         } else {
             log.warn "Step code was not found: ${step.text}; $path (${step.location.line})"
-            matchStepErrors += [path: path, line: step.location.line]
+            def text = step.text.replaceAll(/".+"/,"\"\"").replaceAll(/'.+'/,"\'\'")
+            matchStepErrors += [path: path, text: text]
         }
         code
     }
@@ -387,7 +390,8 @@ abstract class TestCodeAbstractParser {
             }
         } else {
             log.warn "Step code was not found: ${step.value}; ${step.path} (${step.line})"
-            matchStepErrors += [path: step.path, line: step.line]
+            def text = step.value.replaceAll(/".+"/,"\"\"").replaceAll(/'.+'/,"\'\'")
+            matchStepErrors += [path: step.path, text: text]
         }
         result
     }
@@ -416,7 +420,8 @@ abstract class TestCodeAbstractParser {
      * @param gherkinFiles list of changed gherkin files
      * @return task interface
      */
-    TaskInterface computeInterfaceForDoneTask(List<GherkinFile> gherkinFiles, List<StepDefinitionFile> stepFiles) {
+    TaskInterface computeInterfaceForDoneTask(List<GherkinFile> gherkinFiles, List<StepDefinitionFile> stepFiles,
+                                              Set removedSteps) {
         configureProperties()
         List<AcceptanceTest> acceptanceTests = extractAcceptanceTest(gherkinFiles)
         List<StepCode> stepCodes1 = acceptanceTests*.stepCodes?.flatten()?.unique()
@@ -424,7 +429,7 @@ abstract class TestCodeAbstractParser {
         List<FileToAnalyse> files2 = findCodeForStepsIndependentFromAcceptanceTest(stepFiles)
         List<FileToAnalyse> filesToAnalyse = collapseFilesToVisit(files1, files2)
         //filesToAnalyse.each{ log.info it.toString() }
-        computeInterface(filesToAnalyse)
+        computeInterface(filesToAnalyse, removedSteps)
     }
 
     /***
@@ -437,10 +442,10 @@ abstract class TestCodeAbstractParser {
         List<AcceptanceTest> acceptanceTests = extractAcceptanceTest(gherkinFiles)
         List<StepCode> stepCodes = acceptanceTests*.stepCodes?.flatten()?.unique()
         List<FileToAnalyse> filesToAnalyse = identifyMethodsPerFileToVisit(stepCodes)
-        computeInterface(filesToAnalyse)
+        computeInterface(filesToAnalyse, null)
     }
 
-    private TaskInterface computeInterface(List<FileToAnalyse> filesToAnalyse) {
+    private TaskInterface computeInterface(List<FileToAnalyse> filesToAnalyse, Set removedSteps) {
         //log.info "enter in computeInterface"
         def interfaces = []
         List<StepCall> calledSteps = [] //keys:text, path, line
@@ -488,14 +493,18 @@ abstract class TestCodeAbstractParser {
         }
 
         /* identifies more step definitions to analyse */
+        log.info "calledSteps:"
+        calledSteps.each{ log.info it.toString() }
+
         List<FileToAnalyse> newStepsToAnalyse = identifyMethodsPerFileToVisitByStepCalls(calledSteps)
         newStepsToAnalyse = updateStepFiles(filesToAnalyse, newStepsToAnalyse)
-        //log.info "newStepsToAnalyse: $newStepsToAnalyse"
-        if (!newStepsToAnalyse.empty) interfaces += computeInterface(newStepsToAnalyse)
+        log.info "newStepsToAnalyse:"
+        newStepsToAnalyse.each{ log.info it.toString() }
+        if (!newStepsToAnalyse.empty) interfaces += computeInterface(newStepsToAnalyse, removedSteps)
 
         /* collapses step code interfaces to define the interface for the whole task */
         def itest = TaskInterface.colapseInterfaces(interfaces)
-        itest.matchStepErrors = organizeMatchStepErrors()
+        itest.matchStepErrors = organizeMatchStepErrors(removedSteps)
         itest.compilationErrors = organizeCompilationErrors()
         itest.notFoundViews = organizeNotFoundViews()
         itest

@@ -1,7 +1,5 @@
 package taskAnalyser
 
-import groovy.time.TimeCategory
-import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
 import taskAnalyser.task.DoneTask
 import util.ConstantData
@@ -22,33 +20,31 @@ class TaskAnalyser {
 
     private computeTaskData() {
         log.info "Number of tasks: ${tasks.size()}"
-        def stepCounter = 0
-        def gherkinCounter = 0
         def result = []
+        def gherkinTasks = []
+        def stepTasks = []
 
         tasks?.each { task ->
-            TimeDuration timestamp
-            def initTime = new Date()
             def interfaces = task.computeInterfaces()
-            def endTime = new Date()
-            use(TimeCategory) {
-                timestamp = endTime - initTime
-            }
             def stepCalls = interfaces.itest.methods?.findAll { it.type == "StepCall" }?.unique()?.size()
             def methods = interfaces.itest.methods?.findAll { it.type == "Object" }?.unique()
             def methodsIdentity = ""
             if (!methods.empty) methodsIdentity = methods*.name
-            if (!task.changedStepDefinitions.empty) stepCounter++
-            if (!task.changedGherkinFiles.empty) gherkinCounter++
-
+            if (!task.changedStepDefinitions.empty) stepTasks += task.id
+            if (!task.changedGherkinFiles.empty) gherkinTasks += task.id
             result += [task: task, itest: interfaces.itest, ireal: interfaces.ireal, methods: methodsIdentity, stepCalls: stepCalls,
-                       text: interfaces.itext, timestamp:timestamp]
+                       text: interfaces.itext, timestamp:interfaces.timestamp]
         }
 
-        log.info "Number of tasks that contains step definitions: $stepCounter"
-        log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
+        def stepCounter = stepTasks.unique().size()
+        def gherkinCounter = gherkinTasks.unique().size()
+        def testsCounter = (stepTasks + gherkinTasks).unique().size()
 
-        [stepCounter: stepCounter, gherkinCounter: gherkinCounter, data: result]
+        log.info "Number of tasks that contain step definitions: $stepCounter"
+        log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
+        log.info "Number of tasks that contain tests: $testsCounter"
+
+        [stepCounter: stepCounter, gherkinCounter: gherkinCounter, testsCounter:testsCounter, data: result]
     }
 
     private generateResultForProject(String tasksFile, String evaluationFile) {
@@ -56,7 +52,8 @@ class TaskAnalyser {
         tasks = r1.tasks
         def r2 = computeTaskData()
         def url = r1.tasks?.first()?.testCodeParser?.repositoryPath
-        DataManager.saveAllResult(evaluationFile, url, r1.allTasksQuantity, tasks.size(), r2.stepCounter, r2.gherkinCounter, r2.data)
+        DataManager.saveAllResult(evaluationFile, url, r1.allTasksQuantity, tasks.size(), r2.stepCounter,
+                r2.gherkinCounter, r2.testsCounter, r2.data)
     }
 
     private analyseAllForProject(String tasksFile) {

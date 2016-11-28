@@ -3,7 +3,7 @@
 class ErbTagsRemover
 
   def remove_erb_tags(text)
-    all_tagged_chunks = text.scan(/(?<=\<%)(.*?)(?=\%>)/)
+    all_tagged_chunks = text.scan(/(?<=\<%)(.*?)(?=\%>)/m)
     all_tagged_chunks.each do |tagged_chunks|
       tagged_chunks.each do |tagged_chunk|
         if tagged_chunk[0] == '='

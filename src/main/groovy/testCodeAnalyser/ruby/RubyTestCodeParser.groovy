@@ -132,10 +132,10 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         if(registryMethodCall) {
             def viewData = this.registryViewRelatedToAction(visitor, data.controller, data.action)
             foundView = viewData.found
-            if(!foundView){
+            /*if(!foundView){
                 viewData = this.registryViewRelatedToPath(visitor, path)
                 foundView = viewData.found
-            }
+            }*/
         }
         [registryMethodCall:registryMethodCall, foundView:foundView]
     }
@@ -159,7 +159,8 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             if(views && !views.empty){ //no case execute it yet
                 visitor?.taskInterface?.referencedPages += views
                 foundView = true
-                def methodCall
+                //trying to find controller and action by view seems risky
+                /*def methodCall
                 views?.each{ view ->
                     def action = this.extractActionFromView(view)
                     log.info "ACTION EXTRACTED FROM VIEW '$view': $action"
@@ -168,7 +169,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                         methodCall = data.registry
                         if(methodCall) registryMethodCall = methodCall
                     }
-                }
+                }*/
             }
         }
         else if(routeIsAction(path)){
@@ -178,11 +179,13 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         } else {
             log.info "PATH: $path"
             def candidates = this.routes.findAll{ path == it.value || path ==~ /${it.value}/ }
-            if(candidates.empty){
+            //trying to find a view by route with no match seems risky
+            /*if(candidates.empty){
                 def viewData = this.registryViewRelatedToPath(visitor, path)
                 foundView = viewData.found
             }
-            else{
+            else{*/
+            if(!candidates.empty){
                 candidates.each{ candidate ->
                     log.info "CANDIDATE: $candidate"
                     if(candidate.arg && !candidate.arg.empty) {
@@ -302,14 +305,14 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                         }
                     }
                 }
-                if (route.value && route.value != "" && !foundView) { //tries to extract data from path
+                /*if (route.value && route.value != "" && !foundView) { //tries to extract data from path
                     def viewData = this.registryViewRelatedToPath(visitor, route.value)
                     foundView = viewData.found
                     if(foundView){
                         view += method
                         views = viewData.views
                     }
-                }
+                }*/
             }
             foundViews += views
             log.info "Found route related to rails path method '${method}': ${registryMethodCall || foundView}"

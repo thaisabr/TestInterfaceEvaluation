@@ -127,7 +127,7 @@ class DoneTask extends Task {
         organizeProductionFiles(validFiles)
     }
 
-    private TaskInterface organizeProductionFiles(def productionFiles) {
+    private TaskInterface organizeProductionFiles(productionFiles) {
         def taskInterface = new TaskInterface()
         productionFiles.each { file ->
             def path = gitRepository.name + File.separator + file
@@ -152,7 +152,7 @@ class DoneTask extends Task {
      */
     @Override
     TaskInterface computeTestBasedInterface() {
-        TimeDuration timestamp
+        TimeDuration timestamp = null
         def taskInterface = new TaskInterface()
         if (!commits || commits.empty) {
             log.warn "TASK ID: $id; NO COMMITS!"
@@ -177,6 +177,7 @@ class DoneTask extends Task {
                     timestamp = endTime - initTime
                 }
                 log.info "Timestamp: $timestamp"
+                taskInterface.timestamp = timestamp
 
                 // resets repository to last version
                 gitRepository.reset()
@@ -215,6 +216,7 @@ class DoneTask extends Task {
     }
 
     TaskInterface computeRealInterface() {
+        TimeDuration timestamp = null
         def taskInterface = new TaskInterface()
 
         if (!commits || commits.empty) {
@@ -225,8 +227,16 @@ class DoneTask extends Task {
         try {
             // resets repository to the state of the last commit to extract changes
             gitRepository.reset(commits?.last()?.hash)
+
+            def initTime = new Date()
             //computes real interface
             taskInterface = identifyProductionChangedFiles()
+            def endTime = new Date()
+            use(TimeCategory) {
+                timestamp = endTime - initTime
+            }
+            taskInterface.timestamp = timestamp
+
             // resets repository to last version
             gitRepository.reset()
         } catch (Exception ex) {
@@ -264,12 +274,20 @@ class DoneTask extends Task {
                 use(TimeCategory) {
                     timestamp = endTime - initTime
                 }
+                itest.timestamp = timestamp
 
                 //computes task text based in gherkin scenarios
                 itext = super.computeTextBasedInterface()
 
+                initTime = new Date()
                 //computes real interface
                 ireal = identifyProductionChangedFiles()
+                endTime = new Date()
+                use(TimeCategory) {
+                    timestamp = endTime - initTime
+                }
+                ireal.timestamp = timestamp
+
 
                 // resets repository to last version
                 gitRepository.reset()
@@ -278,7 +296,7 @@ class DoneTask extends Task {
             }*/
         }
 
-        [itest: itest, itext: itext, ireal: ireal, time:timestamp]
+        [itest: itest, itext: itext, ireal: ireal]
     }
 
     def getCommitsQuantity() {

@@ -2,6 +2,8 @@ package taskAnalyser.task
 
 import gherkin.Parser
 import gherkin.ast.Feature
+import groovy.time.TimeCategory
+import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
 import util.Util
 import util.exception.CloningRepositoryException
@@ -23,7 +25,7 @@ class TodoTask extends Task {
      * @param scenarios a list of map objects that identifies a Gherkin file and its scenarios that
      *        are related to the task, by keywords 'path' and 'lines' respectively.
      */
-    TodoTask(String rootDirectory, boolean isRemote, String id, def scenarios) throws CloningRepositoryException {
+    TodoTask(String rootDirectory, boolean isRemote, String id, scenarios) throws CloningRepositoryException {
         super(rootDirectory, id)
 
         testCodeParser.configureProperties()
@@ -32,7 +34,7 @@ class TodoTask extends Task {
         else testDescription = findAllRelatedGherkinFile(rootDirectory, scenarios)
     }
 
-    private static List<GherkinFile> findAllRelatedGherkinFile(String rootDirectory, def scenarios) {
+    private static List<GherkinFile> findAllRelatedGherkinFile(String rootDirectory, scenarios) {
         Parser<Feature> featureParser = new Parser<>()
         List<GherkinFile> gherkinFiles = []
 
@@ -57,10 +59,21 @@ class TodoTask extends Task {
 
     @Override
     TaskInterface computeTestBasedInterface() {
-        if (!testDescription.isEmpty()) {
+        def taskInterface = null
+        TimeDuration timestamp = null
+
+        if (!testDescription.empty) {
             log.info "Task id: $id"
-            testCodeParser.computeInterfaceForTodoTask(testDescription)
-        } else return null
+            def initTime = new Date()
+            taskInterface = testCodeParser.computeInterfaceForTodoTask(testDescription)
+            def endTime = new Date()
+            use(TimeCategory) {
+                timestamp = endTime - initTime
+            }
+            taskInterface.timestamp = timestamp
+        }
+
+        taskInterface
     }
 
     @Override

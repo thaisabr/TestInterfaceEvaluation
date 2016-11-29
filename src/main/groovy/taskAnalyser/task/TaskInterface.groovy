@@ -1,5 +1,6 @@
 package taskAnalyser.task
 
+import groovy.time.TimeDuration
 import util.Util
 
 
@@ -21,6 +22,8 @@ class TaskInterface {
     Set compilationErrors
     Set notFoundViews
 
+    TimeDuration timestamp //time to compute task interface
+
     TaskInterface() {
         this.classes = [] as Set
         this.methods = [] as Set
@@ -32,6 +35,7 @@ class TaskInterface {
         this.matchStepErrors = [] as Set
         this.compilationErrors = [] as Set
         this.notFoundViews = [] as Set
+        this.timestamp = new TimeDuration(0,0,0,0)
     }
 
     @Override

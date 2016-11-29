@@ -33,7 +33,7 @@ class TaskAnalyser {
             if (!task.changedStepDefinitions.empty) stepTasks += task.id
             if (!task.changedGherkinFiles.empty) gherkinTasks += task.id
             result += [task: task, itest: interfaces.itest, ireal: interfaces.ireal, methods: methodsIdentity, stepCalls: stepCalls,
-                       text: interfaces.itext, timestamp:interfaces.timestamp]
+                       text: interfaces.itext, timestamp:interfaces.itest.timestamp]
         }
 
         def stepCounter = stepTasks.unique().size()

@@ -49,7 +49,7 @@ class RubyConfigRoutesVisitor {
 
     }
 
-    private static extractArgs(Node iVisited, def argsVisitor) {
+    private static extractArgs(Node iVisited, argsVisitor) {
         def args = null
         iVisited?.childNodes()?.each {
             it.accept(argsVisitor)
@@ -72,7 +72,7 @@ class RubyConfigRoutesVisitor {
         values
     }
 
-    private static isRequestFirstStyleCode(def dataList) {
+    private static isRequestFirstStyleCode(dataList) {
         def styleRequestFirst = false
         if (dataList.first().value in RequestType.values()) styleRequestFirst = true
         return styleRequestFirst
@@ -88,7 +88,7 @@ class RubyConfigRoutesVisitor {
         result
     }
 
-    private static configurePath(def args, Set<Route> routes, String original) {
+    private static configurePath(args, Set<Route> routes, String original) {
         if (args.path && !args.path.value.empty) {
             routes = routes.collect { route ->
                 route.value = route.value.replace("/$original", "/${args.path.value}")
@@ -163,7 +163,7 @@ class RubyConfigRoutesVisitor {
         [original: original, plural: plural, singular: singular, controllerName: controllerName, indexName: indexName]
     }
 
-    private static configureAliasAndPath(def args, String alias, String singular, String original, def resourcesData) {
+    private static configureAliasAndPath(args, String alias, String singular, String original, resourcesData) {
         configureAlias(alias, singular, resourcesData.memberRoutes, resourcesData.collectionRoutes)
         configurePath(args, resourcesData.memberRoutes, original)
         configurePath(args, resourcesData.collectionRoutes, original)
@@ -177,7 +177,7 @@ class RubyConfigRoutesVisitor {
         childNodes
     }
 
-    private generateNonResourcefulRoute(Node iVisited, def argsVisitor, String prefix, String formattedPrefix) {
+    private generateNonResourcefulRoute(Node iVisited, argsVisitor, String prefix, String formattedPrefix) {
         def name = ""
         def args = extractArgs(iVisited, argsVisitor)
         if (!args) return
@@ -231,7 +231,7 @@ class RubyConfigRoutesVisitor {
     }
 
     private registryMemberAndCollectionRoutes(Node node, String prefix, String original, String aliasSingular, String controller,
-                                              String index, def rangesOfNestedResources, def rangesOfNestedResource,
+                                              String index, rangesOfNestedResources, rangesOfNestedResource,
                                               String formattedPrefix){
         def alreadyVisitedNodes = []
         def memberData = []
@@ -296,7 +296,7 @@ class RubyConfigRoutesVisitor {
         [visited:alreadyVisitedNodes, members:memberData, collection:collectionData, otherNodes:getVisitor.otherNodes]
     }
 
-    private static generatePostAndDeleteRoutes(def deleteNodes, String prefix, String original, String aliasSingular, String controller,
+    private static generatePostAndDeleteRoutes(deleteNodes, String prefix, String original, String aliasSingular, String controller,
                                                String index, String formattedPrefix){
         def alreadyVisitedNodes = []
         def routes = []
@@ -354,7 +354,7 @@ class RubyConfigRoutesVisitor {
                 otherRoutes: return3.routes]
     }
 
-    private generateNestedResourcesRoute(def resourcesData, String prefix, String original, String plural,
+    private generateNestedResourcesRoute(resourcesData, String prefix, String original, String plural,
                                          String singular, String formattedPrefix) {
         def parentNameSingular = singular
         def parentNamePlural = plural
@@ -369,7 +369,7 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private registryRoutes(def resourcesData, String prefix, String original, String plural, String singular, String formattedPrefix) {
+    private registryRoutes(resourcesData, String prefix, String original, String plural, String singular, String formattedPrefix) {
         this.routingMethods += resourcesData.otherRoutes
         this.routingMethods += resourcesData.memberRoutes
         this.routingMethods += resourcesData.collectionRoutes
@@ -530,7 +530,7 @@ class RubyConfigRoutesVisitor {
         this.routingMethods += route
     }
 
-    private generateCommonRoutes(def args, String prefix, String index, String original, String aliasSingular,
+    private generateCommonRoutes(args, String prefix, String index, String original, String aliasSingular,
                                  String controller, String path, String formattedPrefix) {
         if (!args.member.empty) {
             def values = extractArgValues(args.member)*.value
@@ -556,7 +556,7 @@ class RubyConfigRoutesVisitor {
      *
      * @return [as="", member=[line, position, value], collection=[], only=[], except=[], controller:""]
      */
-    private generateBasicResourcesRoutes(def args, String prefix, String index, String original, String singular,
+    private generateBasicResourcesRoutes(args, String prefix, String index, String original, String singular,
                                          String controller, String formattedPrefix) {
         String aliasSingular = singular
         String path = ""
@@ -578,7 +578,7 @@ class RubyConfigRoutesVisitor {
         aliasSingular
     }
 
-    private generateBasicResourceRoutes(def args, String prefix, String index, String original, String controller,
+    private generateBasicResourceRoutes(args, String prefix, String index, String original, String controller,
                                         String formattedPrefix) {
         String aliasSingular = index
         String path = ""
@@ -640,7 +640,7 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private generateResourcesExceptRoutes(def except, String prefix, String original, String controller,
+    private generateResourcesExceptRoutes(except, String prefix, String original, String controller,
                                           String index, String alias, String path, String formattedPrefix) {
         def all = ["edit", "index", "new", "show"]
         def routesToGenerate = all - except
@@ -658,7 +658,7 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private generateResourcesOnlyRoutes(def value, String prefix, String original, String controller,
+    private generateResourcesOnlyRoutes(value, String prefix, String original, String controller,
                                         String index, String alias, String path, String formattedPrefix) {
         if (path && !path.empty) {
             original = path
@@ -675,7 +675,7 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private generateResourcesMemberRoute(def action, String prefix, String original, String aliasSingular,
+    private generateResourcesMemberRoute(action, String prefix, String original, String aliasSingular,
                                          String controller, String path, String formattedPrefix) {
         def nameSufix
         def pathValuePrefix
@@ -697,7 +697,7 @@ class RubyConfigRoutesVisitor {
                 arg: "$argsPrefix$action")
     }
 
-    private generateResourcesCollectionRoute(def action, String prefix, String original, String index,
+    private generateResourcesCollectionRoute(action, String prefix, String original, String index,
                                              String controller, String path, String formattedPrefix) {
         def nameSufix
         def pathValuePrefix

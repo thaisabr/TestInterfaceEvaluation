@@ -178,15 +178,22 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             foundView = r.foundView
         } else {
             log.info "PATH: $path"
-            def candidates = this.routes.findAll{ path == it.value || path ==~ /${it.value}/ }
-            //trying to find a view by route with no match seems risky
-            /*if(candidates.empty){
-                def viewData = this.registryViewRelatedToPath(visitor, path)
-                foundView = viewData.found
-            }
-            else{*/
-            if(!candidates.empty){
-                candidates.each{ candidate ->
+            def candidates = this.routes.findAll{ path == it.value } //trying to find an equal path
+            if(!candidates.empty) {
+                def candidate = candidates.first()
+                log.info "CANDIDATE: $candidate"
+                if(candidate.arg && !candidate.arg.empty) {
+                    def r = this.registryPathData(visitor, candidate.arg)
+                    if(r.registryMethodCall) registryMethodCall = r.registryMethodCall
+                    if(r.foundView) foundView = r.foundView
+                }
+            } else { //if it was not found, we trie to find a compatible one
+                candidates = this.routes.findAll{ path ==~ /${it.value}/ }
+                if(candidates.empty) {
+                    def viewData = this.registryViewRelatedToPath(visitor, path)
+                    foundView = viewData.found
+                } else {
+                    def candidate = candidates.first()
                     log.info "CANDIDATE: $candidate"
                     if(candidate.arg && !candidate.arg.empty) {
                         def r = this.registryPathData(visitor, candidate.arg)
@@ -265,7 +272,12 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     private registryViewRelatedToPath(TestCodeVisitor visitor, String path){
         def views = []
-        def matches = viewFiles?.findAll { it ==~ /.*$path.*/ }
+        def index = path.lastIndexOf("/")
+        def controller = path.substring(0,index+1)
+        def action = path.substring(index+1)
+        def regex = /.*${controller}_?$action.+/
+        if(File.separator == "\\") regex = regex.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,"\\\\\\\\")
+        def matches = viewFiles?.findAll { it ==~ regex }
         if (matches && matches.size() > 0) {
             if (matches.size() == (1 as int)) views = matches
             else {
@@ -398,6 +410,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         if(!(visitor instanceof RubyTestCodeVisitor)) return
 
         def calls = extractCallsFromErb(visitor)
+        if(calls.empty) return
         log.info "method call from ERB file(s):"
         calls?.each{ log.info it.toString() }
 

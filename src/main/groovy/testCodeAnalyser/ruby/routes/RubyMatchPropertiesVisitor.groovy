@@ -25,7 +25,7 @@ class RubyMatchPropertiesVisitor extends NoopVisitor {
         def controllerActionString = null
         def result //name, value, method
 
-        if (values.size() < 2) return
+        if (values.size() < 2) return //':controller(/:action(/:id(.:format)))'
 
         //relevant nodes: to, as, controller, action, via, defaults, constraints
         //TO REMEMBER: via, defaults e contraints sao conjuntos de valores sem relevancia nesse ponto e por isso nao sao extraidos

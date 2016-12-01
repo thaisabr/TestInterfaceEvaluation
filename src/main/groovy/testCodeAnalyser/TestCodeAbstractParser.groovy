@@ -1,7 +1,6 @@
 package testCodeAnalyser
 
 import gherkin.ast.Scenario
-import gherkin.ast.ScenarioDefinition
 import gherkin.ast.ScenarioOutline
 import gherkin.ast.Step
 import groovy.util.logging.Slf4j
@@ -105,8 +104,10 @@ abstract class TestCodeAbstractParser {
         projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         configureRegexList() // Updates regex list used to match step definition and step code
         configureMethodsList()
-        viewFiles = Util.findFilesFromDirectory(repositoryPath + File.separator + Util.VIEWS_FILES_RELATIVE_PATH).findAll { file ->
-            Util.VALID_VIEW_FILES.any { file.endsWith(it) }
+        def views = Util.findFilesFromDirectory(repositoryPath + File.separator + Util.VIEWS_FILES_RELATIVE_PATH)
+        viewFiles = views.findAll { file -> Util.VALID_VIEW_FILES.any { file.endsWith(it) } }
+        viewFiles += (views - viewFiles).findAll{
+            it.count(".")==1 && (it.endsWith(".erb") || it.endsWith(".haml") || it.endsWith(".slim"))
         }
     }
 
@@ -244,7 +245,7 @@ abstract class TestCodeAbstractParser {
      * @param allVisitedFiles A collection all visited files identified by 'path' and visited 'methods'.
      * @return a list of methods grouped by path.
      */
-    static listFilesToVisit(def lastCalledMethods, def allVisitedFiles) {
+    static listFilesToVisit(lastCalledMethods, allVisitedFiles) {
         def validCalledMethods = lastCalledMethods.findAll { it.file != null }
         def methods = listTestMethodsToVisit(validCalledMethods)
         def filesToVisit = []
@@ -265,7 +266,7 @@ abstract class TestCodeAbstractParser {
      * @param lastCalledMethods list of map objects identifying called methods by 'name', 'type' and 'file'.
      * @return a list of methods grouped by path.
      */
-    static listTestMethodsToVisit(def lastCalledMethods) {
+    static listTestMethodsToVisit(lastCalledMethods) {
         def testFiles = []
         def calledTestMethods = lastCalledMethods?.findAll { it.file != null && Util.isTestCode(it.file) }?.unique()
         calledTestMethods*.file.unique().each { path ->
@@ -341,7 +342,7 @@ abstract class TestCodeAbstractParser {
         test
     }
 
-    List<StepCode> findCodeForStep(def step, String path, boolean extractArgs) {
+    List<StepCode> findCodeForStep(step, String path, boolean extractArgs) {
         List<StepCode> code = []
         def stepCodeMatch = regexList?.findAll { step.text ==~ it.value }
         if (stepCodeMatch && stepCodeMatch.size() > 0) { //step code was found
@@ -498,8 +499,6 @@ abstract class TestCodeAbstractParser {
 
         List<FileToAnalyse> newStepsToAnalyse = identifyMethodsPerFileToVisitByStepCalls(calledSteps)
         newStepsToAnalyse = updateStepFiles(filesToAnalyse, newStepsToAnalyse)
-        log.info "newStepsToAnalyse:"
-        newStepsToAnalyse.each{ log.info it.toString() }
         if (!newStepsToAnalyse.empty) interfaces += computeInterface(newStepsToAnalyse, removedSteps)
 
         /* collapses step code interfaces to define the interface for the whole task */
@@ -555,7 +554,7 @@ abstract class TestCodeAbstractParser {
      * @param file a map object that identifies a file by 'path' and 'methods'. A method is identified by its name.
      * @param visitor visitor to visit method bodies
      */
-    abstract visitFile(def file, TestCodeVisitor visitor)
+    abstract visitFile(file, TestCodeVisitor visitor)
 
     abstract TestCodeVisitor parseUnitBody(UnitFile file)
 

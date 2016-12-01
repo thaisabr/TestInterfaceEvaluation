@@ -168,8 +168,9 @@ abstract class Util {
 
     static boolean isValidCode(String path) {
         if (VALID_FOLDERS.any { path?.contains(it + File.separator) } && VALID_EXTENSIONS.any {
-            path?.endsWith(it)
-        }) true
+            path?.endsWith(it) }) true
+        else if(VALID_FOLDERS.any { path?.contains(it + File.separator) } && path.count(".")==1 &&
+                (path.endsWith(".erb") || path.endsWith(".haml") || path.endsWith(".slim"))) true
         else false
     }
 

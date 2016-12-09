@@ -324,7 +324,11 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         iVisited?.args?.childNodes()?.each { child ->
             if (child instanceof DStrNode) {
                 child.childNodes().each { c -> if (c instanceof StrNode) argValue += c.value.trim() }
-            } else if (child instanceof StrNode) argValue += child.value.trim()
+            } else if (child instanceof StrNode) {
+                argValue += child.value.trim()
+            } else if(child instanceof CallNode){
+                child.childNodes().each { c -> if (c instanceof StrNode) argValue += c.value.trim() }
+            }
         }
 
         def lines = argValue?.readLines()?.collect{ it.replaceAll(/[ \t]+/, " ").replaceAll(/[ ]+/, " ").trim() }

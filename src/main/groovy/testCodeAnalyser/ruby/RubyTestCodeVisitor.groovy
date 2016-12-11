@@ -29,6 +29,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     Set projectMethods //keys: name, args, path; all methods from project
     def productionClass //keys: name, path; used when visiting RSpec files; try a better way to represent it!
     List<StepCall> calledSteps
+    static int stepCallCounter
     MethodToAnalyse stepDefinitionMethod
 
     RubyTestCodeVisitor(String currentFile) { //test purpose only
@@ -318,7 +319,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
     private registryStepCall(FCallNode iVisited) {
         //registries frequency of step calls
-        taskInterface.methods += [name: iVisited.name, type: "StepCall", file: null]
+        taskInterface.methods += [name: iVisited.name, type: "StepCall", file: "${++stepCallCounter}"]
 
         def argValue = ""
         iVisited?.args?.childNodes()?.each { child ->

@@ -43,4 +43,15 @@ class RubyUtil extends Util {
         projectFiles?.findAll { it ==~ /$exp/ }
     }
 
+    static String getRailsVersion(String path){
+        File file = new File(path+File.separator+RubyConstantData.GEM_FILE)
+        if(file.exists()){
+            def line = file.readLines().find{ !(it.trim().startsWith("#")) && it.contains("gem 'rails'") }
+            if(!line) return ""
+            def index = line.lastIndexOf(",")
+            if(index>-1) return line?.substring(index+1)?.trim()
+        }
+        return ""
+    }
+
 }

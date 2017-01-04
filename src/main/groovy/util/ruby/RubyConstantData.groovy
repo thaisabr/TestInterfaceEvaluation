@@ -8,5 +8,6 @@ interface RubyConstantData {
     String ROUTE_SUFIX = "_path"
     List<String> EXCLUDED_PATH_METHODS = ["current_path", "recognize_path", "assert_routing", "assert_recognizes", " assert_response"]
     String ERB_ANALYSER_FILE = "erb_analyser.rb"
+    String GEM_FILE = "Gemfile"
 
 }

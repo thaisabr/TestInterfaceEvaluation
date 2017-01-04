@@ -20,8 +20,8 @@ class DataManager {
                              "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
                              "#AST_Errors", "Gherkin_AST_Errors", "#Gherkin_AST_Errors", "Steps_AST_Errors",
                              "#Steps_AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views", "#Views", "#ITest",
-                             "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp"]
-    static final int RECALL_INDEX = HEADER.size() - 3
+                             "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp", "Rails"]
+    static final int RECALL_INDEX = HEADER.size() - 4
     static final int PRECISION_INDEX = RECALL_INDEX - 1
     static final int IREAL_INDEX = PRECISION_INDEX - 1
     static final int ITEST_INDEX = IREAL_INDEX - 1
@@ -39,12 +39,6 @@ class DataManager {
             log.error ex.message
         }
         entries
-    }
-
-    private static List<String[]> readInputCSV(String filename) {
-        List<String[]> entries = readAllResult(filename)
-        entries.remove(0) //ignore header
-        entries.unique { it[2] } //bug: input csv can contain duplicated values; task id is used to identify them.
     }
 
     private static computePairs(set) {
@@ -266,6 +260,12 @@ class DataManager {
 
     }
 
+    static List<String[]> readInputCSV(String filename) {
+        List<String[]> entries = readAllResult(filename)
+        entries.remove(0) //ignore header
+        entries.unique { it[2] } //bug: input csv can contain duplicated values; task id is used to identify them.
+    }
+
     /***
      * Extracts all tasks in a CSV file that changed production and test files.
      * @filename cvs file organized by 7 columns: "index","repository_url","task_id","commits_hash",
@@ -274,11 +274,7 @@ class DataManager {
      */
     static extractProductionAndTestTasks(String filename) {
         List<String[]> entries = readInputCSV(filename)
-
-        //deveria ser ||, deixo o && porque tem tarefa que tem um conjunto tão grande de arquivos alterados, que há perda de dados
-        //alterar no projeto de mineração para, ao invés de listar os arquivos alterados, identificar apenas a quantidade
-        List<String[]> relevantEntries = entries.findAll { it[4] != "[]" && it[5] != "[]" }
-
+        List<String[]> relevantEntries = entries.findAll { (it[4] as int)>0 && (it[5] as int)>0 }
         List<DoneTask> tasks = []
         try {
             relevantEntries.each { entry ->
@@ -322,7 +318,8 @@ class DataManager {
                              stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
                              compilationErrors.gherkin, compilationErrors.quantityGherkin, compilationErrors.steps,
                              compilationErrors.stepsQuantity, renames, removes, views, views.size(), itestSize,
-                             irealSize, entry.itest, entry.ireal, precision, recall, entry.task.commits*.hash, entry.timestamp]
+                             irealSize, entry.itest, entry.ireal, precision, recall, entry.task.commits*.hash,
+                             entry.timestamp, entry.rails]
 
             writer.writeNext(line)
             if (saveText) writeITextFile(filename, entry) //dealing with long textual description of a task

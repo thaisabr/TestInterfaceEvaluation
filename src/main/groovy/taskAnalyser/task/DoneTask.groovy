@@ -6,6 +6,7 @@ import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
 import util.Util
 import util.exception.CloningRepositoryException
+import util.ruby.RubyUtil
 
 /***
  * Represents a done task, that is, a task that contains production and test code. The code is published in a public
@@ -247,6 +248,7 @@ class DoneTask extends Task {
     }
 
     def computeInterfaces() {
+        def railsVersion = ""
         TimeDuration timestamp = null
         TaskInterface itest = new TaskInterface()
         String itext = ""
@@ -254,7 +256,7 @@ class DoneTask extends Task {
 
         if (!commits || commits.empty) {
             log.warn "TASK ID: $id; NO COMMITS!"
-            return [itest: itest, itext: itext, ireal: ireal]
+            return [itest: itest, itext: itext, ireal: ireal, rails: railsVersion]
         }
 
         log.info "TASK ID: $id"
@@ -288,6 +290,8 @@ class DoneTask extends Task {
                 }
                 ireal.timestamp = timestamp
 
+                //it is only necessary in the evaluation study
+                railsVersion = RubyUtil.getRailsVersion(gitRepository.localPath)
 
                 // resets repository to last version
                 gitRepository.reset()
@@ -296,7 +300,7 @@ class DoneTask extends Task {
             }*/
         }
 
-        [itest: itest, itext: itext, ireal: ireal]
+        [itest: itest, itext: itext, ireal: ireal, rails: railsVersion]
     }
 
     def getCommitsQuantity() {

@@ -45,7 +45,7 @@ abstract class Task {
         gherkinFiles?.each { file ->
             text += file.text + "\n"
         }
-        text.replaceAll("(?m)^\\s", "")
+        text.replaceAll("(?m)^\\s", "") //(?m) - regex multiline - to avoid lines that only contain blank space
     }
 
     abstract TaskInterface computeTestBasedInterface()

@@ -452,10 +452,10 @@ abstract class TestCodeAbstractParser {
         List<StepCall> calledSteps = [] //keys:text, path, line
 
         filesToAnalyse?.eachWithIndex { stepDefFile, index ->
-            //log.info "step definition file: ${stepDefFile.path}"
+            log.info stepDefFile.toString()
 
             /* first level: To identify method calls from step body. */
-            TestCodeVisitor testCodeVisitor = parseStepBody(stepDefFile) //aqui é que vai usar args
+            TestCodeVisitor testCodeVisitor = parseStepBody(stepDefFile)
 
             /* second level: To visit methods until there is no more method calls of methods defined in test code. */
             def visitedFiles = []
@@ -485,9 +485,9 @@ abstract class TestCodeAbstractParser {
                 log.info "calledPageMethods:"
                 testCodeVisitor?.taskInterface?.calledPageMethods?.each { log.info it.toString() }
                 findAllPages(testCodeVisitor)
-            } else {
+            } /*else {
                 log.info "calledPageMethods: []"
-            }
+            }*/
 
             /* updates task interface */
             interfaces += testCodeVisitor.taskInterface

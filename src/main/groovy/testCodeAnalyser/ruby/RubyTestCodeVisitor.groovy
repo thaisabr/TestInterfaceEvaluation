@@ -335,7 +335,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         def lines = argValue?.readLines()?.collect{ it.replaceAll(/[ \t]+/, " ").replaceAll(/[ ]+/, " ").trim() }
         if(lines.empty) return
         if(lines.any{ it.contains("<") && it.contains(">")}){ //scenario outline
-            log.info "called step is scenario outline"
+            //log.info "called step is scenario outline"
             /*def argsTable = lines.findAll{ it.startsWith("|") }
             argsTable -= argsTable.first()
             argsTable.each{ argsTableLine ->
@@ -343,11 +343,11 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                 values = values?.findResults { i -> i.empty ? null : i } as Set
             }*/
         } else if( lines.any{ it.startsWith("|")} ){ //datatable
-            log.info "called step is datatable"
+            //log.info "called step is datatable"
             lines = lines.findAll{ !it.startsWith("|") }
             registryCall(lines, iVisited)
         } else { //regular scenario
-            log.info "called step is a regular scenario"
+            //log.info "called step is a regular scenario"
             registryCall(lines, iVisited)
         }
     }

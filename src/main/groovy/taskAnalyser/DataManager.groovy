@@ -25,9 +25,11 @@ class DataManager {
     static final int PRECISION_INDEX = RECALL_INDEX - 1
     static final int IREAL_INDEX = PRECISION_INDEX - 1
     static final int ITEST_INDEX = IREAL_INDEX - 1
-    static final int STEP_MATCH_ERROR_INDEX = 11
-    static final int AST_ERROR_INDEX = 13
+    static final int STEP_MATCH_ERROR_INDEX = 12
+    static final int AST_ERROR_INDEX = 14
     static final int INITIAL_TEXT_SIZE = 6
+    static final int GHERKIN_TEST_INDEX = 6
+    static final int STEP_DEF_INDEX = GHERKIN_TEST_INDEX + 2
 
     private static List<String[]> readAllResult(String filename) {
         List<String[]> entries = []
@@ -194,8 +196,8 @@ class DataManager {
         def astError = entries.findAll{ (it[AST_ERROR_INDEX] as int) > 0 }
         def basicError = (astError + stepMatchError).unique()
         entries -= basicError
-        def hasGherkinTest = entries.findAll { (it[6] as int) > 0 }
-        def hasStepTest = entries.findAll { (it[7] as int) > 0 }
+        def hasGherkinTest = entries.findAll { (it[GHERKIN_TEST_INDEX] as int) > 0 }
+        def hasStepTest = entries.findAll { (it[STEP_DEF_INDEX] as int) > 0 }
         def validTasks = (hasGherkinTest + hasStepTest).unique()
         def emptyITest = validTasks.findAll { it[ITEST_INDEX].empty }
         def relevantTasks = validTasks - emptyITest

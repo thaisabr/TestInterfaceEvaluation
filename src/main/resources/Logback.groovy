@@ -9,14 +9,14 @@ import static ch.qos.logback.classic.Level.INFO
 
 appender("STDOUT", ConsoleAppender) {
     encoder(PatternLayoutEncoder) {
-        pattern = "%d{HH:mm:ss} [%thread] %-5level %logger{36} %file:%line - %msg%n"
+        pattern = "%d{HH:mm:ss} %-5level %logger{36} %file:%line - %msg%n"
     }
 }
 appender("FILE", FileAppender) {
     file = "${ConstantData.DEFAULT_EVALUATION_FOLDER}${File.separator}evaluation.log"
     append = false
     encoder(PatternLayoutEncoder) {
-        pattern = "%d{HH:mm:ss} [%thread] %-5level %logger{36} %file:%line - %msg%n"
+        pattern = "%d{HH:mm:ss} %-5level %logger{36} %file:%line - %msg%n"
     }
 }
 root(INFO, ["FILE", "STDOUT"])

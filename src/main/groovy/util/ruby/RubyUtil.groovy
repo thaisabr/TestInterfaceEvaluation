@@ -43,15 +43,27 @@ class RubyUtil extends Util {
         projectFiles?.findAll { it ==~ /$exp/ }
     }
 
-    static String getRailsVersion(String path){
+    static checkRailsVersionAndGems(String path){
+        def railsRegex = /\s*gem\s+"?'?rails"?'?.*/
+        def simplecovRegex = /\s*gem\s+"?'?simplecov"?'?.*/
+        def factory_girlRegex = /\s*gem\s+"?'?factory_girl"?'?.*/
+        def rails = ""
+        def simplecov = false
+        def factorygirl = false
         File file = new File(path+File.separator+RubyConstantData.GEM_FILE)
         if(file.exists()){
-            def line = file.readLines().find{ !(it.trim().startsWith("#")) && it.contains("gem 'rails'") }
-            if(!line) return ""
-            def index = line.lastIndexOf(",")
-            if(index>-1) return line?.substring(index+1)?.trim()
+            def lines = file.readLines()
+            def railsGem = lines.find{ !(it.trim().startsWith("#")) && it==~railsRegex }
+            if(railsGem){
+                def index = railsGem.lastIndexOf(",")
+                if(index>-1) rails = railsGem?.substring(index+1)?.trim()
+            }
+            def simplecovGem = lines.find{ !(it.trim().startsWith("#")) && it==~simplecovRegex }
+            if(simplecovGem) simplecov = true
+            def factorygirlGem = lines.find{ !(it.trim().startsWith("#")) && it==~factory_girlRegex }
+            if(factorygirlGem) factorygirl = true
         }
-        return ""
+        return [rails:rails, simplecov:simplecov, factorygirl:factorygirl]
     }
 
 }

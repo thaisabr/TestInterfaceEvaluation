@@ -21,6 +21,7 @@ class TaskInterface {
     Set matchStepErrors
     Set compilationErrors
     Set notFoundViews
+    Set foundAcceptanceTests
 
     TimeDuration timestamp //time to compute task interface
 
@@ -35,6 +36,7 @@ class TaskInterface {
         this.matchStepErrors = [] as Set
         this.compilationErrors = [] as Set
         this.notFoundViews = [] as Set
+        this.foundAcceptanceTests = [] as Set
         this.timestamp = new TimeDuration(0,0,0,0)
     }
 
@@ -70,7 +72,7 @@ class TaskInterface {
         def classes = (classes?.findAll { Util.isProductionCode(it.file) })*.file
 
         //production methods
-        def methodFiles = methods?.findAll { it.type != null && !it.type.empty && Util.isProductionCode(it.file) }*.file
+        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" && Util.isProductionCode(it.file) }*.file
 
         //production files
         def files = ((classes + methodFiles + referencedPages) as Set)?.sort()
@@ -96,6 +98,20 @@ class TaskInterface {
         def taskInterface = new TaskInterface()
         interfaces.each { taskInterface.colapseInterfaces(it) }
         return taskInterface
+    }
+
+    /***
+     * Lists all files related to the task.
+     * Until the moment, the identification of such files is made by the usage of classes and methods only.
+     *
+     * @return a list of files
+     */
+    Set<String> findAllCode(){
+        def classes = classes*.file
+        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" }*.file
+        def files = ((classes + methodFiles + referencedPages) as Set)?.sort()
+        def canonicalPath = Util.getRepositoriesCanonicalPath()
+        files?.findResults { i -> i ? i - canonicalPath : null } as Set
     }
 
 }

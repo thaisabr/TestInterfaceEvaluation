@@ -4,23 +4,24 @@ import gherkin.Parser
 import gherkin.ParserException
 import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
+import groovy.util.logging.Slf4j
 import org.eclipse.jgit.revwalk.RevCommit
 import taskAnalyser.task.GherkinFile
 import taskAnalyser.task.StepDefinition
 
-
+@Slf4j
 class GherkinManager {
 
     static Feature parseGherkinFile(String content, String filename, String sha) {
         Feature feature = null
         if (!content || content == "") {
-            GitRepository.log.warn "Problem to parse Gherkin file '$filename'. Reason: The commit deleted it."
+            log.warn "Problem to parse Gherkin file '$filename'. Reason: The commit deleted it."
         } else {
             try {
                 Parser<Feature> parser = new Parser<>()
                 feature = parser.parse(content)
             } catch (ParserException ex) {
-                GitRepository.log.warn "Problem to parse Gherkin file '$filename' (commit $sha). ${ex.class}: ${ex.message}."
+                log.warn "Problem to parse Gherkin file '$filename' (commit $sha). ${ex.class}: ${ex.message}."
             }
         }
         feature
@@ -52,7 +53,7 @@ class GherkinManager {
         result
     }
 
-    static extractCommonText(def locations, Feature feature, def lines) {
+    static extractCommonText(locations, Feature feature, lines) {
         def text = ""
         if (!feature) return text
         def featureLocation = feature.location.line
@@ -76,12 +77,13 @@ class GherkinManager {
         text
     }
 
-    static extractTextFromGherkin(Feature feature, List<ScenarioDefinition> scenDefinitions,
-                                  String content, GherkinFile gherkinFile) {
+    static extractTextFromGherkin(Feature feature, GherkinFile gherkinFile) {
         def locations = feature.scenarioDefinitions*.location*.line.flatten().sort()
-        def lines = content.readLines()
+        def lines = gherkinFile.featureFileText.readLines()
 
         gherkinFile.baseText = extractCommonText(locations, feature, lines)
+        gherkinFile.changedScenarioDefinitionsText = []
+        List<ScenarioDefinition> scenDefinitions = gherkinFile.changedScenarioDefinitions
         scenDefinitions.each { change ->
             def text = ""
             def initialLine = change.location.line
@@ -114,11 +116,8 @@ class GherkinManager {
     static GherkinFile extractGherkinAdds(RevCommit commit, String content, String path) {
         GherkinFile changedGherkinFile = null
         def newFeature = parseGherkinFile(content, path, commit.name)
-        def newScenarioDefinitions = newFeature?.scenarioDefinitions
-
-        if (newScenarioDefinitions && !newScenarioDefinitions.isEmpty()) {
-            changedGherkinFile = new GherkinFile(path: path, feature: newFeature, changedScenarioDefinitions: newScenarioDefinitions)
-            extractTextFromGherkin(newFeature, newScenarioDefinitions, content, changedGherkinFile)
+        if(newFeature && newFeature.scenarioDefinitions && !newFeature.scenarioDefinitions.empty){
+            changedGherkinFile = new GherkinFile(path: path, feature: newFeature, changedScenarioDefinitions: newFeature.scenarioDefinitions)
         }
         changedGherkinFile
     }

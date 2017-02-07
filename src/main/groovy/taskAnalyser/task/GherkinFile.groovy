@@ -1,6 +1,7 @@
 package taskAnalyser.task
 
 import commitAnalyser.CodeChange
+import commitAnalyser.GherkinManager
 import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
 
@@ -36,6 +37,11 @@ class GherkinFile implements CodeChange {
      */
     String baseText
 
+    /***
+     *  Textual representation of gherkin file from wich the feature node is extracted
+     */
+    String featureFileText
+
     @Override
     String toString() {
         def text = "Gherkin file: ${path}\nFeature: ${feature.name}\n"
@@ -53,6 +59,7 @@ class GherkinFile implements CodeChange {
     }
 
     def getText() {
+        GherkinManager.extractTextFromGherkin(feature, this)
         baseText + "\n" + (changedScenarioDefinitionsText.join("\n"))
     }
 

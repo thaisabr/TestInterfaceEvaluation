@@ -26,6 +26,8 @@ abstract class TestCodeAbstractParser {
     protected Set compilationErrors
     Set matchStepErrors
 
+    Set<AcceptanceTest> foundAcceptanceTests
+
     /***
      * Initializes fields used to link step declaration and code.
      *
@@ -41,6 +43,7 @@ abstract class TestCodeAbstractParser {
         notFoundViews = [] as Set
         compilationErrors = [] as Set
         matchStepErrors = [] as Set
+        foundAcceptanceTests = []
     }
 
     private organizeNotFoundViews() {
@@ -96,6 +99,8 @@ abstract class TestCodeAbstractParser {
             }
         }
 
+        foundAcceptanceTests = acceptanceTests
+        log.info "Number of implemented acceptance tests: ${acceptanceTests.size()}"
         acceptanceTests?.each { log.info it.toString() }
         acceptanceTests
     }
@@ -429,7 +434,6 @@ abstract class TestCodeAbstractParser {
         List<FileToAnalyse> files1 = identifyMethodsPerFileToVisit(stepCodes1)
         List<FileToAnalyse> files2 = findCodeForStepsIndependentFromAcceptanceTest(stepFiles)
         List<FileToAnalyse> filesToAnalyse = collapseFilesToVisit(files1, files2)
-        //filesToAnalyse.each{ log.info it.toString() }
         computeInterface(filesToAnalyse, removedSteps)
     }
 
@@ -447,7 +451,6 @@ abstract class TestCodeAbstractParser {
     }
 
     private TaskInterface computeInterface(List<FileToAnalyse> filesToAnalyse, Set removedSteps) {
-        //log.info "enter in computeInterface"
         def interfaces = []
         List<StepCall> calledSteps = [] //keys:text, path, line
 
@@ -467,7 +470,6 @@ abstract class TestCodeAbstractParser {
 
                 /* visits each file */
                 filesToParse.each { f ->
-                    //log.info "next visit: $f"
                     visitFile(f, testCodeVisitor)
                 }
 
@@ -485,9 +487,7 @@ abstract class TestCodeAbstractParser {
                 log.info "calledPageMethods:"
                 testCodeVisitor?.taskInterface?.calledPageMethods?.each { log.info it.toString() }
                 findAllPages(testCodeVisitor)
-            } /*else {
-                log.info "calledPageMethods: []"
-            }*/
+            }
 
             /* updates task interface */
             interfaces += testCodeVisitor.taskInterface
@@ -506,6 +506,7 @@ abstract class TestCodeAbstractParser {
         itest.matchStepErrors = organizeMatchStepErrors(removedSteps)
         itest.compilationErrors = organizeCompilationErrors()
         itest.notFoundViews = organizeNotFoundViews()
+        itest.foundAcceptanceTests = foundAcceptanceTests
         itest
     }
 

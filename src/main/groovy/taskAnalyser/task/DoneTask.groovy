@@ -1,9 +1,13 @@
 package taskAnalyser.task
 
 import commitAnalyser.Commit
+import commitAnalyser.GherkinManager
+import commitAnalyser.StepDefinitionManager
+import gherkin.ast.Feature
 import groovy.time.TimeCategory
 import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
+import org.eclipse.jgit.revwalk.RevCommit
 import util.Util
 import util.exception.CloningRepositoryException
 import util.ruby.RubyUtil
@@ -42,20 +46,114 @@ class DoneTask extends Task {
     private init(List<String> shas) {
         basicInit(shas)
 
+        RevCommit lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
+
         // identifies changed gherkin files and scenario definitions
         List<Commit> commitsChangedGherkinFile = commits?.findAll { it.gherkinChanges && !it.gherkinChanges.isEmpty() }
-        changedGherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
+        registryChangedGherkinContent(commitsChangedGherkinFile, lastCommit)
 
         // identifies changed step definitions
         List<Commit> commitsStepsChange = this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }
-        changedStepDefinitions = identifyChangedStepContent(commitsStepsChange)
+        registryChangedStepContent(commitsStepsChange, lastCommit)
+    }
+
+    private registryChangedStepContent(List<Commit> commitsChangedStepFile, RevCommit lastCommit){
+        def stepDefinitions = identifyChangedStepContent(commitsChangedStepFile)
+        def notFoundSteps = []
+        def notFoundFiles = []
+        List<StepDefinitionFile> finalStepDefinitionsFilesSet = []
+
+        stepDefinitions?.each { stepFile ->
+            def content = gitRepository.extractFileContent(lastCommit, stepFile.path)
+            List<StepDefinition> stepDefs = StepDefinitionManager.parseStepDefinitionFile(stepFile.path, content, lastCommit.name, testCodeParser)
+            if(stepDefs){
+                def regexes = stepDefs*.regex
+                if (!regexes.empty){
+                    def initialSet = stepFile.changedStepDefinitions
+                    def valid = initialSet.findAll { it.regex in regexes }
+                    def finalSteps = stepDefs?.findAll{ it.regex in valid*.regex }
+                    def invalid = initialSet - valid
+                    if(!invalid?.empty) notFoundSteps += [file:stepFile.path, steps:invalid*.regex]
+                    if(!valid?.empty) {
+                        def newStepDefFile = new StepDefinitionFile(path: stepFile.path, changedStepDefinitions: finalSteps)
+                        finalStepDefinitionsFilesSet += newStepDefFile
+                    }
+                }
+            } else {
+                notFoundFiles += stepFile.path
+            }
+        }
+
+        if(!notFoundFiles.empty){
+            def text = "No long valid step definition files:\n"
+            notFoundFiles?.each{ text += it+"\n" }
+            log.warn text
+        }
+
+        if(!notFoundSteps.empty){
+            def text = "No long valid step definitions:\n"
+            notFoundSteps?.each{ n ->
+                text += "File: ${n.file}\nSteps:\n"
+                n.steps?.each{ text += it+"\n" }
+            }
+            log.warn text
+        }
+
+        changedStepDefinitions = finalStepDefinitionsFilesSet
+    }
+
+    private registryChangedGherkinContent(List<Commit> commitsChangedGherkinFile, RevCommit lastCommit){
+        def gherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
+        def notFoundScenarios = []
+        def notFoundFiles = []
+        List<GherkinFile> finalGherkinFilesSet = []
+
+        gherkinFiles?.each { gherkinFile ->
+            def content = gitRepository.extractFileContent(lastCommit, gherkinFile.path)
+            Feature feature = GherkinManager.parseGherkinFile(content, gherkinFile.path, lastCommit.name)
+            if(feature){
+                gherkinFile.feature = feature
+                def scenarios = feature?.scenarioDefinitions*.name
+                if(scenarios && !scenarios.empty){
+                    def initialSet = gherkinFile.changedScenarioDefinitions
+                    def valid = initialSet.findAll { it.name in scenarios }
+                    def finalScenarios = feature?.scenarioDefinitions?.findAll{ it.name in valid*.name && !it.steps.empty }
+                    def invalid = initialSet - valid
+                    if(!invalid?.empty) notFoundScenarios += [file:gherkinFile.path, scenarios:invalid*.name]
+                    if(!valid?.empty) {
+                        def newGherkinFile = new GherkinFile(path: gherkinFile.path, feature: feature,
+                                changedScenarioDefinitions: finalScenarios, featureFileText: content)
+                        finalGherkinFilesSet += newGherkinFile
+                    }
+                }
+            } else {
+                notFoundFiles += gherkinFile.path
+            }
+        }
+
+        if(!notFoundFiles.empty){
+            def text = "No long valid gherkin files:\n"
+            notFoundFiles?.each{ text += it+"\n" }
+            log.warn text
+        }
+
+        if(!notFoundScenarios.empty){
+            def text = "No long valid scenarios:\n"
+            notFoundScenarios?.each{ n ->
+                text += "File: ${n.file}\nScenarios:\n"
+                n.scenarios?.each{ text += it+"\n" }
+            }
+            log.warn text
+        }
+
+        changedGherkinFiles = finalGherkinFilesSet
     }
 
     private static List<GherkinFile> identifyChangedGherkinContent(List<Commit> commitsChangedGherkinFile) {
         List<GherkinFile> gherkinFiles = []
         commitsChangedGherkinFile?.each { commit -> //commits sorted by date
             commit.gherkinChanges?.each { file ->
-                if (!file.changedScenarioDefinitions.isEmpty()) {
+                if (!file.changedScenarioDefinitions.empty) {
                     def index = gherkinFiles.findIndexOf { it.path == file.path }
                     GherkinFile foundFile
                     if (index >= 0) foundFile = gherkinFiles.get(index)
@@ -248,7 +346,7 @@ class DoneTask extends Task {
     }
 
     def computeInterfaces() {
-        def railsVersion = ""
+        def gems = [rails: "", simplecov: false, factorygirl: false]
         TimeDuration timestamp = null
         TaskInterface itest = new TaskInterface()
         String itext = ""
@@ -256,7 +354,7 @@ class DoneTask extends Task {
 
         if (!commits || commits.empty) {
             log.warn "TASK ID: $id; NO COMMITS!"
-            return [itest: itest, itext: itext, ireal: ireal, rails: railsVersion]
+            return [itest: itest, itext: itext, ireal: ireal, rails: gems.rails, simplecov: gems.simplecov, factorygirl: gems.factorygirl]
         }
 
         log.info "TASK ID: $id"
@@ -291,7 +389,7 @@ class DoneTask extends Task {
                 ireal.timestamp = timestamp
 
                 //it is only necessary in the evaluation study
-                railsVersion = RubyUtil.getRailsVersion(gitRepository.localPath)
+                gems = RubyUtil.checkRailsVersionAndGems(gitRepository.localPath)
 
                 // resets repository to last version
                 gitRepository.reset()
@@ -300,7 +398,7 @@ class DoneTask extends Task {
             }*/
         }
 
-        [itest: itest, itext: itext, ireal: ireal, rails: railsVersion]
+        [itest: itest, itext: itext, ireal: ireal, rails: gems.rails, simplecov: gems.simplecov, factorygirl: gems.factorygirl]
     }
 
     def getCommitsQuantity() {
@@ -333,6 +431,14 @@ class DoneTask extends Task {
 
     def getRenamedFiles() {
         commits*.renameChanges?.flatten()?.unique()?.sort()
+    }
+
+    /* When this method is called, there is no information about test code.
+    That is, it is only checked if the task has some gherkin scenario or step definition changed by any commit.
+    The test code is found when the task interface is computed, during another phase. */
+    def hasTest(){
+        if(getGherkinTestQuantity()==0 && getStepDefQuantity()==0) false
+        else true
     }
 
 }

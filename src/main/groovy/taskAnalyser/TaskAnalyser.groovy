@@ -19,7 +19,6 @@ class TaskAnalyser {
     }
 
     private computeTaskData() {
-        log.info "Number of tasks: ${tasks.size()}"
         def result = []
         def gherkinTasks = []
         def stepTasks = []
@@ -33,7 +32,8 @@ class TaskAnalyser {
             if (!task.changedStepDefinitions.empty) stepTasks += task.id
             if (!task.changedGherkinFiles.empty) gherkinTasks += task.id
             result += [task: task, itest: interfaces.itest, ireal: interfaces.ireal, methods: methodsIdentity, stepCalls: stepCalls,
-                       text: interfaces.itext, timestamp:interfaces.itest.timestamp, rails:interfaces.rails]
+                       text: interfaces.itext, timestamp:interfaces.itest.timestamp, rails:interfaces.rails,
+                       simplecov: interfaces.simplecov, factorygirl: interfaces.factorygirl, trace:interfaces.itest.findAllCode()]
         }
 
         def stepCounter = stepTasks.unique().size()
@@ -50,10 +50,12 @@ class TaskAnalyser {
     private generateResultForProject(String tasksFile, String evaluationFile) {
         def r1 = DataManager.extractProductionAndTestTasks(tasksFile)
         tasks = r1.tasks
-        def r2 = computeTaskData()
-        def url = r1.tasks?.first()?.testCodeParser?.repositoryPath
-        DataManager.saveAllResult(evaluationFile, url, r1.allTasksQuantity, tasks.size(), r2.stepCounter,
-                r2.gherkinCounter, r2.testsCounter, r2.data)
+        if(tasks && !tasks.empty) {
+            def r2 = computeTaskData()
+            def url = r1.tasks?.first()?.testCodeParser?.repositoryPath
+            DataManager.saveAllResult(evaluationFile, url, r1.allTasksQuantity, tasks.size(), r2.stepCounter,
+                    r2.gherkinCounter, r2.testsCounter, r2.data)
+        }
     }
 
     private analyseAllForProject(String tasksFile) {

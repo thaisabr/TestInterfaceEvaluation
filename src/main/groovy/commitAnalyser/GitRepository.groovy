@@ -249,9 +249,8 @@ class GitRepository {
             }
         }
 
-        if (!changedScenarioDefinitions.isEmpty()) {
+        if (!changedScenarioDefinitions.empty) {
             changedGherkinFile = new GherkinFile(path: entry.newPath, feature: newFeature, changedScenarioDefinitions: changedScenarioDefinitions)
-            GherkinManager.extractTextFromGherkin(newFeature, changedScenarioDefinitions, newVersion, changedGherkinFile)
         }
 
         return changedGherkinFile
@@ -283,7 +282,7 @@ class GitRepository {
     }
 
     private CodeChange configureModifyChange(RevCommit commit, RevCommit parent, DiffEntry entry, TestCodeAbstractParser parser) {
-        CodeChange change
+        CodeChange change = null
         if (Util.isGherkinCode(entry.newPath))
             change = extractGherkinChanges(commit, parent, entry)
         else if (Util.isStepDefinitionCode(entry.newPath))
@@ -347,7 +346,7 @@ class GitRepository {
         return treeWalk
     }
 
-    private String extractFileContent(RevCommit commit, String filename) {
+    String extractFileContent(RevCommit commit, String filename) {
         def result = ""
         def git = Git.open(new File(localPath))
         filename = filename.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))

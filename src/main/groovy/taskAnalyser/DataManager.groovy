@@ -16,12 +16,12 @@ import util.Util
 class DataManager {
 
     static
-    final String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests", "#StepDef",
+    final String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests", "#Impl_Gherkin_Tests", "#StepDef",
                              "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
                              "#AST_Errors", "Gherkin_AST_Errors", "#Gherkin_AST_Errors", "Steps_AST_Errors",
                              "#Steps_AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views", "#Views", "#ITest",
-                             "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp", "Rails"]
-    static final int RECALL_INDEX = HEADER.size() - 4
+                             "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp", "Rails", "Simplecov", "FactoryGirl"]
+    static final int RECALL_INDEX = HEADER.size() - 6
     static final int PRECISION_INDEX = RECALL_INDEX - 1
     static final int IREAL_INDEX = PRECISION_INDEX - 1
     static final int ITEST_INDEX = IREAL_INDEX - 1
@@ -79,10 +79,13 @@ class DataManager {
     }
 
     private static writeITextFile(filename, entry) {
-        if (entry.text && !entry.text.empty) {
+        def text = entry.text
+        if (text && !text.empty) {
             File file = new File("${filename - ConstantData.CSV_FILE_EXTENSION}_text_${entry.task.id}.txt")
             file.withWriter("utf-8") { out ->
-                out.write(entry.text)
+                out.write(text)
+                out.write("\n-----------------------------------------------------------\n")
+                entry.trace.each{ out.write(it + "\n") }
             }
         }
     }
@@ -186,6 +189,7 @@ class DataManager {
 
         def emptyIReal = entries.findAll { it[IREAL_INDEX].empty }
         entries -= emptyIReal
+        def sizeNoEmptyIRealTasks = entries.size()
         def stepMatchError = entries.findAll{ (it[STEP_MATCH_ERROR_INDEX] as int) > 0 }
         def astError = entries.findAll{ (it[AST_ERROR_INDEX] as int) > 0 }
         def basicError = (astError + stepMatchError).unique()
@@ -198,7 +202,9 @@ class DataManager {
         def zeroPrecisionAndRecall = relevantTasks.findAll { it[PRECISION_INDEX] == "0.0" && it[RECALL_INDEX] == "0.0" }
         def others = relevantTasks - zeroPrecisionAndRecall
 
-        String[] text = ["Tasks that have AST error", astError.size()]
+        String[] text = ["Tasks that have no empty IReal", sizeNoEmptyIRealTasks]
+        writer.writeNext(text)
+        text = ["Tasks that have AST error", astError.size()]
         writer.writeNext(text)
         text = ["Tasks that have step match error", stepMatchError.size()]
         writer.writeNext(text)
@@ -274,19 +280,34 @@ class DataManager {
      */
     static extractProductionAndTestTasks(String filename) {
         List<String[]> entries = readInputCSV(filename)
-        List<String[]> relevantEntries = entries.findAll { (it[4] as int)>0 && (it[5] as int)>0 }
+        List<String[]> relevantEntries = entries.findAll { ((it[4] as int)>0 && (it[5] as int)>0)  ||
+                ((it[4] as int)>50 && (it[5] as int)==0)} //avoiding the exclusion of corrupted tasks at the entry csv
+        def invalid = entries.size() - relevantEntries.size()
         List<DoneTask> tasks = []
+        def tasksThatSeemsToHaveTest = []
+
         try {
             relevantEntries.each { entry ->
                 if (entry[2].size() > 4) {
                     def hashes = entry[3].tokenize(',[]')*.trim()
-                    tasks += new DoneTask(entry[1], entry[2], hashes)
+                    def task = new DoneTask(entry[1], entry[2], hashes)
+                    if(task.hasTest()) tasks += task
+                    else tasksThatSeemsToHaveTest += entry[2]
                 }
             }
         } catch (Exception ex) {
             log.error ex.message
             return [tasks: [], allTasksQuantity: 0]
         }
+
+        log.info "Number of invalid tasks: ${invalid}"
+        log.info "Number of extracted valid tasks: ${tasks.size()}"
+
+        /* Tasks that had changed test code but when the task is concluded, its Gherkin scenarios or step code definitions
+        * were removed by other tasks*/
+        log.info "Tasks that seem to have test but actually do not: ${tasksThatSeemsToHaveTest.size()}"
+        tasksThatSeemsToHaveTest.each{ log.info it }
+
         [tasks: tasks.sort { it.id }, allTasksQuantity: entries.size()]
     }
 
@@ -314,12 +335,13 @@ class DataManager {
             def views = entry.itest.notFoundViews
             if (views.empty) views = ""
             String[] line = [entry.task.id, dates, entry.task.days, entry.task.commitsQuantity, msgs, devs,
-                             entry.task.gherkinTestQuantity, entry.task.stepDefQuantity, entry.methods, entry.stepCalls,
+                             entry.task.gherkinTestQuantity, entry.itest.foundAcceptanceTests.size(),
+                             entry.task.stepDefQuantity, entry.methods, entry.stepCalls,
                              stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
                              compilationErrors.gherkin, compilationErrors.quantityGherkin, compilationErrors.steps,
                              compilationErrors.stepsQuantity, renames, removes, views, views.size(), itestSize,
                              irealSize, entry.itest, entry.ireal, precision, recall, entry.task.commits*.hash,
-                             entry.timestamp, entry.rails]
+                             entry.timestamp, entry.rails, entry.simplecov, entry.factorygirl]
 
             writer.writeNext(line)
             if (saveText) writeITextFile(filename, entry) //dealing with long textual description of a task

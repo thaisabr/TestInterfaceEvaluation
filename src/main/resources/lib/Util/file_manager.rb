@@ -27,5 +27,4 @@ class File_manager
     name_with_extension = /(?!.*\/)(.*)$/.match(file_path).to_s
     name = /.*(?=\.)/.match(name_with_extension).to_s
   end
-
 end

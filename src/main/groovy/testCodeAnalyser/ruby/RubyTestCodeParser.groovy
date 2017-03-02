@@ -16,7 +16,7 @@ import testCodeAnalyser.ruby.routes.Route
 import testCodeAnalyser.ruby.routes.RubyConfigRoutesVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecFileVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
-import testCodeAnalyser.ruby.views.ErbAnalyser
+import testCodeAnalyser.ruby.views.ViewAnalyser
 import util.RegexUtil
 import util.Util
 import util.ruby.RubyConstantData
@@ -30,8 +30,14 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     String routesFile
     Set<Route> routes
     Set<Route> problematicRoutes
-    static ErbAnalyser erbAnalyser = new ErbAnalyser()
+    static ViewAnalyser viewAnalyser
     static counter = 1
+
+    static {
+        if(Util.VIEW_ANALYSIS){
+            viewAnalyser = new ViewAnalyser()
+        }
+    }
 
     RubyTestCodeParser(String repositoryPath) {
         super(repositoryPath)
@@ -381,17 +387,17 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         this.registryUsedPaths(visitor, usedPaths)
         this.registryUsedRailsPaths(visitor, railsPathMethods as Set)
 
-        /* extracts data from erb files (this code must be moved in the future) */
-        this.registryCallsFromErb(visitor)
+        /* extracts data from view (ERB or HAML) files (this code must be moved in the future) */
+        if(viewAnalyser) this.registryCallsIntoViewFiles(visitor)
     }
 
-    private static extractCallsFromErb(TestCodeVisitor visitor){
+    private static extractCallsFromViewFiles(TestCodeVisitor visitor){
         def erbs = visitor.taskInterface.findAllFiles().findAll{ Util.isErbFile(it) }
         def calls = []
         erbs?.each{ erb ->
             def path = Util.REPOSITORY_FOLDER_PATH + erb
             try{
-                String code = erbAnalyser.extractCode(path)
+                String code = viewAnalyser.extractCode(path)
                 code.eachLine { line ->
                     calls += Eval.me(line)
                 }
@@ -400,16 +406,17 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                 def dst = new File("error" + File.separator + src.name + counter)
                 dst << src.text
                 log.error "Error to extract code from erb: $path (${ex.message})"
+                ex.printStackTrace()
                 counter ++
             }
         }
         calls.unique()
     }
 
-    private registryCallsFromErb(TestCodeVisitor visitor){
+    private registryCallsIntoViewFiles(TestCodeVisitor visitor){
         if(!(visitor instanceof RubyTestCodeVisitor)) return
 
-        def calls = extractCallsFromErb(visitor)
+        def calls = extractCallsFromViewFiles(visitor)
         if(calls.empty) return
         log.info "method call from ERB file(s):"
         calls?.each{ log.info it.toString() }

@@ -30,6 +30,7 @@ abstract class Util {
     public static final String GEM_I18N
     public static final String GEM_PARSER
     public static final String GEM_AST
+    public static final String VIEW_ANALYSIS
 
     static {
         properties = new Properties()
@@ -75,6 +76,7 @@ abstract class Util {
         GEM_I18N = configureGemI18n()
         GEM_PARSER = configureGemParser()
         GEM_AST = configureGemAst()
+        VIEW_ANALYSIS = configureViewAnalysis()
     }
 
     private static loadProperties() {
@@ -86,6 +88,13 @@ abstract class Util {
     private static configureMandatoryProperties(String value, String defaultValue) {
         if (!value || value.empty) value = defaultValue
         value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+    }
+
+    private static configureBooleanProperties(String value, boolean defaultValue) {
+        boolean flag
+        if (!value || value.empty) flag = defaultValue
+        flag = value as boolean
+        flag
     }
 
     private static configureTasksFilePath() {
@@ -142,6 +151,10 @@ abstract class Util {
 
     private static configureGemAst(){
         configureGem(properties.(ConstantData.PROP_GEM_AST), ConstantData.DEFAULT_GEM_AST_FOLDER)
+    }
+
+    private static configureViewAnalysis(){
+        configureBooleanProperties(properties.(ConstantData.PROP_VIEW_ANALYSIS), ConstantData.DEFAULT_VIEW_ANALYSIS)
     }
 
     static String configureGitRepositoryName(String url) {

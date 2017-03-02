@@ -6,12 +6,12 @@ import util.Util
 import util.ruby.RubyConstantData
 
 @Slf4j
-class ErbAnalyser {
+class ViewAnalyser {
 
     ScriptingContainer container
     Object receiver
 
-    ErbAnalyser() {
+    ViewAnalyser() {
         container = new ScriptingContainer()
         container.loadPaths.add(Util.GEMS_PATH)
         container.loadPaths.add(Util.GEM_INFLECTOR)
@@ -20,12 +20,12 @@ class ErbAnalyser {
         container.loadPaths.add(Util.GEM_AST)
 
         ClassLoader loader = Thread.currentThread().getContextClassLoader()
-        InputStream is = loader.getResourceAsStream(RubyConstantData.ERB_ANALYSER_FILE)
-        receiver = container.runScriptlet(is, RubyConstantData.ERB_ANALYSER_FILE)
+        InputStream is = loader.getResourceAsStream(RubyConstantData.VIEW_ANALYSER_FILE)
+        receiver = container.runScriptlet(is, RubyConstantData.VIEW_ANALYSER_FILE)
     }
 
     String extractCode(String path){
-        log.info "Extract ERBS from: $path"
+        log.info "Extract code from view: $path"
         container.callMethod(receiver, "extract_production_code", path)
     }
 

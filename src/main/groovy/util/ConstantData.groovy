@@ -57,4 +57,8 @@ interface ConstantData {
     List<String> STEP_KEYWORDS_DE = new GherkinDialectProvider().getDialect("de", null).stepKeywords.unique()*.trim()
 
     String INFLECTOR_FILE = "inflector.rb"
+
+    String PROP_VIEW_ANALYSIS = "spgroup.views.analysis"
+    boolean DEFAULT_VIEW_ANALYSIS = false
+
 }

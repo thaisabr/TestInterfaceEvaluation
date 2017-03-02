@@ -398,7 +398,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             def path = Util.REPOSITORY_FOLDER_PATH + erb
             try{
                 String code = viewAnalyser.extractCode(path)
-                code.eachLine { line ->
+                code?.eachLine { line ->
                     calls += Eval.me(line)
                 }
             } catch(Exception ex){
@@ -406,7 +406,6 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                 def dst = new File("error" + File.separator + src.name + counter)
                 dst << src.text
                 log.error "Error to extract code from erb: $path (${ex.message})"
-                ex.printStackTrace()
                 counter ++
             }
         }

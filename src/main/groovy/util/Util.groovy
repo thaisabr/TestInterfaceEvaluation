@@ -30,7 +30,7 @@ abstract class Util {
     public static final String GEM_I18N
     public static final String GEM_PARSER
     public static final String GEM_AST
-    public static final String VIEW_ANALYSIS
+    public static final boolean VIEW_ANALYSIS
 
     static {
         properties = new Properties()
@@ -90,11 +90,9 @@ abstract class Util {
         value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
     }
 
-    private static configureBooleanProperties(String value, boolean defaultValue) {
-        boolean flag
-        if (!value || value.empty) flag = defaultValue
-        flag = value as boolean
-        flag
+    private static boolean configureBooleanProperties(String value, boolean defaultValue) {
+        if (!value || value.empty) defaultValue
+        else Boolean.valueOf(value)
     }
 
     private static configureTasksFilePath() {
@@ -153,7 +151,7 @@ abstract class Util {
         configureGem(properties.(ConstantData.PROP_GEM_AST), ConstantData.DEFAULT_GEM_AST_FOLDER)
     }
 
-    private static configureViewAnalysis(){
+    private static boolean configureViewAnalysis(){
         configureBooleanProperties(properties.(ConstantData.PROP_VIEW_ANALYSIS), ConstantData.DEFAULT_VIEW_ANALYSIS)
     }
 

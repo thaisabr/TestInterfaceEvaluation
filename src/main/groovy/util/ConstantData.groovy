@@ -43,6 +43,7 @@ interface ConstantData {
 
     String NON_PRIMITIVE_ARRAY_PREFIX = "[L"
     String ERB_EXTENSION = ".erb"
+    String HAML_EXTENSION = ".haml"
     String CSV_FILE_EXTENSION = ".csv"
     String FEATURE_EXTENSION = ".feature"
     String JAR_EXTENSION = ".jar"

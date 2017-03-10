@@ -205,8 +205,10 @@ abstract class Util {
         else false
     }
 
-    static boolean isErbFile(String path){
-        if (path?.contains(VIEWS_FILES_RELATIVE_PATH + File.separator) && path?.endsWith(ConstantData.ERB_EXTENSION)) true
+    static boolean isViewFile(String path){
+        if ( path?.contains(VIEWS_FILES_RELATIVE_PATH + File.separator) &&
+                ( path?.endsWith(ConstantData.ERB_EXTENSION) || path?.endsWith(ConstantData.HAML_EXTENSION) )
+        ) true
         else false
     }
 

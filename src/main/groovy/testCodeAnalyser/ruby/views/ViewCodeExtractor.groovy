@@ -1,17 +1,15 @@
 package testCodeAnalyser.ruby.views
 
-import groovy.util.logging.Slf4j
 import org.jruby.embed.ScriptingContainer
 import util.Util
 import util.ruby.RubyConstantData
 
-@Slf4j
-class ViewAnalyser {
+class ViewCodeExtractor {
 
     ScriptingContainer container
     Object receiver
 
-    ViewAnalyser() {
+    ViewCodeExtractor() {
         container = new ScriptingContainer()
         container.loadPaths.add(Util.GEMS_PATH)
         container.loadPaths.add(Util.GEM_INFLECTOR)
@@ -25,7 +23,6 @@ class ViewAnalyser {
     }
 
     String extractCode(String path){
-        log.info "Extract code from view: $path"
         container.callMethod(receiver, "extract_production_code", path)
     }
 

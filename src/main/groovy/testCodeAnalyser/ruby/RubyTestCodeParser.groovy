@@ -17,7 +17,7 @@ import testCodeAnalyser.ruby.routes.Route
 import testCodeAnalyser.ruby.routes.RubyConfigRoutesVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecFileVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
-import testCodeAnalyser.ruby.views.ViewAnalyser
+import testCodeAnalyser.ruby.views.ViewCodeExtractor
 import util.ConstantData
 import util.RegexUtil
 import util.Util
@@ -33,12 +33,12 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     Set<Route> routes
     Set<Route> problematicRoutes
     TaskInterface interfaceFromViews
-    static ViewAnalyser viewAnalyser
+    static ViewCodeExtractor viewAnalyser
     static counter = 1
 
     static {
         if(Util.VIEW_ANALYSIS){
-            viewAnalyser = new ViewAnalyser()
+            viewAnalyser = new ViewCodeExtractor()
         }
     }
 

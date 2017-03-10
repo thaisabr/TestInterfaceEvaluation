@@ -6,7 +6,6 @@ import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.expr.*
 import org.codehaus.groovy.control.SourceUnit
 import taskAnalyser.task.TaskInterface
-import testCodeAnalyser.MethodToAnalyse
 import testCodeAnalyser.StepCall
 import testCodeAnalyser.TestCodeVisitor
 import util.Util
@@ -137,7 +136,7 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     /***
      * Visits static method or step method(static import)
      */
-    public void visitStaticMethodCallExpression(StaticMethodCallExpression call) {
+    void visitStaticMethodCallExpression(StaticMethodCallExpression call) {
         super.visitStaticMethodCallExpression(call)
         def path = GroovyUtil.getClassPathForGroovy(call.ownerType.name, projectFiles)
         if (GroovyUtil.isValidClass(call.ownerType.name, path)) {
@@ -147,7 +146,7 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     }
 
     @Override
-    public void visitField(FieldNode node) {
+    void visitField(FieldNode node) {
         super.visitField(node)
         def className = node.type.name
         def path = GroovyUtil.getClassPathForGroovy(className, projectFiles)
@@ -162,18 +161,13 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     /***
      * Visits fields and constants from other classes, for example: "foo.bar"
      */
-    public void visitPropertyExpression(PropertyExpression expression) {
+    void visitPropertyExpression(PropertyExpression expression) {
         super.visitPropertyExpression(expression)
         def path = GroovyUtil.getClassPathForGroovy(expression.objectExpression.type.name, projectFiles)
         if (GroovyUtil.isValidClass(expression.objectExpression.type.name, path)) {
             def className = expression.objectExpression.type.name
             taskInterface.accessedProperties += [name: expression.propertyAsString, type: className, file: path]
         }
-    }
-
-    @Override
-    MethodToAnalyse getStepDefinitionMethod() {
-        return null
     }
 
 }

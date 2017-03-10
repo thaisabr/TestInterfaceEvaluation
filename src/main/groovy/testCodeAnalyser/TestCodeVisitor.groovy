@@ -3,14 +3,20 @@ package testCodeAnalyser
 import taskAnalyser.task.TaskInterface
 
 
-interface TestCodeVisitor {
+trait TestCodeVisitor {
 
-    TaskInterface getTaskInterface()
+    abstract TaskInterface getTaskInterface()
 
-    void setLastVisitedFile(String path)
+    abstract void setLastVisitedFile(String path)
 
-    def getCalledSteps()
+    abstract getCalledSteps()
 
-    MethodToAnalyse getStepDefinitionMethod()
+    MethodToAnalyse getStepDefinitionMethod() {
+        null
+    }
+
+    int getVisitCallCounter(){
+        0
+    }
 
 }

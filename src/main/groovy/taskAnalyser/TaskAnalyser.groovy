@@ -1,5 +1,6 @@
 package taskAnalyser
 
+import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
 import taskAnalyser.task.DoneTask
 import util.ConstantData

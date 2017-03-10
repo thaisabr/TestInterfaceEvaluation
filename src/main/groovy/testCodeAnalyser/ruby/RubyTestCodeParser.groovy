@@ -7,6 +7,7 @@ import org.jrubyparser.ast.Node
 import org.jrubyparser.lexer.SyntaxException
 import org.jrubyparser.parser.ParserConfiguration
 import taskAnalyser.task.StepDefinition
+import taskAnalyser.task.TaskInterface
 import taskAnalyser.task.UnitFile
 import testCodeAnalyser.FileToAnalyse
 import testCodeAnalyser.StepRegex
@@ -17,6 +18,7 @@ import testCodeAnalyser.ruby.routes.RubyConfigRoutesVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecFileVisitor
 import testCodeAnalyser.ruby.unitTest.RSpecTestDefinitionVisitor
 import testCodeAnalyser.ruby.views.ViewAnalyser
+import util.ConstantData
 import util.RegexUtil
 import util.Util
 import util.ruby.RubyConstantData
@@ -30,6 +32,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     String routesFile
     Set<Route> routes
     Set<Route> problematicRoutes
+    TaskInterface interfaceFromViews
     static ViewAnalyser viewAnalyser
     static counter = 1
 
@@ -44,6 +47,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         this.routesFile = repositoryPath + RubyConstantData.ROUTES_FILE
         this.routes = [] as Set
         this.problematicRoutes = [] as Set
+        this.interfaceFromViews = new TaskInterface()
     }
 
     /***
@@ -164,6 +168,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             def views = viewFiles?.findAll { it.contains(path) }
             if(views && !views.empty){ //no case execute it yet
                 visitor?.taskInterface?.referencedPages += views
+                interfaceFromViews.referencedPages += views
                 foundView = true
                 //trying to find controller and action by view seems risky
                 /*def methodCall
@@ -254,6 +259,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             def filePaths = RubyUtil.getClassPathForRubyClass(className, this.projectFiles)
             filePaths.each{ filePath ->
                 visitor?.taskInterface?.methods += [name: data.action, type: className, file: filePath]
+                interfaceFromViews.methods += [name: data.action, type: className, file: filePath]
             }
             controller = data.controller
             action = data.action
@@ -261,10 +267,11 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         [controller:controller, action:action, registry:registryMethodCall]
     }
 
-    private static registryView(TestCodeVisitor visitor, List<String> views){
+    private registryView(TestCodeVisitor visitor, List<String> views){
         def foundView = false
         if(views && !views.empty) {
             visitor?.taskInterface?.referencedPages += views
+            interfaceFromViews.referencedPages += views
             foundView = true
         }
         foundView
@@ -274,6 +281,31 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         def views = RubyUtil.searchViewFor(controller, action, this.viewFiles)
         def foundView = registryView(visitor, views)
         [views: views, found:foundView]
+    }
+
+    private registryDirectAccessedViews(TestCodeVisitor visitor, List<String> files){
+        def foundViews = this.viewFiles.findAll{ f-> files.any{ f.endsWith(File.separator+it)} }
+
+        def views = foundViews?.collect{
+            int index = it.indexOf(Util.REPOSITORY_FOLDER_PATH)
+            it.substring(index+Util.REPOSITORY_FOLDER_PATH.size())
+        }
+
+        registryView(visitor, views)
+        codeFromViewAnalysis += views
+
+        def found = foundViews.collect{
+            int index = it.lastIndexOf(File.separator)
+            it.substring(index+1)
+        }
+
+        log.info "Direct accessed views:"
+        views.each{ log.info it.toString() }
+
+        log.info "Accessed files with no data:"
+        def problematic = files - found
+        problematic.each{ log.info it.toString() }
+        this.notFoundViews += problematic
     }
 
     private registryViewRelatedToPath(TestCodeVisitor visitor, String path){
@@ -388,40 +420,56 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         this.registryUsedRailsPaths(visitor, railsPathMethods as Set)
 
         /* extracts data from view (ERB or HAML) files (this code must be moved in the future) */
-        if(viewAnalyser) this.registryCallsIntoViewFiles(visitor)
+        if(viewAnalyser) {
+            this.registryCallsIntoViewFiles(visitor, [] as Set)
+        }
     }
 
-    private static extractCallsFromViewFiles(TestCodeVisitor visitor){
-        def erbs = visitor.taskInterface.findAllFiles().findAll{ Util.isErbFile(it) }
+    private static extractCallsFromViewFiles(TestCodeVisitor visitor, Set<String> analysedViewFiles){
+        def viewFiles = visitor.taskInterface.findAllFiles().findAll{ Util.isViewFile(it) }
+        if(analysedViewFiles && !analysedViewFiles.empty) viewFiles -= analysedViewFiles
         def calls = []
-        erbs?.each{ erb ->
-            def path = Util.REPOSITORY_FOLDER_PATH + erb
+        viewFiles?.each{ viewFile ->
+            def path = Util.REPOSITORY_FOLDER_PATH + viewFile
             try{
+                def r = []
                 String code = viewAnalyser.extractCode(path)
-                code?.eachLine { line ->
-                    calls += Eval.me(line)
-                }
+                code?.eachLine { line -> r += Eval.me(line) }
+                log.info "Extracted code from view: $path"
+                r.each{ log.info it.toString() }
+                calls += r
             } catch(Exception ex){
                 def src = new File(path)
                 def dst = new File("error" + File.separator + src.name + counter)
                 dst << src.text
-                log.error "Error to extract code from erb: $path (${ex.message})"
+                log.error "Error to extract code from view file: $path (${ex.message})"
                 counter ++
             }
         }
         calls.unique()
     }
 
-    private registryCallsIntoViewFiles(TestCodeVisitor visitor){
+    private registryCallsIntoViewFiles(TestCodeVisitor visitor, Set<String> analysedViewFiles){
         if(!(visitor instanceof RubyTestCodeVisitor)) return
 
-        def calls = extractCallsFromViewFiles(visitor)
+        def calls = extractCallsFromViewFiles(visitor, analysedViewFiles)
         if(calls.empty) return
-        log.info "method call from ERB file(s):"
+
+        log.info "All calls from view file(s):"
         calls?.each{ log.info it.toString() }
 
-        //access to files or paths
-        def usedPaths = calls?.findAll{ it.receiver.empty && it.name.contains("/") }
+        //access to files
+        analysedViewFiles += visitor.taskInterface.findAllFiles().findAll{ Util.isViewFile(it) }
+        def files = calls?.findAll{
+            it.receiver.empty &&
+            (it.name.endsWith(ConstantData.ERB_EXTENSION) || it.name.endsWith(ConstantData.HAML_EXTENSION))
+        }*.name
+        def accessedViewFiles = files?.collect{it.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))}
+        this.registryDirectAccessedViews(visitor, accessedViewFiles)
+
+        //access to paths
+        def noFiles = calls - files
+        def usedPaths = noFiles?.findAll{ it.receiver.empty && it.name.contains("/") }
         def paths = usedPaths*.name
         this.registryUsedPaths(visitor, paths as Set)
 
@@ -448,6 +496,9 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             if(name.startsWith("@")) name = name.substring(1)
             rubyVisitor.registryCallFromInstanceVariable(name, 0, it.receiver)
         }
+
+        //check if there is new view files to analyse
+        registryCallsIntoViewFiles(visitor, analysedViewFiles)
     }
 
     /***
@@ -504,7 +555,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
      * @param visitor visitor to visit method bodies
      */
     @Override
-    def visitFile(file, TestCodeVisitor visitor) {
+    visitFile(file, TestCodeVisitor visitor) {
         def node = this.generateAst(file.path)
         visitor.lastVisitedFile = file.path
         def auxVisitor = new RubyMethodVisitor(file.methods, (RubyTestCodeVisitor) visitor)
@@ -548,5 +599,9 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     @Override
     String getClassForFile(String path) {
         RubyUtil.getClassName(path)
+    }
+
+    Set getCodeFromViewAnalysis() {
+        interfaceFromViews.findAllFiles().sort()
     }
 }

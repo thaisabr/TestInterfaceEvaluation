@@ -31,6 +31,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     List<StepCall> calledSteps
     static int stepCallCounter
     MethodToAnalyse stepDefinitionMethod
+    int visitCallCounter
 
     RubyTestCodeVisitor(String currentFile) { //test purpose only
         this.taskInterface = new TaskInterface()
@@ -46,7 +47,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         this.taskInterface = new TaskInterface()
         this.lastVisitedFile = currentFile
         this.projectMethods = methods
-        calledSteps = []
+        this.calledSteps = []
     }
 
     private registryMethodCall(CallNode iVisited) {
@@ -56,7 +57,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         }
     }
 
-    private static int countArgsMethodCall(def iVisited) {
+    private static int countArgsMethodCall(iVisited) {
         def counter = 0
         iVisited?.args?.childNodes()?.each { child ->
             if (child instanceof HashNode && child?.listNode?.size() > 0) {
@@ -160,7 +161,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         }
     }
 
-    private static extractPath(def value) {
+    private static extractPath(value) {
         if (value.startsWith("http://")) value = value - "http://"
         else if (value.startsWith("https://")) value = value - "https://"
         def i = value.indexOf("/")
@@ -168,7 +169,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         value
     }
 
-    private registryVisitStringArg(def value) {
+    private registryVisitStringArg(value) {
         value = extractPath(value)
         def index = value.indexOf("?")
         if (index > 0) value = value.substring(0, index)//ignoring params
@@ -193,6 +194,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
     private analyseVisitCall(FCallNode iVisited) {
         //log.info "VISIT CALL: ${lastVisitedFile} (${iVisited.position.startLine+1});"
+        visitCallCounter++
         registryVisitCall(iVisited.args.last)
     }
 

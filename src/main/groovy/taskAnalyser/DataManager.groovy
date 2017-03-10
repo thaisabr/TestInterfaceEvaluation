@@ -20,8 +20,9 @@ class DataManager {
                              "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
                              "#AST_Errors", "Gherkin_AST_Errors", "#Gherkin_AST_Errors", "Steps_AST_Errors",
                              "#Steps_AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views", "#Views", "#ITest",
-                             "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp", "Rails", "Simplecov", "FactoryGirl"]
-    static final int RECALL_INDEX = HEADER.size() - 6
+                             "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp", "Rails", "Simplecov",
+                             "FactoryGirl", "#Visit_Call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis"]
+    static final int RECALL_INDEX = HEADER.size() - 10
     static final int PRECISION_INDEX = RECALL_INDEX - 1
     static final int IREAL_INDEX = PRECISION_INDEX - 1
     static final int ITEST_INDEX = IREAL_INDEX - 1
@@ -322,7 +323,8 @@ class DataManager {
         if (taskData && taskData.size() > 1) saveText = true
 
         taskData?.each { entry ->
-            def itestSize = entry.itest.findAllFiles().size()
+            def itestFiles = entry.itest.findAllFiles()
+            def itestSize = itestFiles.size()
             def irealSize = entry.ireal.findAllFiles().size()
             def precision = TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)
             def recall = TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)
@@ -336,14 +338,17 @@ class DataManager {
             if (renames.empty) renames = ""
             def views = entry.itest.notFoundViews
             if (views.empty) views = ""
+            def filesFromViewAnalysis = entry.itest.codeFromViewAnalysis
+            def viewFileFromITest = itestFiles.findAll{ Util.isViewFile(it) }.size()
             String[] line = [entry.task.id, dates, entry.task.days, entry.task.commitsQuantity, msgs, devs,
-                             entry.task.gherkinTestQuantity, entry.itest.foundAcceptanceTests.size(),
-                             entry.task.stepDefQuantity, entry.methods, entry.stepCalls,
-                             stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
-                             compilationErrors.gherkin, compilationErrors.quantityGherkin, compilationErrors.steps,
-                             compilationErrors.stepsQuantity, renames, removes, views, views.size(), itestSize,
-                             irealSize, entry.itest, entry.ireal, precision, recall, entry.task.commits*.hash,
-                             entry.timestamp, entry.rails, entry.simplecov, entry.factorygirl]
+                     entry.task.gherkinTestQuantity, entry.itest.foundAcceptanceTests.size(),
+                     entry.task.stepDefQuantity, entry.methods, entry.stepCalls,
+                     stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
+                     compilationErrors.gherkin, compilationErrors.quantityGherkin, compilationErrors.steps,
+                     compilationErrors.stepsQuantity, renames, removes, views, views.size(), itestSize,
+                     irealSize, entry.itest, entry.ireal, precision, recall, entry.task.commits*.hash,
+                     entry.timestamp, entry.rails, entry.simplecov, entry.factorygirl, entry.itest.visitCallCounter,
+                     viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis]
 
             writer.writeNext(line)
             if (saveText) writeITextFile(filename, entry) //dealing with long textual description of a task

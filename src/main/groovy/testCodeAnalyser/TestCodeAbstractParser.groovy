@@ -5,6 +5,7 @@ import gherkin.ast.ScenarioOutline
 import gherkin.ast.Step
 import groovy.util.logging.Slf4j
 import taskAnalyser.task.*
+import util.ConstantData
 import util.Util
 
 /***
@@ -25,8 +26,9 @@ abstract class TestCodeAbstractParser {
     protected Set notFoundViews
     protected Set compilationErrors
     Set matchStepErrors
-
     Set<AcceptanceTest> foundAcceptanceTests
+    Set codeFromViewAnalysis
+    int visitCallCounter
 
     /***
      * Initializes fields used to link step declaration and code.
@@ -44,10 +46,7 @@ abstract class TestCodeAbstractParser {
         compilationErrors = [] as Set
         matchStepErrors = [] as Set
         foundAcceptanceTests = []
-    }
-
-    private organizeNotFoundViews() {
-        notFoundViews.sort()
+        codeFromViewAnalysis = [] as Set
     }
 
     private organizeMatchStepErrors(Set removedSteps) {
@@ -112,7 +111,7 @@ abstract class TestCodeAbstractParser {
         def views = Util.findFilesFromDirectory(repositoryPath + File.separator + Util.VIEWS_FILES_RELATIVE_PATH)
         viewFiles = views.findAll { file -> Util.VALID_VIEW_FILES.any { file.endsWith(it) } }
         viewFiles += (views - viewFiles).findAll{
-            it.count(".")==1 && (it.endsWith(".erb") || it.endsWith(".haml") || it.endsWith(".slim"))
+            it.count(".")==1 && (it.endsWith(ConstantData.ERB_EXTENSION) || it.endsWith(ConstantData.HAML_EXTENSION) || it.endsWith(".slim"))
         }
     }
 
@@ -491,6 +490,8 @@ abstract class TestCodeAbstractParser {
 
             /* updates task interface */
             interfaces += testCodeVisitor.taskInterface
+
+            visitCallCounter += testCodeVisitor.visitCallCounter
         }
 
         /* identifies more step definitions to analyse */
@@ -502,11 +503,13 @@ abstract class TestCodeAbstractParser {
         if (!newStepsToAnalyse.empty) interfaces += computeInterface(newStepsToAnalyse, removedSteps)
 
         /* collapses step code interfaces to define the interface for the whole task */
-        def itest = TaskInterface.colapseInterfaces(interfaces)
+        def itest = TaskInterface.collapseInterfaces(interfaces)
         itest.matchStepErrors = organizeMatchStepErrors(removedSteps)
         itest.compilationErrors = organizeCompilationErrors()
-        itest.notFoundViews = organizeNotFoundViews()
+        itest.notFoundViews = notFoundViews.sort()
         itest.foundAcceptanceTests = foundAcceptanceTests
+        itest.codeFromViewAnalysis = codeFromViewAnalysis
+        itest.visitCallCounter = visitCallCounter
         itest
     }
 

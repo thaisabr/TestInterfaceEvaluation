@@ -22,7 +22,8 @@ class TaskInterface {
     Set compilationErrors
     Set notFoundViews
     Set foundAcceptanceTests
-
+    Set codeFromViewAnalysis
+    int visitCallCounter
     TimeDuration timestamp //time to compute task interface
 
     TaskInterface() {
@@ -37,6 +38,7 @@ class TaskInterface {
         this.compilationErrors = [] as Set
         this.notFoundViews = [] as Set
         this.foundAcceptanceTests = [] as Set
+        this.codeFromViewAnalysis = [] as Set
         this.timestamp = new TimeDuration(0,0,0,0)
     }
 
@@ -84,7 +86,7 @@ class TaskInterface {
         files?.findResults { i -> i ? i - canonicalPath : null } as Set
     }
 
-    def colapseInterfaces(TaskInterface task) {
+    def collapseInterfaces(TaskInterface task) {
         this.classes += task.classes
         this.methods += task.methods
         this.staticFields += task.staticFields
@@ -92,11 +94,20 @@ class TaskInterface {
         this.accessedProperties += task.accessedProperties
         this.calledPageMethods += task.calledPageMethods
         this.referencedPages += task.referencedPages
+
+        this.matchStepErrors += task.matchStepErrors
+        this.compilationErrors += task.matchStepErrors
+        this.notFoundViews += task.matchStepErrors
+        this.foundAcceptanceTests += task.matchStepErrors
+        this.codeFromViewAnalysis += task.matchStepErrors
+        this.visitCallCounter += task.matchStepErrors
+        this.timestamp += this.matchStepErrors
+
     }
 
-    static TaskInterface colapseInterfaces(List<TaskInterface> interfaces) {
+    static TaskInterface collapseInterfaces(List<TaskInterface> interfaces) {
         def taskInterface = new TaskInterface()
-        interfaces.each { taskInterface.colapseInterfaces(it) }
+        interfaces.each { taskInterface.collapseInterfaces(it) }
         return taskInterface
     }
 

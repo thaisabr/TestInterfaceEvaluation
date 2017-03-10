@@ -94,15 +94,13 @@ class TaskInterface {
         this.accessedProperties += task.accessedProperties
         this.calledPageMethods += task.calledPageMethods
         this.referencedPages += task.referencedPages
-
         this.matchStepErrors += task.matchStepErrors
         this.compilationErrors += task.matchStepErrors
         this.notFoundViews += task.matchStepErrors
-        this.foundAcceptanceTests += task.matchStepErrors
-        this.codeFromViewAnalysis += task.matchStepErrors
-        this.visitCallCounter += task.matchStepErrors
-        this.timestamp += this.matchStepErrors
-
+        this.foundAcceptanceTests += task.foundAcceptanceTests
+        this.codeFromViewAnalysis += task.codeFromViewAnalysis
+        this.visitCallCounter += task.visitCallCounter
+        this.timestamp += this.timestamp
     }
 
     static TaskInterface collapseInterfaces(List<TaskInterface> interfaces) {

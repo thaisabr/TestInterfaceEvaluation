@@ -33,14 +33,8 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     Set<Route> routes
     Set<Route> problematicRoutes
     TaskInterface interfaceFromViews
-    static ViewCodeExtractor viewAnalyser
+    ViewCodeExtractor viewCodeExtractor
     static counter = 1
-
-    static {
-        if(Util.VIEW_ANALYSIS){
-            viewAnalyser = new ViewCodeExtractor()
-        }
-    }
 
     RubyTestCodeParser(String repositoryPath) {
         super(repositoryPath)
@@ -48,6 +42,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         this.routes = [] as Set
         this.problematicRoutes = [] as Set
         this.interfaceFromViews = new TaskInterface()
+        if(Util.VIEW_ANALYSIS) viewCodeExtractor = new ViewCodeExtractor()
     }
 
     /***
@@ -292,7 +287,6 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         }
 
         registryView(visitor, views)
-        codeFromViewAnalysis += views
 
         def found = foundViews.collect{
             int index = it.lastIndexOf(File.separator)
@@ -420,31 +414,29 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         this.registryUsedRailsPaths(visitor, railsPathMethods as Set)
 
         /* extracts data from view (ERB or HAML) files (this code must be moved in the future) */
-        if(viewAnalyser) {
-            this.registryCallsIntoViewFiles(visitor, [] as Set)
-        }
+        if(viewCodeExtractor) this.registryCallsIntoViewFiles(visitor, [] as Set)
     }
 
-    private static extractCallsFromViewFiles(TestCodeVisitor visitor, Set<String> analysedViewFiles){
+    private extractCallsFromViewFiles(TestCodeVisitor visitor, Set<String> analysedViewFiles){
         def viewFiles = visitor.taskInterface.findAllFiles().findAll{ Util.isViewFile(it) }
         if(analysedViewFiles && !analysedViewFiles.empty) viewFiles -= analysedViewFiles
         def calls = []
         viewFiles?.each{ viewFile ->
             def path = Util.REPOSITORY_FOLDER_PATH + viewFile
-            try{
+            //try{
                 def r = []
-                String code = viewAnalyser.extractCode(path)
+                String code = viewCodeExtractor?.extractCode(path)
                 code?.eachLine { line -> r += Eval.me(line) }
                 log.info "Extracted code from view: $path"
                 r.each{ log.info it.toString() }
                 calls += r
-            } catch(Exception ex){
+            /*} catch(Exception ex){
                 def src = new File(path)
                 def dst = new File("error" + File.separator + src.name + counter)
                 dst << src.text
                 log.error "Error to extract code from view file: $path (${ex.message})"
                 counter ++
-            }
+            }*/
         }
         calls.unique()
     }
@@ -601,7 +593,8 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         RubyUtil.getClassName(path)
     }
 
-    Set getCodeFromViewAnalysis() {
+    @Override
+    Set<String> getCodeFromViewAnalysis() {
         interfaceFromViews.findAllFiles().sort()
     }
 }

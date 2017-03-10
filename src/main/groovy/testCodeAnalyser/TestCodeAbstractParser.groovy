@@ -508,7 +508,7 @@ abstract class TestCodeAbstractParser {
         itest.compilationErrors = organizeCompilationErrors()
         itest.notFoundViews = notFoundViews.sort()
         itest.foundAcceptanceTests = foundAcceptanceTests
-        itest.codeFromViewAnalysis = codeFromViewAnalysis
+        itest.codeFromViewAnalysis = this.getCodeFromViewAnalysis()
         itest.visitCallCounter = visitCallCounter
         itest
     }

@@ -238,7 +238,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
         log.info "Paths with method call: $methodCall"
         log.info "Paths with view: $view"
-        log.info "All founded views: ${visitor?.taskInterface?.referencedPages}"
+        log.info "All found views: ${visitor?.taskInterface?.referencedPages}"
         log.info "Paths with no data: $problematic"
         this.notFoundViews += problematic
     }
@@ -279,22 +279,20 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     }
 
     private registryDirectAccessedViews(TestCodeVisitor visitor, List<String> files){
-        def foundViews = this.viewFiles.findAll{ f-> files.any{ f.endsWith(File.separator+it)} }
-
+        def foundViews = this.viewFiles.findAll{ f -> files.any{ f.endsWith(it)} }
         def views = foundViews?.collect{
             int index = it.indexOf(Util.REPOSITORY_FOLDER_PATH)
             it.substring(index+Util.REPOSITORY_FOLDER_PATH.size())
         }
 
         registryView(visitor, views)
-
-        def found = foundViews.collect{
-            int index = it.lastIndexOf(File.separator)
-            it.substring(index+1)
-        }
-
         log.info "Direct accessed views:"
         views.each{ log.info it.toString() }
+
+        def found = foundViews.collect{
+            def index = it.indexOf(this.repositoryPath)
+            it.substring(index+this.repositoryPath.size()+1)
+        }
 
         log.info "Accessed files with no data:"
         def problematic = files - found
@@ -367,7 +365,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
         log.info "Path methods with method call: $methodCall"
         log.info "Path methods with view: $view"
-        log.info "All founded views from path methods: ${foundViews}"
+        log.info "All found views from path methods: ${foundViews}"
         log.info "Path methods with no data: $problematic"
     }
 
@@ -423,20 +421,20 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         def calls = []
         viewFiles?.each{ viewFile ->
             def path = Util.REPOSITORY_FOLDER_PATH + viewFile
-            //try{
+            try{
                 def r = []
                 String code = viewCodeExtractor?.extractCode(path)
                 code?.eachLine { line -> r += Eval.me(line) }
                 log.info "Extracted code from view: $path"
                 r.each{ log.info it.toString() }
                 calls += r
-            /*} catch(Exception ex){
+            } catch(Exception ex){
                 def src = new File(path)
                 def dst = new File("error" + File.separator + src.name + counter)
                 dst << src.text
                 log.error "Error to extract code from view file: $path (${ex.message})"
                 counter ++
-            }*/
+            }
         }
         calls.unique()
     }
@@ -455,8 +453,13 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         def files = calls?.findAll{
             it.receiver.empty &&
             (it.name.endsWith(ConstantData.ERB_EXTENSION) || it.name.endsWith(ConstantData.HAML_EXTENSION))
-        }*.name
-        def accessedViewFiles = files?.collect{it.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))}
+        }
+        def accessedViewFiles = files*.name?.collect{
+            def n
+            if( it[0] ==~ RegexUtil.FILE_SEPARATOR_REGEX) n = it
+            else n = File.separator + it
+            (Util.VIEWS_FILES_RELATIVE_PATH+n).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        }
         this.registryDirectAccessedViews(visitor, accessedViewFiles)
 
         //access to paths

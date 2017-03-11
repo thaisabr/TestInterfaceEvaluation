@@ -38,6 +38,7 @@ class RubyUtil extends Util {
     }
 
     static List<String> getClassPathForRubyInstanceVariable(String original, Collection<String> projectFiles) {
+        if(original.contains(" ")) return [] //invalid class reference
         def name = original + ConstantData.RUBY_EXTENSION
         def exp = ".*$File.separator$name".replace(File.separator, Matcher.quoteReplacement(File.separator))
         projectFiles?.findAll { it ==~ /$exp/ }

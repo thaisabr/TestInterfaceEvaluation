@@ -31,6 +31,8 @@ abstract class Util {
     public static final String GEM_PARSER
     public static final String GEM_AST
     public static final boolean VIEW_ANALYSIS
+    public static final boolean CONTROLLER_FILTER
+    public static final boolean VIEW_FILTER
 
     static {
         properties = new Properties()
@@ -74,9 +76,11 @@ abstract class Util {
         GEMS_PATH = (properties.(ConstantData.PROP_GEMS)).replace(File.separator, Matcher.quoteReplacement(File.separator))
         GEM_INFLECTOR = configureGemInflector()
         GEM_I18N = configureGemI18n()
-        GEM_PARSER = configureGemParser()
+        GEM_PARSER =  configureGemParser()
         GEM_AST = configureGemAst()
         VIEW_ANALYSIS = configureViewAnalysis()
+        CONTROLLER_FILTER = configureControllerFilter()
+        VIEW_FILTER = configureViewFilter()
     }
 
     private static loadProperties() {
@@ -155,6 +159,14 @@ abstract class Util {
         configureBooleanProperties(properties.(ConstantData.PROP_VIEW_ANALYSIS), ConstantData.DEFAULT_VIEW_ANALYSIS)
     }
 
+    private static boolean configureControllerFilter(){
+        configureBooleanProperties(properties.(ConstantData.PROP_CONTROLLER_FILTER), ConstantData.DEFAULT_CONTROLLER_FILTER)
+    }
+
+    private static boolean configureViewFilter(){
+        configureBooleanProperties(properties.(ConstantData.PROP_VIEW_FILTER), ConstantData.DEFAULT_VIEW_FILTER)
+    }
+
     static String configureGitRepositoryName(String url) {
         String name = url - ConstantData.GITHUB_URL - ConstantData.GIT_EXTENSION
         return name.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
@@ -165,10 +177,10 @@ abstract class Util {
     }
 
     static Collection<String> findAllProductionFiles(Collection<String> files) {
-        files?.findAll { isProductionCode(it) }
+        files?.findAll { isProductionFile(it) }
     }
 
-    static boolean isTestCode(String path) {
+    static boolean isTestFile(String path) {
         if (path?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) ||
                 path?.contains(GHERKIN_FILES_RELATIVE_PATH + File.separator) ||
                 path?.contains(STEPS_FILES_RELATIVE_PATH + File.separator) ||
@@ -177,31 +189,31 @@ abstract class Util {
         } else false
     }
 
-    static boolean isValidCode(String path) {
+    static boolean isValidFile(String path) {
         if (VALID_FOLDERS.any { path?.contains(it + File.separator) } && VALID_EXTENSIONS.any {
             path?.endsWith(it) }) true
         else if(VALID_FOLDERS.any { path?.contains(it + File.separator) } && path.count(".")==1 &&
-                (path.endsWith(".erb") || path.endsWith(".haml") || path.endsWith(".slim"))) true
+                (path.endsWith(ConstantData.ERB_EXTENSION) || path.endsWith(ConstantData.HAML_EXTENSION) || path.endsWith(".slim"))) true
         else false
     }
 
-    static boolean isStepDefinitionCode(String path) {
+    static boolean isStepDefinitionFile(String path) {
         if (path?.contains(STEPS_FILES_RELATIVE_PATH + File.separator) && path?.endsWith(VALID_EXTENSION)) true
         else false
     }
 
-    static boolean isGherkinCode(String path) {
+    static boolean isGherkinFile(String path) {
         if (path?.endsWith(ConstantData.FEATURE_EXTENSION)) true
         else false
     }
 
-    static boolean isUnitTestCode(String path) {
+    static boolean isUnitTestFile(String path) {
         if (path?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) && path?.endsWith(VALID_EXTENSION)) true
         else false
     }
 
-    static boolean isProductionCode(String path) {
-        if (isValidCode(path) && !isTestCode(path)) true
+    static boolean isProductionFile(String path) {
+        if (isValidFile(path) && !isTestFile(path)) true
         else false
     }
 
@@ -209,6 +221,11 @@ abstract class Util {
         if ( path?.contains(VIEWS_FILES_RELATIVE_PATH + File.separator) &&
                 ( path?.endsWith(ConstantData.ERB_EXTENSION) || path?.endsWith(ConstantData.HAML_EXTENSION) )
         ) true
+        else false
+    }
+
+    static boolean isControllerFile(String path){
+        if (path?.contains("${CONTROLLER_FILES_RELATIVE_PATH}${File.separator}")) true
         else false
     }
 
@@ -277,6 +294,20 @@ abstract class Util {
     static findJarFilesFromDirectory(String directory) {
         def files = findFilesFromDirectory(directory)
         files.findAll { it.contains(ConstantData.JAR_EXTENSION) }
+    }
+
+    static filterFiles(files){
+        def filteredFiles = []
+
+        //identifying view files
+        if(VIEW_FILTER) filteredFiles += files?.findAll{ isViewFile(it) }
+
+        def others = files - filteredFiles
+
+        //identifying controller files
+        if(CONTROLLER_FILTER) filteredFiles += others?.findAll{ isControllerFile(it) }
+
+        filteredFiles
     }
 
 }

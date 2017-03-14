@@ -272,7 +272,7 @@ abstract class TestCodeAbstractParser {
      */
     static listTestMethodsToVisit(lastCalledMethods) {
         def testFiles = []
-        def calledTestMethods = lastCalledMethods?.findAll { it.file != null && Util.isTestCode(it.file) }?.unique()
+        def calledTestMethods = lastCalledMethods?.findAll { it.file != null && Util.isTestFile(it.file) }?.unique()
         calledTestMethods*.file.unique().each { path ->
             def methods = calledTestMethods.findAll { it.file == path }*.name
             testFiles += [path: path, methods: methods]

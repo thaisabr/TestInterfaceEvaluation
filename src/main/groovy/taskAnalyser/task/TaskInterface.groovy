@@ -71,16 +71,16 @@ class TaskInterface {
      */
     Set<String> findAllFiles() {
         //production classes
-        def classes = (classes?.findAll { Util.isProductionCode(it.file) })*.file
+        def classes = (classes?.findAll { Util.isProductionFile(it.file) })*.file
 
         //production methods
-        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" && Util.isProductionCode(it.file) }*.file
+        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" && Util.isProductionFile(it.file) }*.file
 
         //production files
         def files = ((classes + methodFiles + referencedPages) as Set)?.sort()
 
-        //filtering result to only identify view files
-        //files = files?.findAll{ it?.contains("${Util.VIEWS_FILES_RELATIVE_PATH}${File.separator}") }
+        //filtering result to only identify view and/or controller files
+        files = Util.filterFiles(files)
 
         def canonicalPath = Util.getRepositoriesCanonicalPath()
         files?.findResults { i -> i ? i - canonicalPath : null } as Set

@@ -228,7 +228,11 @@ class DoneTask extends Task {
 
     private TaskInterface organizeProductionFiles(productionFiles) {
         def taskInterface = new TaskInterface()
-        productionFiles.each { file ->
+
+        //filtering result to only identify view and/or controller files
+        productionFiles = Util.filterFiles(productionFiles)
+
+        productionFiles?.each { file ->
             def path = gitRepository.name + File.separator + file
             if (path.contains(Util.VIEWS_FILES_RELATIVE_PATH)) {
                 def index = path.lastIndexOf(File.separator)

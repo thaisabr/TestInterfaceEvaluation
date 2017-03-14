@@ -120,7 +120,7 @@ class GitRepository {
             result += it
         }
 
-        result.findAll { file -> (Util.isValidCode(file.newPath) || Util.isValidCode(file.oldPath)) }
+        result.findAll { file -> (Util.isValidFile(file.newPath) || Util.isValidFile(file.oldPath)) }
     }
 
     /***
@@ -267,14 +267,14 @@ class GitRepository {
 
     private CodeChange configureAddChange(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser) {
         CodeChange change
-        if (Util.isGherkinCode(entry.newPath))
+        if (Util.isGherkinFile(entry.newPath))
             change = extractGherkinAdds(commit, entry)
-        else if (Util.isStepDefinitionCode(entry.newPath))
+        else if (Util.isStepDefinitionFile(entry.newPath))
             change = extractStepDefinitionAdds(commit, entry, parser)
         else {
             def result = extractFileContent(commit, entry.newPath)
             def lines = 0..<result.readLines().size()
-            if (Util.isUnitTestCode(entry.newPath)) {
+            if (Util.isUnitTestFile(entry.newPath)) {
                 //change = extractUnitChanges(commit, entry.newPath, lines, parser)
             } else change = new CoreChange(path: entry.newPath, type: entry.changeType, lines: lines)
         }
@@ -283,13 +283,13 @@ class GitRepository {
 
     private CodeChange configureModifyChange(RevCommit commit, RevCommit parent, DiffEntry entry, TestCodeAbstractParser parser) {
         CodeChange change = null
-        if (Util.isGherkinCode(entry.newPath))
+        if (Util.isGherkinFile(entry.newPath))
             change = extractGherkinChanges(commit, parent, entry)
-        else if (Util.isStepDefinitionCode(entry.newPath))
+        else if (Util.isStepDefinitionFile(entry.newPath))
             change = extractStepDefinitionChanges(commit, parent, entry, parser)
         else {
             def lines = computeChanges(commit, entry.newPath)
-            if (Util.isUnitTestCode(entry.newPath)) {
+            if (Util.isUnitTestFile(entry.newPath)) {
                 //change = extractUnitChanges(commit, entry.newPath, lines, parser)
             } else {
                 change = new CoreChange(path: entry.newPath, type: entry.changeType, lines: lines)
@@ -321,7 +321,7 @@ class GitRepository {
                     }
                     break
                 case DiffEntry.ChangeType.DELETE: //the file size is already known
-                    if (Util.isProductionCode(entry.oldPath)) {
+                    if (Util.isProductionFile(entry.oldPath)) {
                         def result = extractFileContent(parent, entry.oldPath)
                         codeChanges += new CoreChange(path: entry.oldPath, type: entry.changeType, lines: 0..<result.readLines().size())
                     }
@@ -486,19 +486,19 @@ class GitRepository {
         tw.setRecursive(true)
         tw.addTree(commit.tree)
         while (tw.next()) {
-            if (!Util.isValidCode(tw.pathString)) continue
+            if (!Util.isValidFile(tw.pathString)) continue
 
             def result = extractFileContent(commit, tw.pathString)
 
-            if (Util.isGherkinCode(tw.pathString)) {
+            if (Util.isGherkinFile(tw.pathString)) {
                 def change = GherkinManager.extractGherkinAdds(commit, result, tw.pathString)
                 if (change != null) codeChanges += change
-            } else if (Util.isStepDefinitionCode(tw.pathString)) {
+            } else if (Util.isStepDefinitionFile(tw.pathString)) {
                 def change = StepDefinitionManager.extractStepDefinitionAdds(commit, result, tw.pathString, parser)
                 if (change != null) codeChanges += change
             } else {
                 def lines = 0..<result.readLines().size()
-                if (Util.isUnitTestCode(tw.pathString)) {
+                if (Util.isUnitTestFile(tw.pathString)) {
                     //codeChanges += extractUnitChanges(commit, tw.pathString, lines, parser)
                 } else {
                     codeChanges += new CoreChange(path: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: 0..<lines)

@@ -131,10 +131,10 @@ class DataManager {
         if (compilationErrors.empty) compilationErrors = ""
         else {
             compErrorsQuantity = compilationErrors*.msgs.flatten().size()
-            gherkin = compilationErrors.findAll{ Util.isGherkinCode(it.path) }
+            gherkin = compilationErrors.findAll{ Util.isGherkinFile(it.path) }
             gherkinQuantity = gherkin.size()
             if(gherkin.empty) gherkin = ""
-            steps = compilationErrors.findAll{ Util.isStepDefinitionCode(it.path) }
+            steps = compilationErrors.findAll{ Util.isStepDefinitionFile(it.path) }
             stepsQuantity = steps.size()
             if(steps.empty) steps = ""
             compilationErrors = compilationErrors.toString()

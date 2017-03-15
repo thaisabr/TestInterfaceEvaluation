@@ -300,12 +300,10 @@ abstract class Util {
         def filteredFiles = []
 
         //identifying view files
-        if(VIEW_FILTER) filteredFiles += files?.findAll{ isViewFile(it) }
-
-        def others = files - filteredFiles
+        if(VIEW_FILTER) filteredFiles = files?.findAll{ isViewFile(it) }
 
         //identifying controller files
-        if(CONTROLLER_FILTER) filteredFiles += others?.findAll{ isControllerFile(it) }
+        if(CONTROLLER_FILTER) filteredFiles = files?.findAll{ isControllerFile(it) }
 
         filteredFiles
     }

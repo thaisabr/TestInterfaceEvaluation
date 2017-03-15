@@ -297,7 +297,7 @@ abstract class Util {
     }
 
     static filterFiles(files){
-        def filteredFiles = []
+        def filteredFiles = files
 
         //identifying view files
         if(VIEW_FILTER) filteredFiles = files?.findAll{ isViewFile(it) }

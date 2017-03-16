@@ -6,9 +6,17 @@ class TaskAnalyser
     extension = get_file_extension(file_path)
     case extension.downcase
       when 'erb'
-        return ErbControllerExtractor.new.erb_controller_extractor(file_path)
+        begin
+          return ErbControllerExtractor.new.erb_controller_extractor(file_path)
+        rescue
+          raise "Syntax exception : the file #{file_path} is either wrong or this tool cannot analise it"
+        end
       when 'haml'
-        return HamlControllerExtractor.new.haml_controller_extractor(file_path)
+        begin
+          return HamlControllerExtractor.new.haml_controller_extractor(file_path)
+        rescue
+          raise "Syntax exception : the file #{file_path} is either wrong or this tool cannot analise it"
+        end
       else
         raise 'This file extension is not currently supported'
     end

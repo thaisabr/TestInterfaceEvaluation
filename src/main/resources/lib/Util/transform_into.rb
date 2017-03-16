@@ -15,7 +15,7 @@ class Transform_into
 
   def self.var_into_method(var)
     if var.to_s[0] == '@'
-     "#{(var.to_s)[1..-1]}_path"
+      "#{(var.to_s)[1..-1]}_path"
     else
       var = "#{var}_path"
     end
@@ -35,4 +35,11 @@ class Transform_into
     var
   end
 
+  def self.plural_for_ivar(var,ivar)
+    if var.to_s.eql? ivar.to_s
+      var.to_s.pluralize
+    else
+      var
+    end
+  end
 end

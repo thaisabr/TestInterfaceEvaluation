@@ -16,6 +16,14 @@ class HamlControllerExtractor
     parsed_code = Ruby_parser.new.parse_code(code)
     output_array = Find_controller_calls.new([],'','','haml').find_controllers(parsed_code)
     output_array.each do |output|
+      if output.name[1] == '@'
+        output.name = "#{output.name[0]}#{output.name[2..-1]}"
+      elsif output.name[0] == '@'
+        output.name = output.name[1..-1]
+      end
+      if output.name[0] == '_'
+        output.name = "app/views/projects/#{output.name}"
+      end
       output_value = output_value + "[name: '#{output.name}', receiver: '#{output.receiver}', label: '#{output.label}']\n"
     end
     output_value

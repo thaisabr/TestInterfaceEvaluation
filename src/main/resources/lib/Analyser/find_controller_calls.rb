@@ -33,6 +33,7 @@ class Find_controller_calls
   $buttons = :buttons
   $array = :array
   $action = :action
+  $map = :map
 
   def find_controllers(code)
     if is_still_a_node(code)
@@ -69,23 +70,35 @@ def look_for_link_to_calls(code)
   controller_name = ''
   method_name = code.children[1]
   if method_name == $link_to
-    found_confirm_call = look_for_confirm_call(code)
-    if !found_confirm_call && !code.children[3].nil?
-      method_argument_type = code.children[3].type
-      if method_argument_type == $ivar || method_argument_type == $lvar
-        method_argument_value = code.children[3].children[0]
-        insert_outputs_on_array(Transform_into.var_into_method(method_argument_value), "",'')
+    if is_still_a_node(code.children[2])
+      if code.children[2].type == $str && code.children[2].children[0] == '#'
+        controller_name = ''
       else
-        method_inside_link_to_has_params = code.children[3].children[1].nil?
-        if !method_inside_link_to_has_params
-          method_inside_link_to_param = code.children[3].children[1]
-          if is_still_a_node(method_inside_link_to_param)
-            if method_inside_link_to_param.type == $pair
-              method_inside_link_to_param = code.children[3].children[1].children[1].children[0]
-              controller_name = code.children[3].children[0].children[1].children[0]
+        found_confirm_call = look_for_confirm_call(code)
+        if !found_confirm_call && !code.children[3].nil?
+          method_argument_type = code.children[3].type
+          if method_argument_type == $ivar || method_argument_type == $lvar
+            method_argument_value = code.children[3].children[0]
+            insert_outputs_on_array(Transform_into.var_into_method(method_argument_value), "",'')
+          else
+            method_inside_link_to_has_params = code.children[3].children[1].nil?
+            if !method_inside_link_to_has_params
+              method_inside_link_to_param = code.children[3].children[1]
+              if is_still_a_node(method_inside_link_to_param)
+                if method_inside_link_to_param.type == $pair
+                  method_inside_link_to_param = code.children[3].children[1].children[1].children[0]
+                  controller_name = code.children[3].children[0].children[1].children[0]
+                  if is_still_a_node(method_inside_link_to_param)
+                    method_inside_link_to_param = method_inside_link_to_param.children[0]
+                  end
+                  if is_still_a_node(controller_name)
+                    controller_name = ''
+                  end
+                end
+              end
+              insert_outputs_on_array(method_inside_link_to_param, Transform_into.singular(controller_name.to_s),'')
             end
           end
-          insert_outputs_on_array(method_inside_link_to_param, Transform_into.singular(controller_name.to_s),'')
         end
       end
     end
@@ -93,9 +106,13 @@ def look_for_link_to_calls(code)
 end
 
 def look_for_submit_calls(code, instance_variable)
+  method_argument = ''
+  method_argument_type = ''
   method_name = code.children[1]
   if method_name == $submit
-    method_argument_type = code.children[2].type
+    if is_still_a_node(code.children[2])
+      method_argument_type = code.children[2].type
+    end
     if method_argument_type == $str
       method_argument = code.children[2].children[0]
     else
@@ -107,10 +124,12 @@ def look_for_submit_calls(code, instance_variable)
         end
       end
     end
-    if instance_variable == ''
-      insert_outputs_on_array(Transform_into.var_into_method($submit_name),'' ,"#{method_argument}".downcase)
-    else
-      insert_outputs_on_array("#{method_argument}".downcase,Transform_into.var_into_controller(instance_variable),'')
+    if method_argument != ''
+      if $submit_name != ''
+        insert_outputs_on_array(Transform_into.var_into_method($submit_name),'' ,"#{method_argument}".downcase)
+      else
+        insert_outputs_on_array("#{method_argument}".downcase,Transform_into.var_into_controller(instance_variable),'')
+      end
     end
   end
 end
@@ -118,10 +137,12 @@ end
 def look_for_auto_gen_methods(code, instance_variable,lvar_derived_from_ivar)
   method_name = code.children[1]
   if method_name == $label
-    method_argument_value = code.children[2].children[0]
-    if method_argument_value.is_a?(Parser::AST::Node)
-      if !code.children[2].children[0].children[0].children[2].nil?
-        method_argument_value = code.children[2].children[0].children[0].children[2].children[0]
+    if is_still_a_node(code.children[2])
+      method_argument_value = code.children[2].children[0]
+      if method_argument_value.is_a?(Parser::AST::Node)
+        if !code.children[2].children[0].children[0].children[2].nil?
+          method_argument_value = code.children[2].children[0].children[0].children[2].children[0]
+        end
       end
     end
     if instance_variable != '' || (method_argument_value.to_s.include?('/') || method_argument_value.to_s.include?('_path'))
@@ -178,6 +199,10 @@ def look_for_instance_variable(code)
           if loop_variable_value.to_s[0] == '@'
             $instance_variable = loop_variable_value
           end
+        elsif loop_type == $map
+          if is_still_a_node(code_children.children[0])
+            $instance_variable = code_children.children[0].children[1]
+          end
         end
         look_for_instance_variable(code_children)
       end
@@ -191,11 +216,13 @@ def look_for_confirm_call(code)
   has_adictional_call = !code.children[4].nil?
   if has_adictional_call
     link_to_type = code.children[4].type
-    has_confirm_call = code.children[4].children[0].children[0].children[0]
+    if is_still_a_node(code.children[4].children[0])
+      has_confirm_call = code.children[4].children[0].children[0].children[0]
+    end
     if link_to_type == $hash && has_confirm_call == $confirm
       possible_redirect_name = code.children[4].children[0].children[1]
       if !possible_redirect_name.nil? && !possible_redirect_name.children[2].nil?
-          link_to_redirect_name = code.children[4].children[0].children[1].children[2].children[0]
+        link_to_redirect_name = code.children[4].children[0].children[1].children[2].children[0]
       else
         link_to_redirect_name = code.children[2].children[0]
       end
@@ -304,7 +331,8 @@ def look_for_render_call(code, instance_variable)
       if is_still_a_node method_argument
         method_argument = method_argument.children[0]
       end
-      end
+    end
+    method_argument = Transform_into.plural_for_ivar(method_argument, instance_variable)
     insert_outputs_on_array(Transform_into.name_with_extension(method_argument.to_s, $language), instance_variable,'')
   end
 end
@@ -344,10 +372,14 @@ def look_for_button_methods(code)
             elsif !code_children.children[0].nil?
               possible_hash_type_two = code_children.children[0].children[3]
             end
-            if possible_hash_type_one.type == $hash
-              $button_label = possible_hash_type_one.children[0].children[1].children[0]
-            elsif possible_hash_type_two.type == $hash
-              $button_label = possible_hash_type_two.children[0].children[1].children[0]
+            if is_still_a_node(possible_hash_type_one)
+              if possible_hash_type_one.type == $hash
+                $button_label = possible_hash_type_one.children[0].children[1].children[0]
+              end
+            elsif is_still_a_node(possible_hash_type_two)
+              if possible_hash_type_two.type == $hash
+                $button_label = possible_hash_type_two.children[0].children[1].children[0]
+              end
             end
           end
         end

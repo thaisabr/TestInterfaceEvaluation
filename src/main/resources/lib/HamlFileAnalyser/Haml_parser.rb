@@ -34,7 +34,7 @@ class Haml_parser
   def check_special_conditionals(tagged_chunk, test_code)
     conditionals_regex = /(?=( do$| do |if |if\(|begin$|case|unless))|(?=(else|elsif|rescue$|ensure|end$|when))/
     if conditionals_regex === tagged_chunk
-      special_conditionals = [/end$/,/else$/,/elsif/,/rescue$/,/ensure/,/when/,/case/]
+      special_conditionals = [/end$/,/else$/,/elsif/,/rescue$/,/when/,/case/]
       special_conditionals.each do |special_conditional|
         if special_conditional === tagged_chunk
           test_code = 'a = true'

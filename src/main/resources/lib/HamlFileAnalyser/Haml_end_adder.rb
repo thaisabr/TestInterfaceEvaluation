@@ -231,10 +231,10 @@ class Haml_end_adder
     response = false
     has_need_for_end = /(?=( do$| do +| if |-if | if\(|-if\(| begin| case| unless |-unless | unless\())/
     haml_conditional = /(?<=\-)([A-Za-z0-9]| |@|\[)|(?<=\=)(.* do)/
-    special_conditions = /(?<=\= )(.*) if |^ +- \S.* if |\S+ *-.* if |(?<=\- )next if |(?<=\= )(.*)unless|(?<=\- )(.+)unless|".*-.*"(.+)unless| *(=|-) ([A-Za-r0-9]|").*= .* do /
-    ignore_special_condition = /^ *=.* do$|^ *= f\..* do \|f\|/
+    special_conditions = /(?<=\= )(.*) if |^ +- \S.* if |\S+ *-.* if |(?<=\- )next if |(?<=\= )(.*)unless|(?<=\- )(.+)unless|".*"(.+)unless| *(=|-) ([A-Za-r0-9]|").*= .* do |value: *\(*.* if.*/
+    ignore_special_condition = /^ *=.* do$|^ *= f\..* do \|f\|| do$/
     javascript_if = /(?<=if)( *)\(.*\)\{|(?<=if)( *)\(.*\)/
-    javascript_keyword = /:javascript/
+    javascript_keyword = /:javascript|:coffeescript|:ruby/
     javascript_tag = /javascript_include_tag/
     commentary = /\/( *)\- *(.*)(?= \/).*| *\/ +.*|(^ +#.*|^ *- *#.*)|(^ *\/\/ *- .*)|^ *\/- *.*/
     do_inside_string_block = /".* do"|".* do +.*?"/

@@ -181,34 +181,39 @@ abstract class Util {
     }
 
     static boolean isTestFile(String path) {
-        if (path?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) ||
-                path?.contains(GHERKIN_FILES_RELATIVE_PATH + File.separator) ||
-                path?.contains(STEPS_FILES_RELATIVE_PATH + File.separator) ||
-                path?.contains("test" + File.separator)) {
+        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        if (p?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) ||
+                p?.contains(GHERKIN_FILES_RELATIVE_PATH + File.separator) ||
+                p?.contains(STEPS_FILES_RELATIVE_PATH + File.separator) ||
+                p?.contains("test" + File.separator)) {
             true
         } else false
     }
 
     static boolean isValidFile(String path) {
-        if (VALID_FOLDERS.any { path?.contains(it + File.separator) } && VALID_EXTENSIONS.any {
-            path?.endsWith(it) }) true
-        else if(VALID_FOLDERS.any { path?.contains(it + File.separator) } && path.count(".")==1 &&
-                (path.endsWith(ConstantData.ERB_EXTENSION) || path.endsWith(ConstantData.HAML_EXTENSION) || path.endsWith(".slim"))) true
+        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        if (VALID_FOLDERS.any { p?.contains(it + File.separator) } && VALID_EXTENSIONS.any {
+            p?.endsWith(it) }) true
+        else if(VALID_FOLDERS.any { p?.contains(it + File.separator) } && p?.count(".")==1 &&
+                (p?.endsWith(ConstantData.ERB_EXTENSION) || p?.endsWith(ConstantData.HAML_EXTENSION) || p?.endsWith(".slim"))) true
         else false
     }
 
     static boolean isStepDefinitionFile(String path) {
-        if (path?.contains(STEPS_FILES_RELATIVE_PATH + File.separator) && path?.endsWith(VALID_EXTENSION)) true
+        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        if (p?.contains(STEPS_FILES_RELATIVE_PATH + File.separator) && p?.endsWith(VALID_EXTENSION)) true
         else false
     }
 
     static boolean isGherkinFile(String path) {
-        if (path?.endsWith(ConstantData.FEATURE_EXTENSION)) true
+        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        if (p?.endsWith(ConstantData.FEATURE_EXTENSION)) true
         else false
     }
 
     static boolean isUnitTestFile(String path) {
-        if (path?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) && path?.endsWith(VALID_EXTENSION)) true
+        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        if (p?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) && p?.endsWith(VALID_EXTENSION)) true
         else false
     }
 
@@ -218,14 +223,16 @@ abstract class Util {
     }
 
     static boolean isViewFile(String path){
-        if ( path?.contains(VIEWS_FILES_RELATIVE_PATH + File.separator) &&
-                ( path?.endsWith(ConstantData.ERB_EXTENSION) || path?.endsWith(ConstantData.HAML_EXTENSION) )
+        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        if ( p?.contains(VIEWS_FILES_RELATIVE_PATH + File.separator) &&
+                ( p?.endsWith(ConstantData.ERB_EXTENSION) || p?.endsWith(ConstantData.HAML_EXTENSION) )
         ) true
         else false
     }
 
     static boolean isControllerFile(String path){
-        if (path?.contains("${CONTROLLER_FILES_RELATIVE_PATH}${File.separator}")) true
+        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        if (p?.contains("${CONTROLLER_FILES_RELATIVE_PATH}${File.separator}")) true
         else false
     }
 
@@ -288,7 +295,7 @@ abstract class Util {
 
     static String camelCaseToUnderscore(String camelCase) {
         if (!camelCase || camelCase.empty || camelCase.isAllWhitespace()) return ""
-        camelCase.replaceAll(/(\B[A-Z])/, '_$1').toLowerCase()
+        camelCase.replaceAll(/(\B[A-Z])/, '_$1').toLowerCase().replaceAll(/::/, Matcher.quoteReplacement(File.separator))
     }
 
     static findJarFilesFromDirectory(String directory) {

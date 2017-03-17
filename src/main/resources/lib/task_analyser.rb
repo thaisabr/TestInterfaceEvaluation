@@ -13,7 +13,7 @@ class TaskAnalyser
         end
       when 'haml'
         begin
-          return HamlControllerExtractor.new.haml_controller_extractor(file_path)
+        return HamlControllerExtractor.new.haml_controller_extractor(file_path)
         rescue
           raise "Syntax exception : the file #{file_path} is either wrong or this tool cannot analise it"
         end
@@ -25,8 +25,8 @@ class TaskAnalyser
   def get_file_extension(file_path)
     extension_regex = /(?<=\.).*/
     extension = (file_path.scan extension_regex)[0]
-    if extension.include?('.')
-      extension = extension_regex.match extension
+    while extension.to_s.include?('.')
+      extension = extension_regex.match extension.to_s
     end
     extension.to_s
   end

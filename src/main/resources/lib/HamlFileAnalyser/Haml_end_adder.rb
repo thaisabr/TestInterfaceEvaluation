@@ -230,7 +230,7 @@ class Haml_end_adder
   def check_regex_match(regex_name, string)
     response = false
     has_need_for_end = /(?=( do$| do +| if |-if | if\(|-if\(| begin| case| unless |-unless | unless\())/
-    haml_conditional = /(?<=\-)([A-Za-z0-9]| |@|\[)|(?<=\=)(.* do)/
+    haml_conditional = /(?<=\-)([A-Za-z0-9]| |@|\[)|(?<=\=)(([A-Za-z0-9]| |@|\[).* do)/
     special_conditions = /(?<=\= )(.*) if |^ +- \S.* if |\S+ *-.* if |(?<=\- )next if |(?<=\= )(.*)unless|(?<=\- )(.+)unless|".*"(.+)unless| *(=|-) ([A-Za-r0-9]|").*= .* do |value: *\(*.* if.*/
     ignore_special_condition = /^ *=.* do$|^ *= f\..* do \|f\|| do$/
     javascript_if = /(?<=if)( *)\(.*\)\{|(?<=if)( *)\(.*\)/

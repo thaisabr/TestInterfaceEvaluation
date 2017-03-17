@@ -36,10 +36,12 @@ interface ConstantData {
 
     String DEFAULT_EVALUATION_FOLDER = "output"
     String DEFAULT_EVALUATION_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result.csv"
-    String ORGANIZED_FILE_SUFIX = "-organized.csv"
+    String ORGANIZED_FILE_SUFIX = "-org.csv"
     String FILTERED_FILE_SUFIX = "-filtered.csv"
     String SIMILARITY_FILE_SUFIX = "-similarity.csv"
-    String SIMILARITY_ORGANIZED_FILE_SUFIX = "-similarityOrganized.csv"
+    String SIMILARITY_ORGANIZED_FILE_SUFIX = "-similarity-org.csv"
+    String CONTROLLER_FILE_SUFIX = "-controller.csv"
+    String CONTROLLER_ORGANIZED_FILE_SUFIX = "-controller-org.csv"
 
     String NON_PRIMITIVE_ARRAY_PREFIX = "[L"
     String ERB_EXTENSION = ".erb"

@@ -2,6 +2,7 @@ package taskAnalyser
 
 import au.com.bytecode.opencsv.CSVReader
 import au.com.bytecode.opencsv.CSVWriter
+import evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 import similarityAnalyser.test.TestSimilarityAnalyser
@@ -10,6 +11,10 @@ import taskAnalyser.task.AnalysedTask
 import taskAnalyser.task.AnalysisResult
 import taskAnalyser.task.DoneTask
 import util.ConstantData
+import util.RegexUtil
+import util.Util
+
+import java.util.regex.Matcher
 
 @Slf4j
 class DataManager {
@@ -118,7 +123,7 @@ class DataManager {
     }
 
     private
-    static organizeAllResult(String evaluationFile, String organizedFile, String similarityFile, boolean similarityAnalysis) {
+    static void organizeAllResult(String evaluationFile, String organizedFile, String similarityFile, boolean similarityAnalysis) {
         if (!evaluationFile || evaluationFile.empty || !(new File(evaluationFile).exists())) return
         List<String[]> entries = readAllResult(evaluationFile)
         if (entries.size() <= INITIAL_TEXT_SIZE) return
@@ -299,6 +304,7 @@ class DataManager {
 
     static organizeResult(String evaluationFile, String organizedFile) {
         organizeAllResult(evaluationFile, organizedFile, null, false)
+        filterResult(evaluationFile) //TEMPORARY CODE
     }
 
     static organizeResultForSimilarityAnalysis(String evaluationFile, String organizedFile, String similarityFile) {
@@ -377,6 +383,44 @@ class DataManager {
         writer.writeAll(oneReal)
         writer.writeAll(others)
         writer.close()
+    }
+
+    /* filter results to only consider controller files (via csv) - TEMPORARY CODE */
+    static void filterResult(String evaluationFile) {
+        if (!evaluationFile || evaluationFile.empty || !(new File(evaluationFile).exists())) return
+        List<String[]> entries = readAllResult(evaluationFile)
+        if (entries.size() <= INITIAL_TEXT_SIZE) return
+
+        def controllerFile = evaluationFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.CONTROLLER_FILE_SUFIX
+        CSVWriter writer = new CSVWriter(new FileWriter(controllerFile))
+        writeHeaderOrganizedResult(writer, entries)
+        String[] resultHeader = entries.get(INITIAL_TEXT_SIZE).findAll { !it.allWhitespace }
+        writer.writeNext(resultHeader)
+
+        entries = entries.subList(INITIAL_TEXT_SIZE + 1, entries.size())
+        entries?.each { entry ->
+            def originalItest = entry[ITEST_INDEX].replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,"/").split(",").flatten() as Set
+            def itest = originalItest.findAll { Util.isControllerFile(it) }
+            def originalIReal = entry[IREAL_INDEX].replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,"/").split(",").flatten() as Set
+            def ireal = originalIReal.findAll { Util.isControllerFile(it) }
+            def precision = TaskInterfaceEvaluator.calculateFilesPrecision(itest, ireal)
+            def recall = TaskInterfaceEvaluator.calculateFilesRecall(itest, ireal)
+
+            String[] line = entry
+            line[ITEST_INDEX-2] = itest.size()
+            line[ITEST_INDEX-1] = ireal.size()
+            line[ITEST_INDEX] = itest
+            line[IREAL_INDEX] = ireal
+            line[PRECISION_INDEX] = precision
+            line[RECALL_INDEX] = recall
+            line[resultHeader.size()-3] = 0
+            writer.writeNext(line)
+        }
+
+        writer.close()
+
+        def controllerOrgFile = controllerFile - ConstantData.CONTROLLER_FILE_SUFIX + ConstantData.CONTROLLER_ORGANIZED_FILE_SUFIX
+        organizeAllResult(controllerFile, controllerOrgFile, null, false)
     }
 
 }

@@ -44,7 +44,7 @@ class TaskInterface {
 
     @Override
     String toString() {
-        def files = findAllFiles()
+        def files = findAllProdFiles()
         if (files.empty) return ""
         else {
             def text = ""
@@ -58,7 +58,7 @@ class TaskInterface {
     }
 
     boolean isEmpty() {
-        def files = findAllFiles()
+        def files = findAllProdFiles()
         if (files.empty) true
         else false
     }
@@ -69,7 +69,7 @@ class TaskInterface {
      *
      * @return a list of files
      */
-    Set<String> findAllFiles() {
+    Set<String> findAllProdFiles() {
         //production classes
         def classes = (classes?.findAll { Util.isProductionFile(it.file) })*.file
 
@@ -79,11 +79,13 @@ class TaskInterface {
         //production files
         def files = ((classes + methodFiles + referencedPages) as Set)?.sort()
 
-        //filtering result to only identify view and/or controller files
-        files = Util.filterFiles(files)
-
         def canonicalPath = Util.getRepositoriesCanonicalPath()
         files?.findResults { i -> i ? i - canonicalPath : null } as Set
+    }
+
+    //filtering result to only identify view and/or controller files
+    Set<String> findFilteredFiles(){
+        Util.filterFiles(this.findAllProdFiles())
     }
 
     def collapseInterfaces(TaskInterface task) {
@@ -95,8 +97,8 @@ class TaskInterface {
         this.calledPageMethods += task.calledPageMethods
         this.referencedPages += task.referencedPages
         this.matchStepErrors += task.matchStepErrors
-        this.compilationErrors += task.matchStepErrors
-        this.notFoundViews += task.matchStepErrors
+        this.compilationErrors += task.compilationErrors
+        this.notFoundViews += task.notFoundViews
         this.foundAcceptanceTests += task.foundAcceptanceTests
         this.codeFromViewAnalysis += task.codeFromViewAnalysis
         this.visitCallCounter += task.visitCallCounter
@@ -115,7 +117,7 @@ class TaskInterface {
      *
      * @return a list of files
      */
-    Set<String> findAllCode(){
+    Set<String> findAllFiles(){
         def classes = classes*.file
         def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" }*.file
         def files = ((classes + methodFiles + referencedPages) as Set)?.sort()

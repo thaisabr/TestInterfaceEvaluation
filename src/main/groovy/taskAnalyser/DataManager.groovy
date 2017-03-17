@@ -2,15 +2,14 @@ package taskAnalyser
 
 import au.com.bytecode.opencsv.CSVReader
 import au.com.bytecode.opencsv.CSVWriter
-import evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
-import org.eclipse.jgit.diff.DiffEntry
 import similarityAnalyser.test.TestSimilarityAnalyser
 import similarityAnalyser.text.TextualSimilarityAnalyser
+import taskAnalyser.task.AnalysedTask
+import taskAnalyser.task.AnalysisResult
 import taskAnalyser.task.DoneTask
 import util.ConstantData
-import util.Util
 
 @Slf4j
 class DataManager {
@@ -81,74 +80,15 @@ class DataManager {
         writer.writeNext(HEADER)
     }
 
-    private static writeITextFile(filename, entry) {
-        def text = entry.text
-        if (text && !text.empty) {
-            File file = new File("${filename - ConstantData.CSV_FILE_EXTENSION}_text_${entry.task.id}.txt")
+    private static writeITextFile(String filename, AnalysedTask analysedTask) {
+        if (analysedTask.itext && !analysedTask.itext.empty) {
+            File file = new File("${filename - ConstantData.CSV_FILE_EXTENSION}_text_${analysedTask.doneTask.id}.txt")
             file.withWriter("utf-8") { out ->
-                out.write(text)
+                out.write(analysedTask.itext)
                 out.write("\n-----------------------------------------------------------\n")
-                entry.trace.each{ out.write(it + "\n") }
+                analysedTask.trace.each{ out.write(it + "\n") }
             }
         }
-    }
-
-    private static extractDates(entry) {
-        def dates = entry?.task?.commits*.date?.flatten()?.sort()
-        if (dates) dates = dates.collect { new Date(it * 1000).format('dd-MM-yyyy') }.unique()
-        else dates = []
-        dates
-    }
-
-    private static String extractMessages(entry) {
-        String msgs = entry?.task?.commits*.message?.flatten()?.toString()
-        if (msgs.length() > 1000) msgs = msgs.toString().substring(0, 999) + " [TOO_LONG]"
-        msgs
-    }
-
-    private static extractStepErrors(entry) {
-        def stepErrors = entry.itest.matchStepErrors
-        def stepErrorsQuantity = 0
-        def text = ""
-        if (stepErrors.empty) text = ""
-        else {
-            stepErrorsQuantity = stepErrors*.size.flatten().sum()
-            stepErrors.each{ error ->
-                text += "[path:${error.path}, size:${error.size}], "
-            }
-            text = text.substring(0, text.size()-2)
-        }
-        [text: text, quantity: stepErrorsQuantity]
-    }
-
-    private static extractCompilationErrors(entry) {
-        def compilationErrors = entry.itest.compilationErrors
-        def compErrorsQuantity = 0
-        def gherkinQuantity = 0
-        def stepsQuantity = 0
-        def gherkin = ""
-        def steps = ""
-        if (compilationErrors.empty) compilationErrors = ""
-        else {
-            compErrorsQuantity = compilationErrors*.msgs.flatten().size()
-            gherkin = compilationErrors.findAll{ Util.isGherkinFile(it.path) }
-            gherkinQuantity = gherkin.size()
-            if(gherkin.empty) gherkin = ""
-            steps = compilationErrors.findAll{ Util.isStepDefinitionFile(it.path) }
-            stepsQuantity = steps.size()
-            if(steps.empty) steps = ""
-            compilationErrors = compilationErrors.toString()
-        }
-
-        [text: compilationErrors, quantity: compErrorsQuantity, gherkin:gherkin, quantityGherkin:gherkinQuantity,
-         steps:steps, stepsQuantity:stepsQuantity]
-    }
-
-    private static extractRemovedFiles(entry) {
-        def changes = entry.task.commits*.coreChanges?.flatten()?.findAll { it.type == DiffEntry.ChangeType.DELETE }
-        def result = changes?.collect { entry.task.gitRepository.name + File.separator + it.path }?.unique()?.sort()
-        if (result?.empty) result = ""
-        result
     }
 
     private static writeResult(List<String[]> entries, writer) {
@@ -314,44 +254,44 @@ class DataManager {
         [tasks: tasks.sort { it.id }, allTasksQuantity: entries.size()]
     }
 
-    static saveAllResult(filename, url, allTasksCounter, relevantTasksCounter, stepDefTasksCounter,
-                         gherkinTasksCounter, testsCounter, taskData) {
+    static saveAllResult(String filename, int allTasksCounter, AnalysisResult result) {
         CSVWriter writer = new CSVWriter(new FileWriter(filename))
-        writeHeaderAllResult(writer, url, allTasksCounter, relevantTasksCounter, stepDefTasksCounter, gherkinTasksCounter, testsCounter)
+        writeHeaderAllResult(writer, result.url, allTasksCounter, result.validTasks.size(),
+                result.stepCounter, result.gherkinCounter, result.testsCounter)
 
         def saveText = false
-        if (taskData && taskData.size() > 1) saveText = true
+        if (result.validTasks && result.validTasks.size() > 1) saveText = true
 
-        taskData?.each { entry ->
-            def itestFiles = entry.itest.findAllFiles()
+        result.validTasks?.each { task ->
+            def itestFiles = task.itestFiles()
             def itestSize = itestFiles.size()
-            def irealSize = entry.ireal.findAllFiles().size()
-            def precision = TaskInterfaceEvaluator.calculateFilesPrecision(entry.itest, entry.ireal)
-            def recall = TaskInterfaceEvaluator.calculateFilesRecall(entry.itest, entry.ireal)
-            def dates = extractDates(entry)
-            def devs = entry?.task?.commits*.author?.flatten()?.unique()?.size()
-            def msgs = extractMessages(entry)
-            def stepErrors = extractStepErrors(entry)
-            def compilationErrors = extractCompilationErrors(entry)
-            def renames = entry.task.renamedFiles
-            def removes = extractRemovedFiles(entry)
+            def irealSize = task.irealFiles()
+            def precision = task.precision()
+            def recall = task.recall()
+            def dates = task.dates
+            def devs = task.developers
+            def msgs = task.commitMsg
+            def renames = task.renamedFiles
+            def removes = task.removedFiles
             if (renames.empty) renames = ""
-            def views = entry.itest.notFoundViews
+            def views = task.notFoundViews()
             if (views.empty) views = ""
-            def filesFromViewAnalysis = entry.itest.codeFromViewAnalysis
-            def viewFileFromITest = itestFiles.findAll{ Util.isViewFile(it) }.size()
-            String[] line = [entry.task.id, dates, entry.task.days, entry.task.commitsQuantity, msgs, devs,
-                     entry.task.gherkinTestQuantity, entry.itest.foundAcceptanceTests.size(),
-                     entry.task.stepDefQuantity, entry.methods, entry.stepCalls,
-                     stepErrors.text, stepErrors.quantity, compilationErrors.text, compilationErrors.quantity,
-                     compilationErrors.gherkin, compilationErrors.quantityGherkin, compilationErrors.steps,
-                     compilationErrors.stepsQuantity, renames, removes, views, views.size(), itestSize,
-                     irealSize, entry.itest, entry.ireal, precision, recall, entry.task.commits*.hash,
-                     entry.timestamp, entry.rails, entry.simplecov, entry.factorygirl, entry.itest.visitCallCounter,
-                     viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis]
+            def filesFromViewAnalysis = task.filesFromViewAnalysis()
+            def viewFileFromITest = task.itestViewFiles().size()
+            String[] line = [task.doneTask.id, dates, task.doneTask.days,
+                             task.doneTask.commitsQuantity, msgs, devs,
+                             task.doneTask.gherkinTestQuantity, task.itest.foundAcceptanceTests.size(),
+                             task.doneTask.stepDefQuantity, task.methods, task.stepCalls,
+                             task.stepMatchErrorsText, task.stepMatchErrors, task.compilationErrorsText,
+                             task.compilationErrors, task.gherkinCompilationErrors,
+                             task.gherkinCompilationErrors, task.stepDefCompilationErrorsText,
+                             task.stepDefCompilationErrors, renames, removes, views, views.size(), itestSize,
+                             irealSize, task.itest, task.ireal, precision, recall, task.doneTask.hashes,
+                             task.itest.timestamp, task.rails, task.simplecov, task.factorygirl,
+                             task.itest.visitCallCounter, viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis]
 
             writer.writeNext(line)
-            if (saveText) writeITextFile(filename, entry) //dealing with long textual description of a task
+            if (saveText) writeITextFile(filename, task) //dealing with long textual description of a task
         }
 
         writer.close()

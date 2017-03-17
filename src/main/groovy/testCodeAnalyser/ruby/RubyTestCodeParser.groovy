@@ -416,7 +416,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     }
 
     private extractCallsFromViewFiles(TestCodeVisitor visitor, Set<String> analysedViewFiles){
-        def viewFiles = visitor.taskInterface.findAllFiles().findAll{ Util.isViewFile(it) }
+        def viewFiles = visitor.taskInterface.findAllProdFiles().findAll{ Util.isViewFile(it) }
         if(analysedViewFiles && !analysedViewFiles.empty) viewFiles -= analysedViewFiles
         def calls = []
         viewFiles?.each{ viewFile ->
@@ -449,7 +449,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         calls?.each{ log.info it.toString() }
 
         //access to files
-        analysedViewFiles += visitor.taskInterface.findAllFiles().findAll{ Util.isViewFile(it) }
+        analysedViewFiles += visitor.taskInterface.findAllProdFiles().findAll{ Util.isViewFile(it) }
         def files = calls?.findAll{
             it.receiver.empty &&
             (it.name.endsWith(ConstantData.ERB_EXTENSION) || it.name.endsWith(ConstantData.HAML_EXTENSION))
@@ -598,6 +598,6 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
     @Override
     Set<String> getCodeFromViewAnalysis() {
-        interfaceFromViews.findAllFiles().sort()
+        interfaceFromViews.findAllProdFiles().sort()
     }
 }

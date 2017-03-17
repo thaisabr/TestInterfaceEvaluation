@@ -37,11 +37,11 @@ class TestSimilarityAnalyser {
     }
 
     static calculateSimilarityByJaccard(TaskInterface interface1, TaskInterface interface2) {
-        calculateSimilarityByJaccard(interface1.findAllFiles(), interface2.findAllFiles())
+        calculateSimilarityByJaccard(interface1.findAllProdFiles(), interface2.findAllProdFiles())
     }
 
     static calculateSimilarityByCosine(TaskInterface interface1, TaskInterface interface2) {
-        calculateSimilarityByCosine(interface1.findAllFiles(), interface2.findAllFiles())
+        calculateSimilarityByCosine(interface1.findAllProdFiles(), interface2.findAllProdFiles())
     }
 
 }

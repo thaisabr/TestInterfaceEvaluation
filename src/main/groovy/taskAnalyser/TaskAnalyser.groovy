@@ -1,7 +1,8 @@
 package taskAnalyser
 
-import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
+import taskAnalyser.task.AnalysedTask
+import taskAnalyser.task.AnalysisResult
 import taskAnalyser.task.DoneTask
 import util.ConstantData
 import util.Util
@@ -12,6 +13,7 @@ class TaskAnalyser {
     String path
     File file
     List<DoneTask> tasks
+    int allTasks
 
     TaskAnalyser(String tasksFile) {
         path = tasksFile
@@ -19,22 +21,16 @@ class TaskAnalyser {
         tasks = []
     }
 
-    private computeTaskData() {
-        def result = []
+    private AnalysisResult computeTaskData() {
+        List<AnalysedTask> analysedTasks = []
         def gherkinTasks = []
         def stepTasks = []
 
         tasks?.each { task ->
-            def interfaces = task.computeInterfaces()
-            def stepCalls = interfaces.itest.methods?.findAll { it.type == "StepCall" }?.unique()?.size()
-            def methods = interfaces.itest.methods?.findAll { it.type == "Object" }?.unique()
-            def methodsIdentity = ""
-            if (!methods.empty) methodsIdentity = methods*.name
+            def analysedTask = task.computeInterfaces()
             if (!task.changedStepDefinitions.empty) stepTasks += task.id
             if (!task.changedGherkinFiles.empty) gherkinTasks += task.id
-            result += [task: task, itest: interfaces.itest, ireal: interfaces.ireal, methods: methodsIdentity, stepCalls: stepCalls,
-                       text: interfaces.itext, timestamp:interfaces.itest.timestamp, rails:interfaces.rails,
-                       simplecov: interfaces.simplecov, factorygirl: interfaces.factorygirl, trace:interfaces.itest.findAllCode()]
+            analysedTasks += analysedTask
         }
 
         def stepCounter = stepTasks.unique().size()
@@ -45,17 +41,17 @@ class TaskAnalyser {
         log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
         log.info "Number of tasks that contain tests: $testsCounter"
 
-        [stepCounter: stepCounter, gherkinCounter: gherkinCounter, testsCounter:testsCounter, data: result]
+        new AnalysisResult(stepCounter:stepCounter, gherkinCounter:gherkinCounter, testsCounter:testsCounter,
+                validTasks:analysedTasks, url: tasks?.first()?.testCodeParser?.repositoryPath)
     }
 
     private generateResultForProject(String tasksFile, String evaluationFile) {
         def r1 = DataManager.extractProductionAndTestTasks(tasksFile)
         tasks = r1.tasks
+        allTasks = r1.allTasksQuantity
         if(tasks && !tasks.empty) {
-            def r2 = computeTaskData()
-            def url = r1.tasks?.first()?.testCodeParser?.repositoryPath
-            DataManager.saveAllResult(evaluationFile, url, r1.allTasksQuantity, tasks.size(), r2.stepCounter,
-                    r2.gherkinCounter, r2.testsCounter, r2.data)
+            def analysisResult = computeTaskData()
+            DataManager.saveAllResult(evaluationFile, allTasks, analysisResult)
         }
     }
 

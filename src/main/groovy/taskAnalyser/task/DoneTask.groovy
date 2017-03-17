@@ -7,6 +7,7 @@ import gherkin.ast.Feature
 import groovy.time.TimeCategory
 import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
+import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.revwalk.RevCommit
 import util.Util
 import util.exception.CloningRepositoryException
@@ -24,6 +25,13 @@ class DoneTask extends Task {
     List<GherkinFile> changedGherkinFiles
     List<StepDefinitionFile> changedStepDefinitions
     List<UnitFile> changedUnitFiles
+    def removedFiles
+    def renamedFiles
+    int developers
+    List dates
+    int days
+    String commitMessage
+    def hashes
 
     DoneTask(String repositoryUrl, String id, List<String> shas) throws CloningRepositoryException {
         super(repositoryUrl, id)
@@ -41,6 +49,20 @@ class DoneTask extends Task {
         changedStepDefinitions = []
         changedUnitFiles = []
         commits = gitRepository.searchCommitsBySha(testCodeParser, *shas)
+        hashes = commits*.hash
+        developers = commits*.author?.flatten()?.unique()?.size()
+        extractCommitMessages()
+        extractDates()
+        extractDays()
+        renamedFiles = commits*.renameChanges?.flatten()?.unique()?.sort()
+        extractRemovedFiles()
+    }
+
+    private String extractCommitMessages() {
+        String msgs = commits*.message?.flatten()?.toString()
+        if (msgs.length() > 1000) {
+            commitMessage = msgs.toString().substring(0, 999) + " [TOO_LONG]"
+        } else commitMessage = msgs
     }
 
     private init(List<String> shas) {
@@ -244,6 +266,30 @@ class DoneTask extends Task {
         taskInterface
     }
 
+    private extractDates() {
+        def devDates = commits*.date?.flatten()?.sort()
+        if (devDates) devDates = devDates.collect { new Date(it * 1000).format('dd-MM-yyyy') }.unique()
+        else devDates = []
+        dates = devDates
+    }
+
+    private extractDays() {
+        def size = commits.size()
+        if (size < 2) days = size
+        else {
+            use(TimeCategory) {
+                def last = new Date(commits.last().date * 1000).clearTime()
+                def first = new Date(commits.first().date * 1000).clearTime()
+                days = (last - first).days + 1
+            }
+        }
+    }
+
+    private extractRemovedFiles() {
+        def changes = commits*.coreChanges?.flatten()?.findAll { it.type == DiffEntry.ChangeType.DELETE }
+        removedFiles = changes?.collect { gitRepository.name + File.separator + it.path }?.unique()?.sort()
+    }
+
     @Override
     List<GherkinFile> getAcceptanceTests() {
         changedGherkinFiles
@@ -349,16 +395,14 @@ class DoneTask extends Task {
         taskInterface
     }
 
-    def computeInterfaces() {
-        def gems = [rails: "", simplecov: false, factorygirl: false]
+    AnalysedTask computeInterfaces() {
+        def analysedTask = new AnalysedTask(this)
         TimeDuration timestamp = null
-        TaskInterface itest = new TaskInterface()
-        String itext = ""
-        TaskInterface ireal = new TaskInterface()
+        def gems
 
         if (!commits || commits.empty) {
             log.warn "TASK ID: $id; NO COMMITS!"
-            return [itest: itest, itext: itext, ireal: ireal, rails: gems.rails, simplecov: gems.simplecov, factorygirl: gems.factorygirl]
+            analysedTask
         }
 
         log.info "TASK ID: $id"
@@ -373,24 +417,24 @@ class DoneTask extends Task {
 
                 def initTime = new Date()
                 // computes task interface based on the production code exercised by tests
-                itest = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions, gitRepository.removedSteps)
+                analysedTask.itest = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions, gitRepository.removedSteps)
                 def endTime = new Date()
                 use(TimeCategory) {
                     timestamp = endTime - initTime
                 }
-                itest.timestamp = timestamp
+                analysedTask.itest.timestamp = timestamp
 
                 //computes task text based in gherkin scenarios
-                itext = super.computeTextBasedInterface()
+                analysedTask.itext = super.computeTextBasedInterface()
 
                 initTime = new Date()
                 //computes real interface
-                ireal = identifyProductionChangedFiles()
+                analysedTask.ireal = identifyProductionChangedFiles()
                 endTime = new Date()
                 use(TimeCategory) {
                     timestamp = endTime - initTime
                 }
-                ireal.timestamp = timestamp
+                analysedTask.ireal.timestamp = timestamp
 
                 //it is only necessary in the evaluation study
                 gems = RubyUtil.checkRailsVersionAndGems(gitRepository.localPath)
@@ -402,23 +446,14 @@ class DoneTask extends Task {
             }*/
         }
 
-        [itest: itest, itext: itext, ireal: ireal, rails: gems.rails, simplecov: gems.simplecov, factorygirl: gems.factorygirl]
+        analysedTask.rails = gems?.rails
+        analysedTask.simplecov = gems?.simplecov
+        analysedTask.factorygirl = gems?.factorygirl
+        analysedTask
     }
 
     def getCommitsQuantity() {
         commits.size()
-    }
-
-    def getDays() {
-        def size = commits.size()
-        if (size < 2) size
-        else {
-            use(TimeCategory) {
-                def last = new Date(commits.last().date * 1000).clearTime()
-                def first = new Date(commits.first().date * 1000).clearTime()
-                (last - first).days + 1
-            }
-        }
     }
 
     def getGherkinTestQuantity() {
@@ -431,10 +466,6 @@ class DoneTask extends Task {
         def values = changedStepDefinitions*.changedStepDefinitions*.size().flatten()
         if (values.empty) 0
         else values.sum()
-    }
-
-    def getRenamedFiles() {
-        commits*.renameChanges?.flatten()?.unique()?.sort()
     }
 
     /* When this method is called, there is no information about test code.

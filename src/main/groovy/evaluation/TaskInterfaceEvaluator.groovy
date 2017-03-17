@@ -17,7 +17,7 @@ class TaskInterfaceEvaluator {
     }
 
     static getCommonFiles(TaskInterface ITest, TaskInterface IReal) {
-        ITest.findAllFiles().intersect(IReal.findAllFiles())
+        ITest.findFilteredFiles().intersect(IReal.findFilteredFiles())
     }
 
     /***
@@ -30,8 +30,8 @@ class TaskInterfaceEvaluator {
     static double calculateFilesPrecision(TaskInterface ITest, TaskInterface IReal) {
         double result = 0
         if (!ITest || ITest.empty || !IReal || IReal.empty) return 0
-        def testFiles = ITest.findAllFiles()
-        def truePositives = calculateTruePositives(testFiles, IReal.findAllFiles())
+        def testFiles = ITest.findFilteredFiles()
+        def truePositives = calculateTruePositives(testFiles, IReal.findFilteredFiles())
         if (truePositives > 0) result = (double) truePositives / testFiles.size()
         result
     }
@@ -46,8 +46,8 @@ class TaskInterfaceEvaluator {
     static double calculateFilesRecall(TaskInterface ITest, TaskInterface IReal) {
         double result = 0
         if (!ITest || ITest.empty || !IReal || IReal.empty) return 0
-        def realFiles = IReal.findAllFiles()
-        def truePositives = calculateTruePositives(ITest.findAllFiles(), realFiles)
+        def realFiles = IReal.findFilteredFiles()
+        def truePositives = calculateTruePositives(ITest.findFilteredFiles(), realFiles)
         if (truePositives > 0) result = (double) truePositives / realFiles.size()
         result
     }

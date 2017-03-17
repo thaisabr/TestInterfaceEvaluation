@@ -36,6 +36,14 @@ class TaskInterfaceEvaluator {
         result
     }
 
+    static double calculateFilesPrecision(Set ITest, Set IReal) {
+        double result = 0
+        if (!ITest || ITest.empty || !IReal || IReal.empty) return 0
+        def truePositives = calculateTruePositives(ITest, IReal)
+        if (truePositives > 0) result = (double) truePositives / ITest.size()
+        result
+    }
+
     /***
      * Calculates recall of test based task interface considering files only.
      *
@@ -49,6 +57,14 @@ class TaskInterfaceEvaluator {
         def realFiles = IReal.findFilteredFiles()
         def truePositives = calculateTruePositives(ITest.findFilteredFiles(), realFiles)
         if (truePositives > 0) result = (double) truePositives / realFiles.size()
+        result
+    }
+
+    static double calculateFilesRecall(Set ITest, Set IReal) {
+        double result = 0
+        if (!ITest || ITest.empty || !IReal || IReal.empty) return 0
+        def truePositives = calculateTruePositives(ITest, IReal)
+        if (truePositives > 0) result = (double) truePositives / IReal.size()
         result
     }
 

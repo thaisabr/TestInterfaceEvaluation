@@ -369,6 +369,87 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         log.info "Path methods with no data: $problematic"
     }
 
+    private extractCallsFromViewFiles(TestCodeVisitor visitor, Set<String> analysedViewFiles){
+        def viewFiles = visitor.taskInterface.findAllProdFiles().findAll{ Util.isViewFile(it) }
+        if(analysedViewFiles && !analysedViewFiles.empty) viewFiles -= analysedViewFiles
+        def calls = []
+        viewFiles?.each{ viewFile ->
+            def path = Util.REPOSITORY_FOLDER_PATH + viewFile
+            try{
+                def r = []
+                String code = viewCodeExtractor?.extractCode(path)
+                code?.eachLine { line -> r += Eval.me(line) }
+                log.info "Extracted code from view: $path"
+                r.each{ log.info it.toString() }
+                calls += r
+            } catch(Exception ex){
+                def src = new File(path)
+                def dst = new File("error" + File.separator + src.name + counter)
+                dst << src.text
+                log.error "Error to extract code from view file: $path (${ex.message})"
+                counter ++
+            }
+        }
+        calls.unique()
+    }
+
+    private registryCallsIntoViewFiles(TestCodeVisitor visitor, Set<String> analysedViewFiles){
+        if(!(visitor instanceof RubyTestCodeVisitor)) return
+
+        def calls = extractCallsFromViewFiles(visitor, analysedViewFiles)
+        if(calls.empty) return
+
+        log.info "All calls from view file(s):"
+        calls?.each{ log.info it.toString() }
+
+        //access to files
+        analysedViewFiles += visitor.taskInterface.findAllProdFiles().findAll{ Util.isViewFile(it) }
+        def files = calls?.findAll{
+            it.receiver.empty &&
+                    (it.name.endsWith(ConstantData.ERB_EXTENSION) || it.name.endsWith(ConstantData.HAML_EXTENSION))
+        }
+        def accessedViewFiles = files*.name?.collect{
+            def n
+            if( it[0] ==~ RegexUtil.FILE_SEPARATOR_REGEX) n = it
+            else n = File.separator + it
+            (Util.VIEWS_FILES_RELATIVE_PATH+n).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        }
+        this.registryDirectAccessedViews(visitor, accessedViewFiles)
+
+        //access to paths
+        def noFiles = calls - files
+        def usedPaths = noFiles?.findAll{ it.receiver.empty && it.name.contains("/") }
+        def paths = usedPaths*.name
+        this.registryUsedPaths(visitor, paths as Set)
+
+        //rails path methods
+        def railsPathMethods = (calls - usedPaths)?.findAll{ it.receiver.empty && it.name.contains("_path") }
+        def railsMethods = (railsPathMethods*.name)?.collect{ it - RubyConstantData.ROUTE_SUFIX }
+        this.registryUsedRailsPaths(visitor, railsMethods as Set)
+
+        def others = (calls - usedPaths - railsPathMethods)
+
+        //class usage only
+        def classesOnly = others?.findAll{ it.name.empty && !it.receiver.empty }
+        def rubyVisitor = (RubyTestCodeVisitor) visitor
+        classesOnly?.each{
+            String name = it.name
+            if(name.startsWith("@")) name = name.substring(1)
+            rubyVisitor.registryClassUsage(name)
+        }
+
+        //method call
+        def methods = others?.findAll{ !it.receiver.empty && !it.name.empty }
+        methods?.each{
+            String name = it.name
+            if(name.startsWith("@")) name = name.substring(1)
+            rubyVisitor.registryCallFromInstanceVariable(name, 0, it.receiver)
+        }
+
+        //check if there is new view files to analyse
+        registryCallsIntoViewFiles(visitor, analysedViewFiles)
+    }
+
     @Override
     void findAllPages(TestCodeVisitor visitor) {
         /* generates all routes according to config/routes.rb file */
@@ -413,87 +494,6 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
 
         /* extracts data from view (ERB or HAML) files (this code must be moved in the future) */
         if(viewCodeExtractor) this.registryCallsIntoViewFiles(visitor, [] as Set)
-    }
-
-    private extractCallsFromViewFiles(TestCodeVisitor visitor, Set<String> analysedViewFiles){
-        def viewFiles = visitor.taskInterface.findAllProdFiles().findAll{ Util.isViewFile(it) }
-        if(analysedViewFiles && !analysedViewFiles.empty) viewFiles -= analysedViewFiles
-        def calls = []
-        viewFiles?.each{ viewFile ->
-            def path = Util.REPOSITORY_FOLDER_PATH + viewFile
-            try{
-                def r = []
-                String code = viewCodeExtractor?.extractCode(path)
-                code?.eachLine { line -> r += Eval.me(line) }
-                log.info "Extracted code from view: $path"
-                r.each{ log.info it.toString() }
-                calls += r
-            } catch(Exception ex){
-                def src = new File(path)
-                def dst = new File("error" + File.separator + src.name + counter)
-                dst << src.text
-                log.error "Error to extract code from view file: $path (${ex.message})"
-                counter ++
-            }
-        }
-        calls.unique()
-    }
-
-    private registryCallsIntoViewFiles(TestCodeVisitor visitor, Set<String> analysedViewFiles){
-        if(!(visitor instanceof RubyTestCodeVisitor)) return
-
-        def calls = extractCallsFromViewFiles(visitor, analysedViewFiles)
-        if(calls.empty) return
-
-        log.info "All calls from view file(s):"
-        calls?.each{ log.info it.toString() }
-
-        //access to files
-        analysedViewFiles += visitor.taskInterface.findAllProdFiles().findAll{ Util.isViewFile(it) }
-        def files = calls?.findAll{
-            it.receiver.empty &&
-            (it.name.endsWith(ConstantData.ERB_EXTENSION) || it.name.endsWith(ConstantData.HAML_EXTENSION))
-        }
-        def accessedViewFiles = files*.name?.collect{
-            def n
-            if( it[0] ==~ RegexUtil.FILE_SEPARATOR_REGEX) n = it
-            else n = File.separator + it
-            (Util.VIEWS_FILES_RELATIVE_PATH+n).replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        }
-        this.registryDirectAccessedViews(visitor, accessedViewFiles)
-
-        //access to paths
-        def noFiles = calls - files
-        def usedPaths = noFiles?.findAll{ it.receiver.empty && it.name.contains("/") }
-        def paths = usedPaths*.name
-        this.registryUsedPaths(visitor, paths as Set)
-
-        //rails path methods
-        def railsPathMethods = (calls - usedPaths)?.findAll{ it.receiver.empty && it.name.contains("_path") }
-        def railsMethods = (railsPathMethods*.name)?.collect{ it - RubyConstantData.ROUTE_SUFIX }
-        this.registryUsedRailsPaths(visitor, railsMethods as Set)
-
-        def others = (calls - usedPaths - railsPathMethods)
-
-        //class usage only
-        def classesOnly = others?.findAll{ it.name.empty && !it.receiver.empty }
-        def rubyVisitor = (RubyTestCodeVisitor) visitor
-        classesOnly?.each{
-            String name = it.name
-            if(name.startsWith("@")) name = name.substring(1)
-            rubyVisitor.registryClassUsage(name)
-        }
-
-        //method call
-        def methods = others?.findAll{ !it.receiver.empty && !it.name.empty }
-        methods?.each{
-            String name = it.name
-            if(name.startsWith("@")) name = name.substring(1)
-            rubyVisitor.registryCallFromInstanceVariable(name, 0, it.receiver)
-        }
-
-        //check if there is new view files to analyse
-        registryCallsIntoViewFiles(visitor, analysedViewFiles)
     }
 
     /***

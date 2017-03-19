@@ -15,7 +15,7 @@ class Transform_into
 
   def self.var_into_method(var)
     if var.to_s[0] == '@'
-      "#{(var.to_s)[1..-1]}_path"
+     "#{(var.to_s)[1..-1]}_path"
     else
       var = "#{var}_path"
     end

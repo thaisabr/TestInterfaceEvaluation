@@ -299,6 +299,9 @@ def look_for_semantic_form_for(code, label)
           possible_hash = code.children[3].type
           if possible_hash == $hash
             loop_url = code.children[3].children[0].children[1].children[1]
+            if is_still_a_node(loop_url)
+              loop_url = loop_url.children[1]
+            end
           end
         else
           if !code.children[2].nil?
@@ -306,7 +309,7 @@ def look_for_semantic_form_for(code, label)
           end
         end
       end
-      if loop_url != ''
+      if loop_url != '' && !is_still_a_node(loop_url)
         insert_outputs_on_array(loop_url.to_s,'',label)
       end
     end
@@ -362,7 +365,9 @@ def look_for_form_tag_call(code, instance_variable)
       if is_still_a_node(method_argument)
         method_argument = method_argument.children[0].children[0].children[1]
       end
-      insert_outputs_on_array(method_argument, instance_variable,'')
+      if !method_argument.to_s == ''
+        insert_outputs_on_array(method_argument, instance_variable,'')
+      end
     end
 
   end

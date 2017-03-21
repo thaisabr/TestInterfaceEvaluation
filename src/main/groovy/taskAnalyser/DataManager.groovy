@@ -400,9 +400,17 @@ class DataManager {
 
         entries = entries.subList(INITIAL_TEXT_SIZE + 1, entries.size())
         entries?.each { entry ->
-            def originalItest = entry[ITEST_INDEX].replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,"/").split(",").flatten() as Set
+            def originalItest = entry[ITEST_INDEX].replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,"/")
+                    .substring(1,entry[ITEST_INDEX].size()-1)
+                    .split(",")
+                    .flatten()
+                    .collect{ it.trim() } as Set
             def itest = originalItest.findAll { Util.isControllerFile(it) }
-            def originalIReal = entry[IREAL_INDEX].replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,"/").split(",").flatten() as Set
+            def originalIReal = entry[IREAL_INDEX].replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,"/")
+                    .substring(1,entry[IREAL_INDEX].size()-1)
+                    .split(",")
+                    .flatten()
+                    .collect{ it.trim() } as Set
             def ireal = originalIReal.findAll { Util.isControllerFile(it) }
             def precision = TaskInterfaceEvaluator.calculateFilesPrecision(itest, ireal)
             def recall = TaskInterfaceEvaluator.calculateFilesRecall(itest, ireal)

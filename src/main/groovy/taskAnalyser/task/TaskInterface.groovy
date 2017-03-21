@@ -44,7 +44,7 @@ class TaskInterface {
 
     @Override
     String toString() {
-        def files = findAllProdFiles()
+        def files = findFilteredFiles()
         if (files.empty) return ""
         else {
             def text = ""

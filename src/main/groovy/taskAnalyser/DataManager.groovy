@@ -270,7 +270,8 @@ class DataManager {
         result.validTasks?.each { task ->
             def itestFiles = task.itestFiles()
             def itestSize = itestFiles.size()
-            def irealSize = task.irealFiles()
+            def irealFiles = task.irealFiles()
+            def irealSize = irealFiles.size()
             def precision = task.precision()
             def recall = task.recall()
             def dates = task.dates
@@ -291,7 +292,7 @@ class DataManager {
                              task.compilationErrors, task.gherkinCompilationErrors,
                              task.gherkinCompilationErrors, task.stepDefCompilationErrorsText,
                              task.stepDefCompilationErrors, renames, removes, views, views.size(), itestSize,
-                             irealSize, task.itest, task.ireal, precision, recall, task.doneTask.hashes,
+                             irealSize, itestFiles, irealFiles, precision, recall, task.doneTask.hashes,
                              task.itest.timestamp, task.rails, task.simplecov, task.factorygirl,
                              task.itest.visitCallCounter, viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis]
 

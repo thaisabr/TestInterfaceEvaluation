@@ -259,7 +259,9 @@ def look_for_form_for_action(code, instance_variable)
           if possible_array == $array
             name_part_1 = code.children[2].children[0].children[0]
             name_part_2 = code.children[2].children[1].children[0]
-            $submit_name = name_part_1.to_s << '_' << (name_part_2.to_s)[1..-1]
+            if name_part_1.to_s != '' && name_part_2.to_s != ''
+              $submit_name = name_part_1.to_s << '_' << (name_part_2.to_s)[1..-1]
+            end
           end
         end
         if has_hash

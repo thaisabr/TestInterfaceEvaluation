@@ -289,7 +289,7 @@ class DataManager {
                              task.doneTask.gherkinTestQuantity, task.itest.foundAcceptanceTests.size(),
                              task.doneTask.stepDefQuantity, task.methods, task.stepCalls,
                              task.stepMatchErrorsText, task.stepMatchErrors, task.compilationErrorsText,
-                             task.compilationErrors, task.gherkinCompilationErrors,
+                             task.compilationErrors, task.gherkinCompilationErrorsText,
                              task.gherkinCompilationErrors, task.stepDefCompilationErrorsText,
                              task.stepDefCompilationErrors, renames, removes, views, views.size(), itestSize,
                              irealSize, itestFiles, irealFiles, precision, recall, task.doneTask.hashes,

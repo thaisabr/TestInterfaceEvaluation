@@ -14,7 +14,6 @@ import util.ConstantData
 import util.RegexUtil
 import util.Util
 
-import java.util.regex.Matcher
 
 @Slf4j
 class DataManager {
@@ -30,6 +29,8 @@ class DataManager {
     static final int PRECISION_INDEX = RECALL_INDEX - 1
     static final int IREAL_INDEX = PRECISION_INDEX - 1
     static final int ITEST_INDEX = IREAL_INDEX - 1
+    static final int ITEST_SIZE_INDEX = ITEST_INDEX - 2
+    static final int IREAL_SIZE_INDEX = IREAL_INDEX - 2
     static final int STEP_MATCH_ERROR_INDEX = 12
     static final int AST_ERROR_INDEX = 14
     static final int INITIAL_TEXT_SIZE = 6
@@ -74,20 +75,29 @@ class DataManager {
         writer.writeNext(text)
         text = ["Tasks", allTasks]
         writer.writeNext(text)
-        text = ["Tasks that have production and test code", relevantTasks]
+        text = ["P&T code", relevantTasks]
         writer.writeNext(text)
-        text = ["Tasks that have changed step definitions", stepTasks]
+        text = ["Changed stepdef", stepTasks]
         writer.writeNext(text)
-        text = ["Tasks that have changed Gherkin files", gherkinTasks]
+        text = ["Changed Gherkin", gherkinTasks]
         writer.writeNext(text)
-        text = ["Tasks that have test", testsTask]
+        text = ["Have test", testsTask]
         writer.writeNext(text)
         writer.writeNext(HEADER)
     }
 
+    private static configureTextFileName(String filename, String id){
+        def file = new File(ConstantData.DEFAULT_TEXT_FOLDER)
+        if(!file.exists()) file.mkdir()
+        def i = filename.lastIndexOf(File.separator)
+        def name = filename.substring(i+1, filename.size()) - ConstantData.CSV_FILE_EXTENSION
+        "${ConstantData.DEFAULT_TEXT_FOLDER}${File.separator}${name}_text_${id}.txt"
+    }
+
     private static writeITextFile(String filename, AnalysedTask analysedTask) {
+        def name = configureTextFileName(filename, analysedTask.doneTask.id)
         if (analysedTask.itext && !analysedTask.itext.empty) {
-            File file = new File("${filename - ConstantData.CSV_FILE_EXTENSION}_text_${analysedTask.doneTask.id}.txt")
+            File file = new File(name)
             file.withWriter("utf-8") { out ->
                 out.write(analysedTask.itext)
                 out.write("\n-----------------------------------------------------------\n")
@@ -99,8 +109,8 @@ class DataManager {
     private static writeResult(List<String[]> entries, writer) {
         entries.each { entry ->
             def itest = "no", ireal = "no"
-            if (entry[IREAL_INDEX].empty) ireal = "yes"
-            if (entry[ITEST_INDEX].empty) itest = "yes"
+            if (entry[IREAL_SIZE_INDEX] == "0") ireal = "yes"
+            if (entry[ITEST_SIZE_INDEX] == "0") itest = "yes"
             String[] headers = entry + [itest, ireal]
             writer.writeNext(headers)
         }
@@ -135,7 +145,7 @@ class DataManager {
         String[] resultHeader2 = resultHeader1 + ["Empty_ITest", "Empty_IReal"]
         entries = entries.subList(INITIAL_TEXT_SIZE+1, entries.size())
 
-        def emptyIReal = entries.findAll { it[IREAL_INDEX].empty }
+        def emptyIReal = entries.findAll { it[IREAL_SIZE_INDEX] == "0" }
         entries -= emptyIReal
         def sizeNoEmptyIRealTasks = entries.size()
         def stepMatchError = entries.findAll{ (it[STEP_MATCH_ERROR_INDEX] as int) > 0 }
@@ -144,67 +154,71 @@ class DataManager {
         entries -= basicError
         def hasGherkinTest = entries.findAll { (it[GHERKIN_TEST_INDEX] as int) > 0 }
         def hasStepTest = entries.findAll { (it[STEP_DEF_INDEX] as int) > 0 }
-        def validTasks = (hasGherkinTest + hasStepTest).unique()
-        def emptyITest = validTasks.findAll { it[ITEST_INDEX].empty }
-        def relevantTasks = validTasks - emptyITest
+        def hasTests = (hasGherkinTest + hasStepTest).unique()
+        def invalidTasks = entries - hasTests
+        def emptyITest = hasTests.findAll { it[ITEST_SIZE_INDEX] == "0" }
+        def relevantTasks = hasTests - emptyITest
         def zeroPrecisionAndRecall = relevantTasks.findAll { it[PRECISION_INDEX] == "0.0" && it[RECALL_INDEX] == "0.0" }
         def others = relevantTasks - zeroPrecisionAndRecall
 
-        String[] text = ["Tasks that have no empty IReal", sizeNoEmptyIRealTasks]
+        String[] text = ["No-empty IReal", sizeNoEmptyIRealTasks]
         writer.writeNext(text)
-        text = ["Tasks that have AST error", astError.size()]
+        text = ["AST error", astError.size()]
         writer.writeNext(text)
-        text = ["Tasks that have step match error", stepMatchError.size()]
+        text = ["Step match error", stepMatchError.size()]
         writer.writeNext(text)
-        text = ["Tasks that have any error", basicError.size()]
+        text = ["Any error", basicError.size()]
         writer.writeNext(text)
-        text = ["Valid tasks (ones that have acceptance test, no empty IReal, no AST error and no match step error)", validTasks.size()]
+        text = ["No tests", invalidTasks.size()]
         writer.writeNext(text)
-        text = ["Tasks that have acceptance test and empty ITest", emptyITest.size()]
+        text = ["Valid (test, no empty IReal, no error)", hasTests.size()]
         writer.writeNext(text)
-        text = ["Tasks that have test and no empty ITest", relevantTasks.size()]
+        text = ["Test & empty ITest", emptyITest.size()]
         writer.writeNext(text)
-        text = ["Tasks that have no empty ITest and precision e recall 0.0", zeroPrecisionAndRecall.size()]
+        text = ["All relevant (test & no-empty ITest)", relevantTasks.size()]
+        writer.writeNext(text)
+        text = ["Relevant & zero precision-recall", zeroPrecisionAndRecall.size()]
         writer.writeNext(text)
 
         if(entries.empty){
-            text = ["Precision mean", ""]
+            text = ["Precision mean (RT)", ""]
             writer.writeNext(text)
-            text = ["Precision median", ""]
+            text = ["Precision median (RT)", ""]
             writer.writeNext(text)
-            text = ["Precision standard deviation", ""]
+            text = ["Precision standard deviation (RT)", ""]
             writer.writeNext(text)
-            text = ["Recall mean", ""]
+            text = ["Recall mean (RT)", ""]
             writer.writeNext(text)
-            text = ["Recall median", ""]
+            text = ["Recall median (RT)", ""]
             writer.writeNext(text)
-            text = ["Recall standard deviation", ""]
+            text = ["Recall standard deviation (RT)", ""]
             writer.writeNext(text)
         } else {
-            double[] precisionValues = entries.collect { it[PRECISION_INDEX] as double }
+            double[] precisionValues = relevantTasks.collect { it[PRECISION_INDEX] as double }
             def itestStatistics = new DescriptiveStatistics(precisionValues)
-            double[] recallValues = entries.collect { it[RECALL_INDEX] as double }
+            double[] recallValues = relevantTasks.collect { it[RECALL_INDEX] as double }
             def irealStatistics = new DescriptiveStatistics(recallValues)
 
-            text = ["Precision mean", itestStatistics.mean]
+            text = ["Precision mean (RT)", itestStatistics.mean]
             writer.writeNext(text)
-            text = ["Precision median", itestStatistics.getPercentile(50)]
+            text = ["Precision median (RT)", itestStatistics.getPercentile(50)]
             writer.writeNext(text)
-            text = ["Precision standard deviation", itestStatistics.standardDeviation]
+            text = ["Precision standard deviation (RT)", itestStatistics.standardDeviation]
             writer.writeNext(text)
-            text = ["Recall mean", irealStatistics.mean]
+            text = ["Recall mean (RT)", irealStatistics.mean]
             writer.writeNext(text)
-            text = ["Recall median", irealStatistics.getPercentile(50)]
+            text = ["Recall median (RT)", irealStatistics.getPercentile(50)]
             writer.writeNext(text)
-            text = ["Recall standard deviation", irealStatistics.standardDeviation]
+            text = ["Recall standard deviation (RT)", irealStatistics.standardDeviation]
             writer.writeNext(text)
         }
 
         writer.writeNext(resultHeader2)
+        writeResult(basicError, writer)
+        writeResult(invalidTasks, writer)
         writeResult(emptyITest, writer)
         writeResult(zeroPrecisionAndRecall, writer)
         writeResult(others, writer)
-        writeResult(basicError, writer)
         writer.close()
 
         if (similarityAnalysis) {

@@ -35,6 +35,7 @@ interface ConstantData {
     String DEFAULT_GEM_AST_FOLDER = "ast-2.3.0"
 
     String DEFAULT_EVALUATION_FOLDER = "output"
+    String DEFAULT_TEXT_FOLDER = "${DEFAULT_EVALUATION_FOLDER}${File.separator}text"
     String DEFAULT_EVALUATION_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result.csv"
     String ORGANIZED_FILE_SUFIX = "-org.csv"
     String FILTERED_FILE_SUFIX = "-filtered.csv"

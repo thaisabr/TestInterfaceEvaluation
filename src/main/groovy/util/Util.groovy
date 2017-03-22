@@ -182,10 +182,10 @@ abstract class Util {
 
     static boolean isTestFile(String path) {
         def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        if (p?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) ||
-                p?.contains(GHERKIN_FILES_RELATIVE_PATH + File.separator) ||
-                p?.contains(STEPS_FILES_RELATIVE_PATH + File.separator) ||
-                p?.contains("test" + File.separator)) {
+        if (p?.contains("${UNIT_TEST_FILES_RELATIVE_PATH}${File.separator}") ||
+                p?.contains("${GHERKIN_FILES_RELATIVE_PATH}${File.separator}") ||
+                p?.contains("${STEPS_FILES_RELATIVE_PATH}${File.separator}") ||
+                p?.contains("test}${File.separator}")) {
             true
         } else false
     }
@@ -224,7 +224,7 @@ abstract class Util {
 
     static boolean isViewFile(String path){
         def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        if ( p?.contains(VIEWS_FILES_RELATIVE_PATH + File.separator) &&
+        if ( p?.contains("${VIEWS_FILES_RELATIVE_PATH}${File.separator}") &&
                 ( p?.endsWith(ConstantData.ERB_EXTENSION) || p?.endsWith(ConstantData.HAML_EXTENSION) )
         ) true
         else false

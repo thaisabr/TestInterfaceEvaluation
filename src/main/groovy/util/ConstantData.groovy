@@ -64,6 +64,7 @@ interface ConstantData {
 
     String PROP_VIEW_ANALYSIS = "spgroup.views.analysis"
     boolean DEFAULT_VIEW_ANALYSIS = false
+    String DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER = "error"
 
     String PROP_CONTROLLER_FILTER = "spgroup.itest.filter.controller"
     boolean DEFAULT_CONTROLLER_FILTER = false

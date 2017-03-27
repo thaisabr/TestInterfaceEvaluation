@@ -346,7 +346,7 @@ def look_for_render_call(code, instance_variable)
       end
     end
     method_argument = Transform_into.plural_for_ivar(method_argument, instance_variable)
-    insert_outputs_on_array(Transform_into.name_with_extension(method_argument.to_s, $language), instance_variable,'')
+    insert_outputs_on_array(Transform_into.name_with_extension(method_argument.to_s, $language), '','')
   end
 end
 

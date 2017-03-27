@@ -26,13 +26,15 @@ class Transform_into
   end
 
   def self.name_with_extension(var, language)
-    var = var << ".html.#{language}"
-    if var !~ /\//
-      var = '_' << var
-    else
-      var = var.gsub(/(\/)(?!.*\/)/, "/_");
+    if !var.to_s.include?(".html.#{language}") || !var.to_s.include?(".#{language}")
+      var = var << ".html.#{language}"
+      if var !~ /\//
+        var = '_' << var
+      else
+        var = var.gsub(/(\/)(?!.*\/)/, "/_");
+      end
+      var
     end
-    var
   end
 
   def self.plural_for_ivar(var,ivar)

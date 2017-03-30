@@ -377,7 +377,9 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                 def methodName2 = method + RubyConstantData.ROUTE_URL_SUFIX
                 def matches = methods.findAll{ it.name == methodName1 || it.name == methodName2 }
                 matches?.each { m ->
-                    visitor.taskInterface.methods += [name:m.name, type: RubyUtil.getClassName(m.path), file: m.path]
+                    def newMethod = [name:m.name, type: RubyUtil.getClassName(m.path), file: m.path]
+                    visitor?.taskInterface?.methods += newMethod
+                    interfaceFromViews.methods += newMethod
                 }
                 if(!matches.empty) {
                     projectMethods += method
@@ -477,10 +479,14 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         methodsUnknownReceiver.each{ method ->
             def matches = methods.findAll{ it.name == method.name }
             matches?.each { m ->
-                visitor.taskInterface.methods += [name:m.name, type: RubyUtil.getClassName(m.path), file: m.path]
+                def newMethod = [name:m.name, type: RubyUtil.getClassName(m.path), file: m.path]
+                visitor?.taskInterface?.methods += newMethod
+                interfaceFromViews.methods += newMethod
             }
             if(matches.empty){
-                visitor.taskInterface.methods += [name: method, type: "Object", file: null]
+                def newMethod = [name: method, type: "Object", file: null]
+                visitor?.taskInterface?.methods += newMethod
+                interfaceFromViews.methods += newMethod
                 notFoundMethods += method
             }
         }
@@ -583,11 +589,11 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         railsPathMethods += pathMethodsReturnedByAuxMethods?.collect{ it - RubyConstantData.ROUTE_PATH_SUFIX }
 
         /* extracts data from used routes */
-        this.registryUsedPaths(visitor, usedPaths)
-        this.registryUsedRailsPaths(visitor, railsPathMethods as Set)
+        this.registryUsedPaths((RubyTestCodeVisitor) visitor, usedPaths)
+        this.registryUsedRailsPaths((RubyTestCodeVisitor) visitor, railsPathMethods as Set)
 
         /* extracts data from view (ERB or HAML) files (this code must be moved in the future) */
-        if(viewCodeExtractor) this.registryCallsIntoViewFiles(visitor, [] as Set)
+        if(viewCodeExtractor) this.registryCallsIntoViewFiles((RubyTestCodeVisitor) visitor, [] as Set)
     }
 
     /***

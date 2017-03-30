@@ -27,6 +27,9 @@ class Transform_into
 
   def self.name_with_extension(var, language)
     if !var.to_s.include?(".html.#{language}") || !var.to_s.include?(".#{language}")
+      if var.to_s[0] == '@'
+        var = singular(var)
+      end
       var = var << ".html.#{language}"
       if var !~ /\//
         var = '_' << var

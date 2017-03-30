@@ -79,13 +79,16 @@ def look_for_link_to_calls(code)
           method_argument_type = code.children[3].type
           if method_argument_type == $ivar || method_argument_type == $lvar
             method_argument_value = code.children[3].children[0]
-           insert_outputs_on_array(Transform_into.var_into_method(method_argument_value), "",'')
-         else
+            is_instance_or_method = ( method_argument_value.to_s[0] == '@' || method_argument_value.to_s.include?('_path'))
+            if method_argument_value.to_s.size > 1 && (is_instance_or_method || check_if_eq_instance_variable(method_argument_value))
+              insert_outputs_on_array(Transform_into.var_into_method(method_argument_value), "",'')
+            end
+          else
             method_inside_link_to_has_params = code.children[3].children[1].nil?
             if !method_inside_link_to_has_params
               method_inside_link_to_param = code.children[3].children[1]
               if is_still_a_node(method_inside_link_to_param)
-                method_inside_link_to_param = method_inside_link_to_param.children[1]
+                  method_inside_link_to_param = method_inside_link_to_param.children[1]
               end
               if is_still_a_node(method_inside_link_to_param)
                 if method_inside_link_to_param.type == $pair
@@ -98,8 +101,19 @@ def look_for_link_to_calls(code)
                     controller_name = ''
                   end
                 end
+              else
+                is_instance_or_method = !method_inside_link_to_param.to_s[0] == '@' || !method_inside_link_to_param.to_s.include?('_path')
+                if is_instance_or_method && !method_inside_link_to_param.to_s.include?('_')
+                  if is_still_a_node(code.children[3].children[0])
+                    if code.children[3].children[0].type == $lvar
+                      method_inside_link_to_param = ''
+                    else
+                      method_inside_link_to_param = Transform_into.name_with_extension(method_inside_link_to_param.to_s, $language)
+                    end
+                  end
+                end
               end
-              if !is_still_a_node(method_inside_link_to_param)
+              if !is_still_a_node(method_inside_link_to_param) && method_inside_link_to_param.to_s != ''
                 insert_outputs_on_array(method_inside_link_to_param, Transform_into.singular(controller_name.to_s),'')
               end
             end
@@ -165,6 +179,7 @@ def look_for_auto_gen_methods(code, instance_variable,lvar_derived_from_ivar)
         if method_name != $empty_array && method_name.class != Parser::AST::Node
           if instance_variable != '' || ((method_name.to_s).include?('/') || (method_name.to_s).include?('_path'))
             insert_outputs_on_array(method_name, instance_variable,'')
+            puts method_name
           end
         end
       end
@@ -208,7 +223,11 @@ def look_for_instance_variable(code)
           end
         elsif loop_type == $map
           if is_still_a_node(code_children.children[0])
-            $instance_variable = code_children.children[0].children[1]
+            if is_still_a_node(code_children.children[0].children[1])
+              $instance_variable = code_children.children[0].children[1].children[0].children[0]
+            else
+              $instance_variable = code_children.children[0].children[1]
+            end
           end
         end
         look_for_instance_variable(code_children)
@@ -267,7 +286,9 @@ def look_for_form_for_action(code, instance_variable)
         if has_hash
           hash_implementation1 = code.children[3].children[1].nil?
           if hash_implementation1
-            possible_hash = code.children[3].children[0].children[1].type
+            if is_still_a_node(code.children[3].children[0])
+              possible_hash = code.children[3].children[0].children[1].type
+            end
             if possible_hash == $hash
               loop_action = code.children[3].children[0].children[1].children[0].children[1].children[0]
             end
@@ -332,6 +353,9 @@ def look_for_render_call(code, instance_variable)
   if method_name == $render
     if has_hash
       method_argument = code.children[2].children[0].children[1].children[0]
+      if method_argument.to_s == ''
+        method_argument = code.children[2].children[0].children[1].children[1]
+      end
       if is_still_a_node method_argument
         if !method_argument.children[1].nil?
           method_argument = method_argument.children[1].children[0]
@@ -345,8 +369,10 @@ def look_for_render_call(code, instance_variable)
         method_argument = method_argument.children[0]
       end
     end
-    method_argument = Transform_into.plural_for_ivar(method_argument, instance_variable)
-    insert_outputs_on_array(Transform_into.name_with_extension(method_argument.to_s, $language), '','')
+    if method_argument.to_s[-1] != '/'
+      method_argument = Transform_into.plural_for_ivar(method_argument, instance_variable)
+      insert_outputs_on_array(Transform_into.name_with_extension(method_argument.to_s, $language), '','')
+    end
   end
 end
 
@@ -409,6 +435,16 @@ def look_for_button_methods(code)
     end
   else
     $button_label
+  end
+end
+
+def check_if_eq_instance_variable(var)
+  if var.to_s == $instance_variable.to_s
+    true
+  elsif var.to_s == $instance_variable.to_s[1..-1]
+    return true
+  else
+    false
   end
 end
 

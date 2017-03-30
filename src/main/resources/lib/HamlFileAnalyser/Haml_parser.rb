@@ -4,6 +4,7 @@ class Haml_parser
 
   def parse(text)
     text = remove_commented_lines(text)
+    puts text
     all_tagged_chunks = text.scan(/(?<=\=)(.*)|(?<=\-)(.*)/)
     helper_array = []
     ruby_parser = Ruby_parser.new
@@ -49,9 +50,15 @@ class Haml_parser
 
   def remove_commented_lines(text)
     commented_line_of_code = /\/( *)\- *(.*)|\/( *)\= *(.*)|( +\/\/.*)/
+    remove_remnant_bars = /^\/ *$|^\/ *#.*$/
     text_without_comments = text
     text.each_line do |line|
       if commented_line_of_code.match(line)
+        text_without_comments.slice!(line)
+      end
+    end
+    text_without_comments.each_line do |line|
+      if remove_remnant_bars.match(line)
         text_without_comments.slice!(line)
       end
     end

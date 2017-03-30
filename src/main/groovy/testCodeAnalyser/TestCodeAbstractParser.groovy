@@ -19,7 +19,7 @@ abstract class TestCodeAbstractParser {
     String stepsFilePath
 
     List<StepRegex> regexList
-    Set methods
+    Set methods //keys: name, args, path
     List<String> projectFiles
     List<String> viewFiles
 

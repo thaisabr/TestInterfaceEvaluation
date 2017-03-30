@@ -52,7 +52,7 @@ class RubyMethodReturnVisitor extends NoopVisitor {
             case VCallNode: //Method call without any arguments
             case CallNode: //Method call
                 def value = iVisited.value.name
-                if (value.contains(RubyConstantData.ROUTE_SUFIX)) { //it is a path helper method
+                if (value.contains(RubyConstantData.ROUTE_PATH_SUFIX)) { //it is a path helper method
                     this.returnNodes += [line: iVisited.position.startLine, value: value]
                 }
                 break

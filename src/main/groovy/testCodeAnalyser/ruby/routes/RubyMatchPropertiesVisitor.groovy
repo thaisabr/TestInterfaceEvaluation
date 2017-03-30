@@ -65,6 +65,8 @@ class RubyMatchPropertiesVisitor extends NoopVisitor {
             else if (indexTo > -1) controllerActionString = values.get(indexTo + 1).value
         }
 
+        if(pathMethodName.startsWith("/")) pathMethodName = pathMethodName.substring(1)
+
         //configures result
         result = [name: pathMethodName, value: pathValue, arg: controllerActionString]
         return result

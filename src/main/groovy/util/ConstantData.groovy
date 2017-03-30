@@ -45,8 +45,11 @@ interface ConstantData {
     String CONTROLLER_ORGANIZED_FILE_SUFIX = "-controller-org.csv"
 
     String NON_PRIMITIVE_ARRAY_PREFIX = "[L"
+    String HTML_EXTENSION = ".html"
     String ERB_EXTENSION = ".erb"
+    String HTML_ERB_EXTENSION = HTML_EXTENSION + ERB_EXTENSION
     String HAML_EXTENSION = ".haml"
+    String HTML_HAML_EXTENSION = HTML_EXTENSION + HAML_EXTENSION
     String CSV_FILE_EXTENSION = ".csv"
     String FEATURE_EXTENSION = ".feature"
     String JAR_EXTENSION = ".jar"

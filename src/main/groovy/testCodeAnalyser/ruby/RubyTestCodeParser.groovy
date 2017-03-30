@@ -295,16 +295,28 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             if(founds.empty) problematic += file
         }
 
+        def types = [ConstantData.ERB_EXTENSION, ConstantData.HTML_ERB_EXTENSION, ConstantData.HAML_EXTENSION,
+                     ConstantData.HTML_HAML_EXTENSION]
         problematic.each{ problem ->
-            def newName = problem -".html"
-            def founds = this.viewFiles.findAll{ it.endsWith(newName) }
-            founds.each {
-                int index1 = it.indexOf(Util.REPOSITORY_FOLDER_PATH)
-                views += it.substring(index1+Util.REPOSITORY_FOLDER_PATH.size())
-                def index2 = it.indexOf(this.repositoryPath)
-                found += it.substring(index2+this.repositoryPath.size()+1)
+            def extensionIndex = problem.indexOf(".")
+            def extension = problem.substring(extensionIndex)
+            def mainName = problem.substring(0, extensionIndex)
+            def typesToSearch = types - [extension]
+            for(int i=0; i<typesToSearch.size(); i++){
+                def type = typesToSearch.get(i)
+                def newName = mainName + type
+                def founds = this.viewFiles.findAll{ it.endsWith(newName) }
+                founds.each {
+                    int index1 = it.indexOf(Util.REPOSITORY_FOLDER_PATH)
+                    views += it.substring(index1+Util.REPOSITORY_FOLDER_PATH.size())
+                    def index2 = it.indexOf(this.repositoryPath)
+                    found += it.substring(index2+this.repositoryPath.size()+1)
+                }
+                if(!founds.empty) {
+                    problematic -= problem
+                    break
+                }
             }
-            if(!founds.empty) problematic -= problem
         }
 
         registryView(visitor, views)
@@ -380,6 +392,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                     def newMethod = [name:m.name, type: RubyUtil.getClassName(m.path), file: m.path]
                     visitor?.taskInterface?.methods += newMethod
                     interfaceFromViews.methods += newMethod
+                    log.info "False rails path method: ${newMethod.name} (${newMethod.file})"
                 }
                 if(!matches.empty) {
                     projectMethods += method

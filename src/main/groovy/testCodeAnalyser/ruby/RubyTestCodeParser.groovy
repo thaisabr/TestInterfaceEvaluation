@@ -154,6 +154,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     private registryMethodCallAndViewAccessFromRoute(RubyTestCodeVisitor visitor, String path) {
         def registryMethodCall = false
         def foundView = false
+        def valid = true
 
         if(RouteHelper.routeIsFile(path)){
             log.info "ROUTE IS FILE: $path"
@@ -177,6 +178,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
                 }
             } else {
                 log.info "ROUTE FILE IS INVALID: $path"
+                valid = false
             }
         }
         else if(RouteHelper.routeIsAction(path)){
@@ -211,7 +213,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             }
         }
 
-        [path:path, call:registryMethodCall, view:foundView]
+        [path:path, call:registryMethodCall, view:foundView, valid:valid]
     }
 
     private static extractControllerAndActionFromPath(String route) {
@@ -235,12 +237,14 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         }
         def methodCall = result.findAll{ it.call }*.path
         def view = result.findAll{ it.view }*.path
-        def problematic = result.findAll{ !it.call && !it.view }*.path
+        def problematic = result.findAll{ !it.call && !it.view && it.valid }*.path
+        def invalid = result.findAll{ !it.call && !it.view && !it.valid }*.path
 
         log.info "Used paths with method call (${methodCall.size()}): $methodCall"
         log.info "Used paths with view (${view.size()}): $view"
         log.info "All found views until the moment: ${visitor?.taskInterface?.referencedPages}"
-        log.info "Used paths with no data (${problematic.size()}): $problematic"
+        log.info "Invalid used paths (${invalid.size()}): $invalid"
+        log.info "Valid used paths with no data (${problematic.size()}): $problematic"
         this.notFoundViews += problematic
     }
 

@@ -179,7 +179,6 @@ def look_for_auto_gen_methods(code, instance_variable,lvar_derived_from_ivar)
         if method_name != $empty_array && method_name.class != Parser::AST::Node
           if instance_variable != '' || ((method_name.to_s).include?('/') || (method_name.to_s).include?('_path'))
             insert_outputs_on_array(method_name, instance_variable,'')
-            puts method_name
           end
         end
       end
@@ -224,9 +223,13 @@ def look_for_instance_variable(code)
         elsif loop_type == $map
           if is_still_a_node(code_children.children[0])
             if is_still_a_node(code_children.children[0].children[1])
-              $instance_variable = code_children.children[0].children[1].children[0].children[0]
+              if code_children.children[0].children[1].children[0].children[0].to_s[0] == '@'
+                $instance_variable = code_children.children[0].children[1].children[0].children[0]
+              end
             else
-              $instance_variable = code_children.children[0].children[1]
+              if code_children.children[0].children[1].to_s == '@'
+                $instance_variable = code_children.children[0].children[1]
+              end
             end
           end
         end
@@ -352,7 +355,12 @@ def look_for_render_call(code, instance_variable)
   end
   if method_name == $render
     if has_hash
-      method_argument = code.children[2].children[0].children[1].children[0]
+      if is_still_a_node(code.children[2].children[0].children[1])
+        type = code.children[2].children[0].children[1].type
+        if type != $lvar
+          method_argument = code.children[2].children[0].children[1].children[0]
+        end
+      end
       if method_argument.to_s == ''
         method_argument = code.children[2].children[0].children[1].children[1]
       end
@@ -360,7 +368,9 @@ def look_for_render_call(code, instance_variable)
         if !method_argument.children[1].nil?
           method_argument = method_argument.children[1].children[0]
         else
-          method_argument = method_argument.children[0]
+          if method_argument.type != $ivar
+            method_argument = method_argument.children[0]
+          end
         end
       end
     else
@@ -369,7 +379,7 @@ def look_for_render_call(code, instance_variable)
         method_argument = method_argument.children[0]
       end
     end
-    if method_argument.to_s[-1] != '/'
+    if method_argument.to_s[-1] != '/' && method_argument.to_s.size > 1 && !is_still_a_node(method_argument)
       method_argument = Transform_into.plural_for_ivar(method_argument, instance_variable)
       insert_outputs_on_array(Transform_into.name_with_extension(method_argument.to_s, $language), '','')
     end

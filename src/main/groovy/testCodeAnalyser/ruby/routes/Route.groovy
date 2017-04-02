@@ -10,8 +10,9 @@ class Route {
     String arg
     String type = RequestType.GET
 
-    public void setName(String name){
-        this.name = name.replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*/", "/.*/").replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*[^/()]", "/.*")
+    void setName(String name){
+        this.name = name.replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*/", "/.*/")
+                .replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*[^/()]", "/.*")
     }
 
     @Override

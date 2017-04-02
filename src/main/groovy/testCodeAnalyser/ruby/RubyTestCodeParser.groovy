@@ -574,7 +574,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             this.generateProjectRoutes()
             log.info "All project routes:"
             this.routes.each { log.info it.toString() }
-            log.info "Problematic routes:"
+            log.info "Problematic routes (${problematicRoutes.size()}):"
             this.problematicRoutes.each{ log.info it.toString() }
         }
 

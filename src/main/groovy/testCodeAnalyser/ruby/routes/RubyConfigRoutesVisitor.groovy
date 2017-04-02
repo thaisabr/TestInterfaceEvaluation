@@ -62,10 +62,12 @@ class RubyConfigRoutesVisitor {
     private static extractArgValues(List args) {
         def styleRequestFirst = isRequestFirstStyleCode(args)
         def values = []
+        def requestType = RequestType.values()*.name
         for (int i = 0; i < args.size(); i++) {
-            if (args.get(i).value == "get") {
-                if (styleRequestFirst) values += args.get(i + 1)
-                else values += args.get(i - 1)
+            if (args.get(i).value in requestType) {
+                def type = RequestType.valueOfName(args.get(i).value)
+                if (styleRequestFirst) values += [name:args.get(i + 1).value, type:type]
+                else values += [name:args.get(i - 1).value, type:type]
                 i++
             }
         }
@@ -74,7 +76,7 @@ class RubyConfigRoutesVisitor {
 
     private static isRequestFirstStyleCode(dataList) {
         def styleRequestFirst = false
-        if (dataList.first().value in RequestType.values()) styleRequestFirst = true
+        if (dataList.first().value in (RequestType.values()*.name)) styleRequestFirst = true
         return styleRequestFirst
     }
 
@@ -533,15 +535,15 @@ class RubyConfigRoutesVisitor {
     private generateCommonRoutes(args, String prefix, String index, String original, String aliasSingular,
                                  String controller, String path, String formattedPrefix) {
         if (!args.member.empty) {
-            def values = extractArgValues(args.member)*.value
-            values.each { value ->
-                generateResourcesMemberRoute(value, prefix, original, aliasSingular, controller, path, formattedPrefix)
+            def values = extractArgValues(args.member)
+            values?.each { value ->
+                generateResourcesMemberRoute(value.name, value.type, prefix, original, aliasSingular, controller, path, formattedPrefix)
             }
         }
         if (!args.collection.empty) {
-            def values = extractArgValues(args.collection)*.value
-            values.each { value ->
-                generateResourcesCollectionRoute(value, prefix, original, index, controller, path, formattedPrefix)
+            def values = extractArgValues(args.collection)
+            values?.each { value ->
+                generateResourcesCollectionRoute(value.name, value.type, prefix, original, index, controller, path, formattedPrefix)
             }
         }
         if (!args.only.empty) {
@@ -675,7 +677,7 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private generateResourcesMemberRoute(action, String prefix, String original, String aliasSingular,
+    private generateResourcesMemberRoute(action, type, String prefix, String original, String aliasSingular,
                                          String controller, String path, String formattedPrefix) {
         def nameSufix
         def pathValuePrefix
@@ -694,10 +696,10 @@ class RubyConfigRoutesVisitor {
             argsPrefix = "$controller#"
         }
         this.routingMethods += new Route(name: "$action$nameSufix", file: RubyConstantData.ROUTES_ID, value: "$pathValuePrefix$action",
-                arg: "$argsPrefix$action")
+                arg: "$argsPrefix$action", type: type)
     }
 
-    private generateResourcesCollectionRoute(action, String prefix, String original, String index,
+    private generateResourcesCollectionRoute(action, type, String prefix, String original, String index,
                                              String controller, String path, String formattedPrefix) {
         def nameSufix
         def pathValuePrefix
@@ -716,7 +718,7 @@ class RubyConfigRoutesVisitor {
             argsPrefix = "$controller#"
         }
         this.routingMethods += new Route(name: "$action$nameSufix", file: RubyConstantData.ROUTES_ID, value: "$pathValuePrefix$action",
-                arg: "$argsPrefix$action")
+                arg: "$argsPrefix$action", type:type)
     }
 
     private configureResourcesDefaultRoutes(String prefix, String index, String original, String controller,

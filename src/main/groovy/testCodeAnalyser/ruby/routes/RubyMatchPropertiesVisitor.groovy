@@ -8,7 +8,7 @@ import util.ruby.RequestType
 
 class RubyMatchPropertiesVisitor extends NoopVisitor {
 
-    static List NON_RESOURCEFUL_IDENTIFIERS = RequestType.values() + ["match"]
+    static List NON_RESOURCEFUL_IDENTIFIERS = RequestType.values()*.name + ["match"]
     def nodeName
     def argsNodes = []
 

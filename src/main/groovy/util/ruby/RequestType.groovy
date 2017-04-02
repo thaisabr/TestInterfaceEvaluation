@@ -11,4 +11,8 @@ enum RequestType {
         this.name = name
     }
 
+    static RequestType valueOfName(String name) {
+        values().find { it.name == name }
+    }
+
 }

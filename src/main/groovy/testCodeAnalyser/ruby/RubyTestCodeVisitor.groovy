@@ -148,13 +148,13 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         if (methodsToVisit.empty) {
             if (RubyUtil.isRouteMethod(name)) {
                 taskInterface.calledPageMethods += [file: RubyConstantData.ROUTES_ID, name: name - RubyConstantData.ROUTE_PATH_SUFIX, args: []]
-                //log.info "visit param is a route method call: $name"
+                log.info "visit param is a route method call: $name"
             }
-            //else log.info "visit param is a undefined method call: $name"
+            else log.info "visit param is a undefined method call: $name"
         } else {
             def args = []
             if (stepDefinitionMethod) args = stepDefinitionMethod.args
-            //log.info "visit param is defined method call: $name; args: $args"
+            log.info "visit param is defined method call: $name; args: $args"
             methodsToVisit?.each { m ->
                 taskInterface.calledPageMethods += [file: m.path, name: m.name, args: args]
             }
@@ -174,7 +174,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         def index = value.indexOf("?")
         if (index > 0) value = value.substring(0, index)//ignoring params
         taskInterface.calledPageMethods += [file: RubyConstantData.ROUTES_ID, name: value, args: []]
-        //log.info "param is literal: $value"
+        log.info "param is literal: $value"
     }
 
     private registryVisitDynamicStringArg(DStrNode node) {
@@ -188,12 +188,13 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
            Extracted url: /portal/classes//remove_offering  */
         name = name.replaceAll("//", "/:id/")
         taskInterface.calledPageMethods += [file: RubyConstantData.ROUTES_ID, name: name, args: []]
-        //log.info "param is dynamic literal: $name"
+        log.info "param is dynamic literal: $name"
 
     }
 
     private analyseVisitCall(FCallNode iVisited) {
-        //log.info "VISIT CALL: ${lastVisitedFile} (${iVisited.position.startLine+1});"
+        log.info "VISIT CALL: ${lastVisitedFile} (${iVisited.position.startLine+1});"
+        iVisited.args.last.properties.each { k, v -> log.info "$k: $v" }
         visitCallCounter++
         registryVisitCall(iVisited.args.last)
     }
@@ -250,7 +251,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
         whenNodeVisitor.pages?.each { page ->
             taskInterface.calledPageMethods += [file: RubyConstantData.ROUTES_ID, name: page, args: []]
-            //log.info "Page in casenode: $page"
+            log.info "Page in casenode: $page"
         }
 
         whenNodeVisitor.auxiliaryMethods.each { method ->
@@ -466,7 +467,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
         if (iVisited.name in EXCLUDED_METHODS) return iVisited
-        //log.info "Method call: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine+1});   Receptor: ${iVisited.receiver.class}"
+        log.info "Method call: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine+1});   Receptor: ${iVisited.receiver.class}"
 
         // unit test file
         if (productionClass && iVisited.receiver.properties.containsKey("name") && iVisited.receiver.name == "subject") {
@@ -490,7 +491,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         super.visitFCallNode(iVisited)
 
         if (iVisited.name in EXCLUDED_METHODS) return iVisited
-        //log.info "Method call (fcallnode): ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1})"
+        log.info "Method call (fcallnode): ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1})"
 
         if ((iVisited.grandParent instanceof FCallNode) && iVisited.grandParent.name == "visit") return iVisited
         else if (RubyUtil.isRouteMethod(iVisited.name)) {
@@ -521,7 +522,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     @Override
     Object visitVCallNode(VCallNode iVisited) {
         super.visitVCallNode(iVisited)
-        //log.info "Method call: ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1}); no args!"
+        log.info "Method call: ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1}); no args!"
         if (RubyUtil.isRouteMethod(iVisited.name)) {
             taskInterface.calledPageMethods += [file: RubyConstantData.ROUTES_ID, name: iVisited.name - RubyConstantData.ROUTE_PATH_SUFIX, args: []]
         } else registryMethodCallFromUnknownReceiver(iVisited, false)

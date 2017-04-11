@@ -20,7 +20,7 @@ class HamlControllerExtractor
         output = check_and_write_file_path(output,file_path)
       end
       if !output.name.nil?
-        output_value = output_value + "[name: '#{output.name}', receiver: '#{output.receiver}', label: '#{output.label}']\n"
+        output_value = output_value + "[name: '#{output.name}', receiver: '#{output.receiver}', label: '#{output.label}', arguments: '#{output.number_of_arguments}']\n"
       end
     end
     output_value

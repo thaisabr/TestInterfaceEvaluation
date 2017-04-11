@@ -56,11 +56,12 @@ class Find_controller_calls
     $output_array
   end
 
-  def insert_outputs_on_array(name, receiver, label)
+  def insert_outputs_on_array(name, receiver, label,number_of_arguments)
     output_model = Output_model.new
     output_model.name = name
     output_model.receiver = receiver
     output_model.label = label
+    output_model.number_of_arguments = number_of_arguments
     $output_array.push output_model
   end
 
@@ -77,25 +78,37 @@ def look_for_link_to_calls(code)
         found_confirm_call = look_for_confirm_call(code)
         if !found_confirm_call && !code.children[3].nil?
           method_argument_type = code.children[3].type
-          if method_argument_type == $ivar || method_argument_type == $lvar
+          if method_argument_type == $ivar
             method_argument_value = code.children[3].children[0]
             is_instance_or_method = ( method_argument_value.to_s[0] == '@' || method_argument_value.to_s.include?('_path'))
             if method_argument_value.to_s.size > 1 && (is_instance_or_method || check_if_eq_instance_variable(method_argument_value))
-              insert_outputs_on_array(Transform_into.var_into_method(method_argument_value), "",'')
+              if method_argument_value.to_s.include?('_path')
+                insert_outputs_on_array(method_argument_value, "",'',count_method_arguments(code.children[3]))
+              else
+                insert_outputs_on_array(Transform_into.var_into_method(method_argument_value), "",'',count_method_arguments(code.children[3]))
+              end
             end
           else
+            father_node = ''
             method_inside_link_to_has_params = code.children[3].children[1].nil?
-            if !method_inside_link_to_has_params
+            if is_still_a_node(code.children[3].children[0])
+              has_callee = code.children[3].children[0].children[1]
+            end
+            if !method_inside_link_to_has_params && has_callee.class != Symbol
               method_inside_link_to_param = code.children[3].children[1]
+              father_node = code.children[3]
               if is_still_a_node(method_inside_link_to_param)
-                  method_inside_link_to_param = method_inside_link_to_param.children[1]
+                method_inside_link_to_param = method_inside_link_to_param.children[1]
+                father_node = father_node.children[1]
               end
               if is_still_a_node(method_inside_link_to_param)
                 if method_inside_link_to_param.type == $pair
                   method_inside_link_to_param = code.children[3].children[1].children[1].children[0]
+                  father_node = code.children[3].children[1].children[1]
                   controller_name = code.children[3].children[0].children[1].children[0]
                   if is_still_a_node(method_inside_link_to_param)
                     method_inside_link_to_param = method_inside_link_to_param.children[0]
+                    father_node = father_node.children[0]
                   end
                  if is_still_a_node(controller_name)
                     controller_name = ''
@@ -107,14 +120,17 @@ def look_for_link_to_calls(code)
                   if is_still_a_node(code.children[3].children[0])
                     if code.children[3].children[0].type == $lvar
                       method_inside_link_to_param = ''
+                      father_node = ''
                     else
-                      method_inside_link_to_param = Transform_into.name_with_extension(method_inside_link_to_param.to_s, $language)
+                      if method_inside_link_to_param.to_s.size > 1
+                        method_inside_link_to_param = Transform_into.name_with_extension(method_inside_link_to_param.to_s, $language)
+                      end
                     end
                   end
                 end
               end
               if !is_still_a_node(method_inside_link_to_param) && method_inside_link_to_param.to_s != ''
-                insert_outputs_on_array(method_inside_link_to_param, Transform_into.singular(controller_name.to_s),'')
+                insert_outputs_on_array(method_inside_link_to_param, Transform_into.singular(controller_name.to_s),'',count_method_arguments(father_node))
               end
             end
           end
@@ -125,6 +141,7 @@ def look_for_link_to_calls(code)
 end
 
 def look_for_submit_calls(code, instance_variable)
+  father_node = ''
   method_argument = ''
   method_argument_type = ''
   method_name = code.children[1]
@@ -134,39 +151,45 @@ def look_for_submit_calls(code, instance_variable)
     end
     if method_argument_type == $str
       method_argument = code.children[2].children[0]
+      father_node = code.children[2]
     else
       if method_argument_type == $send
         if code.children[3].nil?
           method_argument = code.children[2].children[0].children[0]
+          father_node = code.children[2].children[0]
         else
           method_argument = code.children[3].children[0].children[1].children[0]
+          father_node = code.children[3].children[0].children[1]
         end
       end
     end
     if method_argument != ''
       if $submit_name != ''
-        insert_outputs_on_array(Transform_into.var_into_method($submit_name),'' ,"#{method_argument}".downcase)
+        insert_outputs_on_array(Transform_into.var_into_method($submit_name),'' ,"#{method_argument}".downcase,count_method_arguments(father_node))
       else
-        insert_outputs_on_array("#{method_argument}".downcase,Transform_into.var_into_controller(instance_variable),'')
+        insert_outputs_on_array("#{method_argument}".downcase,Transform_into.var_into_controller(instance_variable),'',count_method_arguments(father_node))
       end
     end
   end
 end
 
 def look_for_auto_gen_methods(code, instance_variable,lvar_derived_from_ivar)
+  father_node = ''
   method_name = code.children[1]
   if method_name == $label
     if is_still_a_node(code.children[2])
       method_argument_value = code.children[2].children[0]
+      father_node = code.children[2]
       if method_argument_value.is_a?(Parser::AST::Node)
         if !code.children[2].children[0].children[0].children[2].nil?
           method_argument_value = code.children[2].children[0].children[0].children[2].children[0]
+          father_node = code.children[2].children[0].children[0].children[2]
         end
       end
     end
     if !method_argument_value.nil?
       if instance_variable != '' || (method_argument_value.to_s.include?('/') || method_argument_value.to_s.include?('_path'))
-        insert_outputs_on_array(method_argument_value, instance_variable,'')
+        insert_outputs_on_array(method_argument_value, instance_variable,'',count_method_arguments(father_node))
       end
     end
   end
@@ -178,7 +201,7 @@ def look_for_auto_gen_methods(code, instance_variable,lvar_derived_from_ivar)
       if method_argument == lvar_derived_from_ivar
         if method_name != $empty_array && method_name.class != Parser::AST::Node
           if instance_variable != '' || ((method_name.to_s).include?('/') || (method_name.to_s).include?('_path'))
-            insert_outputs_on_array(method_name, instance_variable,'')
+            insert_outputs_on_array(method_name, instance_variable,'','0')
           end
         end
       end
@@ -242,6 +265,7 @@ def look_for_instance_variable(code)
 end
 
 def look_for_confirm_call(code)
+  father_node = ''
   has_adictional_call = !code.children[4].nil?
   if has_adictional_call
     link_to_type = code.children[4].type
@@ -253,15 +277,17 @@ def look_for_confirm_call(code)
       possible_redirect_name = code.children[4].children[0].children[1]
       if !possible_redirect_name.nil? && !possible_redirect_name.children[2].nil?
           link_to_redirect_name = code.children[4].children[0].children[1].children[2].children[0]
+        father_node = code.children[4].children[0].children[1].children[2]
       else
         link_to_redirect_name = code.children[2].children[0]
+        father_node = code.children[2]
       end
       if !code.children[3].children[1].nil?
         link_to_argument_variable = code.children[3].children[1]
       else
         link_to_argument_variable = code.children[3].children[0]
       end
-      insert_outputs_on_array("#{link_to_redirect_name}".downcase,Transform_into.var_into_controller(link_to_argument_variable),'')
+      insert_outputs_on_array("#{link_to_redirect_name}".downcase,Transform_into.var_into_controller(link_to_argument_variable),'',count_method_arguments(father_node))
       true
     end
   else
@@ -270,6 +296,7 @@ def look_for_confirm_call(code)
 end
 
 def look_for_form_for_action(code, instance_variable)
+  father_node = ''
   if is_still_a_node(code)
     if code.type == $send
       loop_type = code.children[1]
@@ -294,19 +321,22 @@ def look_for_form_for_action(code, instance_variable)
             end
             if possible_hash == $hash
               loop_action = code.children[3].children[0].children[1].children[0].children[1].children[0]
+              father_node = code.children[3].children[0].children[1].children[0].children[1]
             end
           else
             possible_hash = code.children[3].children[1].children[1].type
             if possible_hash == $hash
               if code.children[3].children[1].children[1].children[1].nil?
                 loop_action = code.children[3].children[1].children[1].children[0].children[1].children[0]
+                father_node = code.children[3].children[1].children[1].children[0].children[1]
               else
                 loop_action = code.children[3].children[1].children[1].children[1].children[1].children[0]
+                father_node = code.children[3].children[1].children[1].children[1].children[1]
               end
             end
           end
           if !loop_action == '' || !instance_variable == ''
-            insert_outputs_on_array(loop_action, instance_variable,'')
+            insert_outputs_on_array(loop_action, instance_variable,'',count_method_arguments(father_node))
           end
         end
       end
@@ -317,6 +347,7 @@ end
 
 def look_for_semantic_form_for(code, label)
   loop_url = ''
+  father_node = ''
   if is_still_a_node(code)
     if code.type == $send
       loop_type = code.children[1]
@@ -325,18 +356,21 @@ def look_for_semantic_form_for(code, label)
           possible_hash = code.children[3].type
           if possible_hash == $hash
             loop_url = code.children[3].children[0].children[1].children[1]
+            father_node = code.children[3].children[0].children[1]
             if is_still_a_node(loop_url)
               loop_url = loop_url.children[1]
+              father_node = father_node.children[1]
             end
           end
         else
           if !code.children[2].nil?
             loop_url = code.children[2].children[1]
+            father_node = code.children[2]
           end
         end
       end
-      if loop_url != '' && !is_still_a_node(loop_url)
-        insert_outputs_on_array(loop_url.to_s,'',label)
+      if loop_url.to_s != '' && !is_still_a_node(loop_url)
+        insert_outputs_on_array(loop_url.to_s,'',label,count_method_arguments(father_node))
       end
     end
   end
@@ -344,6 +378,7 @@ end
 
 
 def look_for_render_call(code, instance_variable)
+  father_node = ''
   method_name = code.children[1]
   has_hash = false
   if !code.children[2].nil?
@@ -359,52 +394,71 @@ def look_for_render_call(code, instance_variable)
         type = code.children[2].children[0].children[1].type
         if type != $lvar
           method_argument = code.children[2].children[0].children[1].children[0]
+          father_node = code.children[2].children[0].children[1]
         end
       end
       if method_argument.to_s == ''
         method_argument = code.children[2].children[0].children[1].children[1]
+        father_node = code.children[2].children[0].children[1]
+        type = code.children[2].children[0].children[1].type
       end
       if is_still_a_node method_argument
         if !method_argument.children[1].nil?
+          type = method_argument.children[1].type
+          father_node = method_argument.children[1]
           method_argument = method_argument.children[1].children[0]
         else
-          if method_argument.type != $ivar
+          if method_argument.type != $ivar && method_argument.type != $lvar
+            type = method_argument.type
+            father_node = method_argument
             method_argument = method_argument.children[0]
           end
         end
       end
     else
       method_argument = code.children[2].children[0]
+      father_node = code.children[2]
+      type = code.children[2].type
       if is_still_a_node method_argument
+        type = method_argument.type
+        father_node = method_argument
         method_argument = method_argument.children[0]
       end
     end
     if method_argument.to_s[-1] != '/' && method_argument.to_s.size > 1 && !is_still_a_node(method_argument)
       method_argument = Transform_into.plural_for_ivar(method_argument, instance_variable)
-      insert_outputs_on_array(Transform_into.name_with_extension(method_argument.to_s, $language), '','')
+      if type == $send
+        insert_outputs_on_array(method_argument,'','',count_method_arguments(father_node))
+      else
+        insert_outputs_on_array(Transform_into.name_with_extension(method_argument.to_s, $language), '','',count_method_arguments(father_node))
+      end
     end
   end
 end
 
 def look_for_form_tag_call(code, instance_variable)
+  father_node = ''
   method_name = code.children[1]
   if method_name == $form_tag
     possible_hash = code.children[2].type
     if possible_hash == $hash
       if !code.children[2].children[1].nil?
         method_argument = code.children[2].children[1].children[1].children[0]
+        father_node = code.children[2].children[1].children[1]
       else
         method_argument = ''
       end
       controller_called = code.children[2].children[0].children[1].children[0]
-      insert_outputs_on_array(method_argument, controller_called,'')
+      insert_outputs_on_array(method_argument, controller_called,'',count_method_arguments(father_node))
     else
       method_argument = code.children[2].children[1]
+      father_node = code.children[2]
       if is_still_a_node(method_argument)
+        father_node = method_argument.children[0].children[0]
         method_argument = method_argument.children[0].children[0].children[1]
       end
       if !method_argument.to_s == ''
-        insert_outputs_on_array(method_argument, instance_variable,'')
+        insert_outputs_on_array(method_argument, instance_variable,'',count_method_arguments(father_node))
       end
     end
 
@@ -456,6 +510,29 @@ def check_if_eq_instance_variable(var)
   else
     false
   end
+end
+
+def count_method_arguments(code)
+  number_of_arguments = 0
+  counter = 0
+  outside_counter = 2
+  if is_still_a_node(code)
+    while is_still_a_node(code.children[outside_counter])
+      if code.children[outside_counter].type == $hash
+        while is_still_a_node(code.children[outside_counter].children[counter])
+          if code.children[outside_counter].children[counter].type == $pair
+            number_of_arguments += 1
+          end
+          counter += 1
+        end
+        outside_counter += 1
+      else
+        number_of_arguments += 1
+        outside_counter += 1
+      end
+    end
+  end
+  number_of_arguments
 end
 
 def is_still_a_node(code)

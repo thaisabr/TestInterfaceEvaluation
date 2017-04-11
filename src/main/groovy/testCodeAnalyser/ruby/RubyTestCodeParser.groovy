@@ -488,13 +488,14 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         methodsWithReceiver
     }
 
-    //we match method call and method definition based on method name only.
-    //the best approach is to also consider the arguments
     private organizeMethodCallsNoReceiver(calls, RubyTestCodeVisitor visitor){
         def methodsUnknownReceiver = calls?.findAll{ it.receiver.empty && !it.name.empty }
         def notFoundMethods = []
         methodsUnknownReceiver.each{ method ->
-            def matches = methods.findAll{ it.name == method.name }
+            def matches = methods.findAll{
+                def counter = method.arguments as int
+                it.name == method.name && counter <= it.args && counter >= it.args - it.optionalArgs
+            }
             matches?.each { m ->
                 def newMethod = [name:m.name, type: RubyUtil.getClassName(m.path), file: m.path]
                 visitor?.taskInterface?.methods += newMethod

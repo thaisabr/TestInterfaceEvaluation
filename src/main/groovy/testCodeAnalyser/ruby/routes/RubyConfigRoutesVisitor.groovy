@@ -118,7 +118,7 @@ class RubyConfigRoutesVisitor {
         List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll { it instanceof SymbolNode }
         if (prefix) path = prefix + "/" + entities.first().name
         else path = entities.first().name
-        if (methodName) name = methodName + "_" + path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
+        if (methodName && methodName!= prefix) name = methodName + "_" + path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
         else name = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
         [path:path, name:name]
     }
@@ -599,6 +599,10 @@ class RubyConfigRoutesVisitor {
     }
 
     private generateIndexResourceRoute(String prefix, String original, String controller, String index, String formattedPrefix) {
+        def singular = inflector.singularize(index)
+        if(singular == index){
+            index = index + "_index"
+        }
         if (prefix && formattedPrefix) {
             def argPrefix = formattedPrefix.replaceAll("_", "/")
             this.routingMethods += new Route(name: "${formattedPrefix}_$index", file: RubyConstantData.ROUTES_ID,
@@ -725,7 +729,7 @@ class RubyConfigRoutesVisitor {
                                             String aliasSingular, String path, String formattedPrefix) {
         if (path && !path.empty) original = path
         if (prefix) {
-            def argPrefix = formattedPrefix.replaceAll("_", "/")
+            def argPrefix = formattedPrefix?.replaceAll("_", "/")
             if (index) generateIndexResourceRoute(prefix, original, controller, index, formattedPrefix)
             this.routingMethods += new Route(name: "new_${formattedPrefix}_$aliasSingular", file: RubyConstantData.ROUTES_ID,
                     value: "/${prefix}/$original/new", arg: "${argPrefix}/$controller#new")

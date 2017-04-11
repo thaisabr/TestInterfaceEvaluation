@@ -35,6 +35,8 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         this.aliasSingular = aliasSingular
         this.controllerName = controllerName
         this.indexName = indexName
+
+
     }
 
     def getOnValue() {
@@ -85,7 +87,10 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         }
 
         def methodName = "${actionName.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}$nameSufix"
-        if (pathMethodName) methodName = pathMethodName
+        if (pathMethodName) {
+            if(indexName && !indexName.empty) methodName = pathMethodName + nameSufix
+            else methodName = pathMethodName
+        }
 
         def arg = "$argsPrefix$actionValue"
         if (argValue) arg = argValue

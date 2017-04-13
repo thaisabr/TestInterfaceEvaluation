@@ -1,5 +1,6 @@
 package testCodeAnalyser
 
+import commitAnalyser.GherkinManager
 import gherkin.ast.Scenario
 import gherkin.ast.ScenarioOutline
 import gherkin.ast.Step
@@ -63,6 +64,7 @@ abstract class TestCodeAbstractParser {
     }
 
     private organizeCompilationErrors() {
+        compilationErrors += GherkinManager.compilationErrors
         def result = [] as Set
         def files = compilationErrors*.path.unique()
         files.each { file ->

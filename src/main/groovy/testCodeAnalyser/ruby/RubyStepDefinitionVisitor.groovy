@@ -15,7 +15,7 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
     String content
     List<StepDefinition> stepDefinitions
 
-    public RubyStepDefinitionVisitor(String path, String content) {
+    RubyStepDefinitionVisitor(String path, String content) {
         this.path = path
         this.content = content
         stepDefinitions = []
@@ -24,7 +24,7 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
     @Override
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
-        if (iVisited.name in ConstantData.STEP_KEYWORDS) {
+        if (iVisited.name in ConstantData.ALL_STEP_KEYWORDS) {
             RubyStepRegexVisitor regexVisitor = new RubyStepRegexVisitor(path)
             iVisited.accept(regexVisitor)
             if (!regexVisitor.regexs.empty) {

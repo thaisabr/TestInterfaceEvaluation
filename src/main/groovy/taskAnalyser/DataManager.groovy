@@ -34,8 +34,8 @@ class DataManager {
     static final int STEP_MATCH_ERROR_INDEX = 12
     static final int AST_ERROR_INDEX = 14
     static final int INITIAL_TEXT_SIZE = 6
-    static final int GHERKIN_TEST_INDEX = 6
-    static final int STEP_DEF_INDEX = GHERKIN_TEST_INDEX + 2
+    static final int GHERKIN_TEST_INDEX = 7
+    static final int STEP_DEF_INDEX = GHERKIN_TEST_INDEX + 1
 
     private static List<String[]> readAllResult(String filename) {
         List<String[]> entries = []

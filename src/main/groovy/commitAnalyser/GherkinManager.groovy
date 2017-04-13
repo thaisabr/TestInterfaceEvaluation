@@ -12,16 +12,20 @@ import taskAnalyser.task.StepDefinition
 @Slf4j
 class GherkinManager {
 
+    static Set compilationErrors = [] as Set
+
     static Feature parseGherkinFile(String content, String filename, String sha) {
         Feature feature = null
         if (!content || content == "") {
             log.warn "Problem to parse Gherkin file '$filename'. Reason: The commit deleted it."
+            compilationErrors += [path: filename, msg: "Commit $sha deleted it."]
         } else {
             try {
                 Parser<Feature> parser = new Parser<>()
                 feature = parser.parse(content)
             } catch (ParserException ex) {
                 log.warn "Problem to parse Gherkin file '$filename' (commit $sha). ${ex.class}: ${ex.message}."
+                compilationErrors += [path: filename, msg: ex.class]
             }
         }
         feature

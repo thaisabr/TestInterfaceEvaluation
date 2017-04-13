@@ -68,15 +68,22 @@ class DoneTask extends Task {
     private init(List<String> shas) {
         basicInit(shas)
 
-        RevCommit lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
+        if(!commits.empty) {
+            RevCommit lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
 
-        // identifies changed gherkin files and scenario definitions
-        List<Commit> commitsChangedGherkinFile = commits?.findAll { it.gherkinChanges && !it.gherkinChanges.isEmpty() }
-        registryChangedGherkinContent(commitsChangedGherkinFile, lastCommit)
+            // identifies changed gherkin files and scenario definitions
+            List<Commit> commitsChangedGherkinFile = commits?.findAll {
+                it.gherkinChanges && !it.gherkinChanges.isEmpty()
+            }
+            registryChangedGherkinContent(commitsChangedGherkinFile, lastCommit)
 
-        // identifies changed step definitions
-        List<Commit> commitsStepsChange = this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }
-        registryChangedStepContent(commitsStepsChange, lastCommit)
+            // identifies changed step definitions
+            List<Commit> commitsStepsChange = this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }
+            registryChangedStepContent(commitsStepsChange, lastCommit)
+        } else {
+            log.error "The task has no commits! Searched commits: "
+            shas.each{ log.error it.toString() }
+        }
     }
 
     private registryChangedStepContent(List<Commit> commitsChangedStepFile, RevCommit lastCommit){

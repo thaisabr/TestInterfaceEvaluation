@@ -17,14 +17,13 @@ class RubyStepRegexVisitor extends NoopVisitor {
     List<StepRegex> regexs
     String path
 
-    public RubyStepRegexVisitor(String path) {
+    RubyStepRegexVisitor(String path) {
         this.path = path
         regexs = []
     }
 
     private static boolean isStepDefinitionNode(RegexpNode node) {
-        def keywords = ConstantData.STEP_KEYWORDS + ConstantData.STEP_KEYWORDS_PT + ConstantData.STEP_KEYWORDS_DE
-        if (node.grandParent instanceof FCallNode && node.grandParent.name in keywords
+        if (node.grandParent instanceof FCallNode && node.grandParent.name in ConstantData.ALL_STEP_KEYWORDS
                 && node.grandParent.position.startLine == node.position.startLine) true
         else false
     }

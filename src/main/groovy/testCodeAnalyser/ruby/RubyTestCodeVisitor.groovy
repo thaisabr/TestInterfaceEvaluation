@@ -148,13 +148,13 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         if (methodsToVisit.empty) {
             if (RubyUtil.isRouteMethod(name)) {
                 taskInterface.calledPageMethods += [file: RubyConstantData.ROUTES_ID, name: name - RubyConstantData.ROUTE_PATH_SUFIX, args: []]
-                log.info "visit param is a route method call: $name"
+                //log.info "visit param is a route method call: $name"
             }
-            else log.info "visit param is a undefined method call: $name"
+            //else log.info "visit param is a undefined method call: $name"
         } else {
             def args = []
             if (stepDefinitionMethod) args = stepDefinitionMethod.args
-            log.info "visit param is defined method call: $name; args: $args"
+            //log.info "visit param is defined method call: $name; args: $args"
             methodsToVisit?.each { m ->
                 taskInterface.calledPageMethods += [file: m.path, name: m.name, args: args]
             }
@@ -193,8 +193,8 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     private analyseVisitCall(FCallNode iVisited) {
-        log.info "VISIT CALL: ${lastVisitedFile} (${iVisited.position.startLine+1});"
-        iVisited.args.last.properties.each { k, v -> log.info "$k: $v" }
+        /*log.info "VISIT CALL: ${lastVisitedFile} (${iVisited.position.startLine+1});"
+        iVisited.args.last.properties.each { k, v -> log.info "$k: $v" }*/
         visitCallCounter++
         registryVisitCall(iVisited.args.last)
     }
@@ -467,7 +467,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
         if (iVisited.name in EXCLUDED_METHODS) return iVisited
-        log.info "Method call: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine+1});   Receptor: ${iVisited.receiver.class}"
+        //log.info "Method call: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine+1});   Receptor: ${iVisited.receiver.class}"
 
         // unit test file
         if (productionClass && iVisited.receiver.properties.containsKey("name") && iVisited.receiver.name == "subject") {
@@ -509,8 +509,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
                     registryStepCall(iVisited)
                     break
                 default: //helper methods for visit can match such a condition
-                    def keywords = ConstantData.STEP_KEYWORDS + ConstantData.STEP_KEYWORDS_PT + ConstantData.STEP_KEYWORDS_DE
-                    if (!(iVisited.name in keywords)) registryMethodCallFromSelf(iVisited)
+                    if (!(iVisited.name in ConstantData.ALL_STEP_KEYWORDS)) registryMethodCallFromSelf(iVisited)
             }
         }
         iVisited
@@ -522,7 +521,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     @Override
     Object visitVCallNode(VCallNode iVisited) {
         super.visitVCallNode(iVisited)
-        log.info "Method call: ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1}); no args!"
+        //log.info "Method call: ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1}); no args!"
         if (RubyUtil.isRouteMethod(iVisited.name)) {
             taskInterface.calledPageMethods += [file: RubyConstantData.ROUTES_ID, name: iVisited.name - RubyConstantData.ROUTE_PATH_SUFIX, args: []]
         } else registryMethodCallFromUnknownReceiver(iVisited, false)

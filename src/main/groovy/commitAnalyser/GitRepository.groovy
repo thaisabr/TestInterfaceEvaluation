@@ -4,12 +4,14 @@ import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
 import org.eclipse.jgit.api.BlameCommand
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.blame.BlameResult
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffFormatter
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.ObjectLoader
 import org.eclipse.jgit.lib.ObjectReader
+import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.revwalk.RevTree
 import org.eclipse.jgit.revwalk.RevWalk
@@ -87,7 +89,7 @@ class GitRepository {
     private cloneRepository() throws CloningRepositoryException {
         try {
             def result = Git.cloneRepository().setURI(url).setDirectory(new File(localPath)).call()
-            lastCommit = result?.log()?.call()?.sort { it.commitTime }?.last()?.name
+            lastCommit = result?.log()?.all()?.call()?.sort { it.commitTime }?.last()?.name
             result.close()
             log.info "Cloned from " + url + " to " + localPath
         } catch (Exception ex) {
@@ -158,7 +160,7 @@ class GitRepository {
         List<StepDefinition> changedStepDefinitions = []
         oldDefs?.each { stepDef ->
             def foundStepDef = newDefs?.find { it.value == stepDef.value }
-            if (foundStepDef && foundStepDef.value && foundStepDef.value != "") {
+            if (foundStepDef && foundStepDef.value && !foundStepDef.value.empty) {
                 if (stepDef.size() == foundStepDef.size()) { //step definition might be changed
                     def stepDefEquals = GherkinManager.equals(foundStepDef, stepDef)
                     if (!stepDefEquals) changedStepDefinitions += foundStepDef
@@ -468,7 +470,7 @@ class GitRepository {
 
     List<RevCommit> identifyCommitsInFile(String filename) {
         def git = Git.open(new File(localPath))
-        List<RevCommit> logs = git?.log()?.addPath(filename)?.call()?.sort { it.commitTime }
+        List<RevCommit> logs = git?.log()?.all()?.addPath(filename)?.call()?.sort { it.commitTime }
         git.close()
         return logs
     }
@@ -512,14 +514,14 @@ class GitRepository {
 
     Iterable<RevCommit> searchAllRevCommits() {
         def git = Git.open(new File(localPath))
-        Iterable<RevCommit> logs = git?.log()?.call()?.sort { it.commitTime }
+        Iterable<RevCommit> logs = git?.log()?.all()?.call()?.sort { it.commitTime }
         git.close()
         logs
     }
 
     Iterable<RevCommit> searchAllRevCommitsBySha(String... hash) {
         def git = Git.open(new File(localPath))
-        def logs = git?.log()?.call()?.findAll { it.name in hash }?.sort { it.commitTime }
+        def logs = git?.log()?.all()?.call()?.findAll { it.name in hash }?.sort { it.commitTime }
         git.close()
         logs
     }
@@ -552,6 +554,20 @@ class GitRepository {
         def git = Git.open(new File(localPath))
         git.checkout().setName(lastCommit).setStartPoint(lastCommit).call()
         git.close()
+    }
+
+    List<String> findNameOfAllMergeCommits(){
+        def git = Git.open(new File(localPath))
+        def logs = git?.log()?.all()?.call()?.findAll { it.parentCount > 1 }?.sort { it.commitTime }*.name
+        git.close()
+        logs
+    }
+
+    Iterable<RevCommit> findAllMergeCommits(){
+        def git = Git.open(new File(localPath))
+        def logs = git?.log()?.all()?.call()?.findAll { it.parentCount > 1 }?.sort { it.commitTime }
+        git.close()
+        logs
     }
 
 }

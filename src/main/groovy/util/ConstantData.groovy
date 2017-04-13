@@ -62,6 +62,7 @@ interface ConstantData {
     List<String> STEP_KEYWORDS = new GherkinDialectProvider().defaultDialect.stepKeywords.unique()*.trim()
     List<String> STEP_KEYWORDS_PT = new GherkinDialectProvider().getDialect("pt", null).stepKeywords.unique()*.trim()
     List<String> STEP_KEYWORDS_DE = new GherkinDialectProvider().getDialect("de", null).stepKeywords.unique()*.trim()
+    List<String> ALL_STEP_KEYWORDS = STEP_KEYWORDS + STEP_KEYWORDS_PT + STEP_KEYWORDS_DE
 
     String INFLECTOR_FILE = "inflector.rb"
 

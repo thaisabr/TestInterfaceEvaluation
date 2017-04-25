@@ -16,8 +16,10 @@ class CsvUtil {
 
     static List<String[]> read(String filename) {
         List<String[]> entries = []
+        File file = new File(filename)
+        if(!file.exists()) return entries
         try {
-            CSVReader reader = new CSVReader(new FileReader(filename))
+            CSVReader reader = new CSVReader(new FileReader(file))
             entries = reader.readAll()
             reader.close()
         } catch (Exception ex) {

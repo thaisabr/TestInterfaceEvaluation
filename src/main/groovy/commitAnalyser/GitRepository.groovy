@@ -4,14 +4,12 @@ import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
 import org.eclipse.jgit.api.BlameCommand
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.blame.BlameResult
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffFormatter
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.ObjectLoader
 import org.eclipse.jgit.lib.ObjectReader
-import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.revwalk.RevTree
 import org.eclipse.jgit.revwalk.RevWalk
@@ -47,7 +45,8 @@ class GitRepository {
     private GitRepository(String path) throws CloningRepositoryException {
         this.removedSteps = [] as Set
         if (path.startsWith("http")) {
-            this.url = path + ConstantData.GIT_EXTENSION
+            if(path.endsWith(ConstantData.GIT_EXTENSION)) this.url = path
+            else this.url = path + ConstantData.GIT_EXTENSION
             this.name = Util.configureGitRepositoryName(url)
             this.localPath = Util.REPOSITORY_FOLDER_PATH + name
             if (isCloned()) {
@@ -554,20 +553,6 @@ class GitRepository {
         def git = Git.open(new File(localPath))
         git.checkout().setName(lastCommit).setStartPoint(lastCommit).call()
         git.close()
-    }
-
-    List<String> findNameOfAllMergeCommits(){
-        def git = Git.open(new File(localPath))
-        def logs = git?.log()?.all()?.call()?.findAll { it.parentCount > 1 }?.sort { it.commitTime }*.name
-        git.close()
-        logs
-    }
-
-    Iterable<RevCommit> findAllMergeCommits(){
-        def git = Git.open(new File(localPath))
-        def logs = git?.log()?.all()?.call()?.findAll { it.parentCount > 1 }?.sort { it.commitTime }
-        git.close()
-        logs
     }
 
 }

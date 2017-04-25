@@ -185,7 +185,7 @@ abstract class Util {
         if (p?.contains("${UNIT_TEST_FILES_RELATIVE_PATH}${File.separator}") ||
                 p?.contains("${GHERKIN_FILES_RELATIVE_PATH}${File.separator}") ||
                 p?.contains("${STEPS_FILES_RELATIVE_PATH}${File.separator}") ||
-                p?.contains("test}${File.separator}")) {
+                p?.contains("test${File.separator}")) {
             true
         } else false
     }

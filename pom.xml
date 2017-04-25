@@ -106,9 +106,10 @@
         <dependency>
             <groupId>org.eclipse.jgit</groupId>
             <artifactId>org.eclipse.jgit</artifactId>
-            <!-- <version>3.4.1.201406201815-r</version> problema no checkout (windows) -->
-            <!-- <version>4.5.0.201609210915-r</version> problema no checkout (ubuntu) -->
-            <version>3.4.1.201406201815-r</version>
+            <version>4.7.0.201704051617-r</version> <!-- newest version -->
+            <!-- <version>3.4.1.201406201815-r</version> problem to checkout (windows) -->
+            <!-- <version>4.5.0.201609210915-r</version> problem to checkout (ubuntu) -->
+            <!-- <version>3.4.1.201406201815-r</version> -->
         </dependency>
         <dependency>
             <groupId>info.cukes</groupId>

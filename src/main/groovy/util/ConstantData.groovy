@@ -21,7 +21,7 @@ abstract class ConstantData {
     public static final String PROP_GEM_AST = "spgroup.gems.ast"
 
     public static final String DEFAULT_TASKS_FOLDER = "tasks"
-    public static final  String DEFAULT_REPOSITORY_FOLDER = "repositories"
+    public static final String DEFAULT_REPOSITORY_FOLDER = "repositories"
     public static final String DEFAULT_LANGUAGE = "ruby"
     public static final String DEFAULT_GHERKIN_FOLDER = "features"
     public static final String DEFAULT_STEPS_FOLDER = "features/step_definitions"
@@ -39,7 +39,7 @@ abstract class ConstantData {
     public static final String ORGANIZED_FILE_SUFIX = "-org.csv"
     public static final String FILTERED_FILE_SUFIX = "-filtered.csv"
     public static final String SIMILARITY_FILE_SUFIX = "-similarity.csv"
-    public static final  String SIMILARITY_ORGANIZED_FILE_SUFIX = "-similarity-org.csv"
+    public static final String SIMILARITY_ORGANIZED_FILE_SUFIX = "-similarity-org.csv"
     public static final String CONTROLLER_FILE_SUFIX = "-controller.csv"
     public static final String CONTROLLER_ORGANIZED_FILE_SUFIX = "-controller-org.csv"
 

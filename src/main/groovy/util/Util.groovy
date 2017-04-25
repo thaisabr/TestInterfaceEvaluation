@@ -1,8 +1,5 @@
 package util
 
-import au.com.bytecode.opencsv.CSVReader
-import au.com.bytecode.opencsv.CSVWriter
-import taskAnalyser.TaskAnalyser
 import util.exception.InvalidLanguageException
 
 import java.util.regex.Matcher
@@ -86,6 +83,8 @@ abstract class Util {
         VIEW_ANALYSIS = configureViewAnalysis()
         CONTROLLER_FILTER = configureControllerFilter()
         VIEW_FILTER = configureViewFilter()
+
+        createFolders()
     }
 
     private static loadProperties() {
@@ -170,6 +169,19 @@ abstract class Util {
 
     private static boolean configureViewFilter(){
         configureBooleanProperties(properties.(ConstantData.PROP_VIEW_FILTER), ConstantData.DEFAULT_VIEW_FILTER)
+    }
+
+    private static createFolder(String folder) {
+        File zipFolder = new File(folder)
+        if (!zipFolder.exists()) {
+            zipFolder.mkdirs()
+        }
+    }
+
+    private static createFolders() {
+        createFolder(ConstantData.DEFAULT_EVALUATION_FOLDER)
+        createFolder(ConstantData.DEFAULT_REPOSITORY_FOLDER)
+        createFolder(ConstantData.DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER)
     }
 
     static String configureGitRepositoryName(String url) {

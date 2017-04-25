@@ -1,5 +1,8 @@
 package util
 
+import au.com.bytecode.opencsv.CSVReader
+import au.com.bytecode.opencsv.CSVWriter
+import taskAnalyser.TaskAnalyser
 import util.exception.InvalidLanguageException
 
 import java.util.regex.Matcher
@@ -33,11 +36,13 @@ abstract class Util {
     public static final boolean VIEW_ANALYSIS
     public static final boolean CONTROLLER_FILTER
     public static final boolean VIEW_FILTER
+    public static final boolean MULTIPLE_TASK_FILES
 
     static {
         properties = new Properties()
         loadProperties()
         TASKS_FILE = configureTasksFilePath()
+        MULTIPLE_TASK_FILES = TASKS_FILE.empty
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
         CODE_LANGUAGE = configureLanguage()
         GHERKIN_FILES_RELATIVE_PATH = configureGherkin()
@@ -100,7 +105,7 @@ abstract class Util {
     }
 
     private static configureTasksFilePath() {
-        configureMandatoryProperties(properties.(ConstantData.PROP_TASK_FILE), ConstantData.DEFAULT_TASK_FILE)
+        configureMandatoryProperties(properties.(ConstantData.PROP_TASK_FILE), "")
     }
 
     private static configureRepositoryFolderPath() {
@@ -268,6 +273,10 @@ abstract class Util {
             default: throw new InvalidLanguageException()
         }
         return files
+    }
+
+    static findTaskFiles(){
+        findFilesFromDirectory(ConstantData.DEFAULT_TASKS_FOLDER).findAll { it.endsWith(ConstantData.CSV_FILE_EXTENSION) }
     }
 
     static List<String> findFilesFromDirectory(String directory) {

@@ -1,22 +1,27 @@
 package taskAnalyser
 
 import groovy.util.logging.Slf4j
-import util.*
+import util.Util
 
 @Slf4j
 class Main {
 
-    public static void main(String[] args) {
-
-        /* analyse a csv file */
-        TaskAnalyser analyser1 = new TaskAnalyser(Util.TASKS_FILE)
-        analyser1.analyseAll()
-        //analyser1.analysePrecisionAndRecall()
+    static void main(String[] args) {
 
         /* analyse a set of csv files */
-        TaskAnalyser analyser2 = new TaskAnalyser(ConstantData.DEFAULT_TASKS_FOLDER)
-        //analyser2.analyseAll()
-       // analyser2.analysePrecisionAndRecall()
+        if(Util.MULTIPLE_TASK_FILES){
+            def cvsFiles = Util.findTaskFiles()
+            cvsFiles?.each {
+                TaskAnalyser analyser = new TaskAnalyser(it)
+                analyser.analyseAll()
+                //analyser.analysePrecisionAndRecall()
+            }
+        } else {
+            /* analyse a csv file */
+            TaskAnalyser analyser = new TaskAnalyser(Util.TASKS_FILE)
+            analyser.analyseAll()
+            //analyser.analysePrecisionAndRecall()
+        }
 
     }
 

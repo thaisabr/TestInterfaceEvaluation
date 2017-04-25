@@ -67,31 +67,50 @@ class EvaluationOrganizerExporter {
         content
     }
 
+    private basicInit(){
+        entries = []
+        stepMatchError = []
+        astError = []
+        basicError = []
+        hasGherkinTest = []
+        hasStepTest = []
+        hasTests = []
+        invalidTasks = []
+        emptyITest = []
+        relevantTasks = []
+        zeroPrecisionAndRecall = []
+        others = []
+        tasksWithText = []
+    }
+
     private fillEntries(){
         entries = CsvUtil.read(evaluationFile)
         resultHeader1 = entries.get(EvaluationExporter.INITIAL_TEXT_SIZE).findAll { !it.allWhitespace }
         resultHeader2 = resultHeader1 + ["Empty_ITest", "Empty_IReal"]
 
-        def entries = entries.subList(EvaluationExporter.INITIAL_TEXT_SIZE+1, entries.size())
-        def emptyIReal = entries.findAll { it[EvaluationExporter.IREAL_SIZE_INDEX] == "0" }
-        entries -= emptyIReal
-        sizeNoEmptyIRealTasks = entries.size()
-        stepMatchError = entries.findAll{ (it[EvaluationExporter.STEP_MATCH_ERROR_INDEX] as int) > 0 }
-        astError = entries.findAll{ (it[EvaluationExporter.AST_ERROR_INDEX] as int) > 0 }
-        basicError = (astError + stepMatchError).unique()
-        entries -= basicError
-        hasGherkinTest = entries.findAll { (it[EvaluationExporter.GHERKIN_TEST_INDEX] as int) > 0 }
-        hasStepTest = entries.findAll { (it[EvaluationExporter.STEP_DEF_INDEX] as int) > 0 }
-        hasTests = (hasGherkinTest + hasStepTest).unique()
-        invalidTasks = entries - hasTests
-        emptyITest = hasTests.findAll { it[EvaluationExporter.ITEST_SIZE_INDEX] == "0" }
-        relevantTasks = hasTests - emptyITest
-        zeroPrecisionAndRecall = relevantTasks.findAll {
-            it[EvaluationExporter.PRECISION_INDEX] == "0.0" && it[EvaluationExporter.RECALL_INDEX] == "0.0"
-        }
-        others = relevantTasks - zeroPrecisionAndRecall
-        tasksWithText = entries.findAll {
-            !it[EvaluationExporter.IREAL_INDEX].empty && (it[EvaluationExporter.GHERKIN_TEST_INDEX] as int) > 0
+        if(entries.size()<=EvaluationExporter.INITIAL_TEXT_SIZE+1) basicInit()
+        else {
+            def entries = entries.subList(EvaluationExporter.INITIAL_TEXT_SIZE+1, entries.size())
+            def emptyIReal = entries.findAll { it[EvaluationExporter.IREAL_SIZE_INDEX] == "0" }
+            entries -= emptyIReal
+            sizeNoEmptyIRealTasks = entries.size()
+            stepMatchError = entries.findAll{ (it[EvaluationExporter.STEP_MATCH_ERROR_INDEX] as int) > 0 }
+            astError = entries.findAll{ (it[EvaluationExporter.AST_ERROR_INDEX] as int) > 0 }
+            basicError = (astError + stepMatchError).unique()
+            entries -= basicError
+            hasGherkinTest = entries.findAll { (it[EvaluationExporter.GHERKIN_TEST_INDEX] as int) > 0 }
+            hasStepTest = entries.findAll { (it[EvaluationExporter.STEP_DEF_INDEX] as int) > 0 }
+            hasTests = (hasGherkinTest + hasStepTest).unique()
+            invalidTasks = entries - hasTests
+            emptyITest = hasTests.findAll { it[EvaluationExporter.ITEST_SIZE_INDEX] == "0" }
+            relevantTasks = hasTests - emptyITest
+            zeroPrecisionAndRecall = relevantTasks.findAll {
+                it[EvaluationExporter.PRECISION_INDEX] == "0.0" && it[EvaluationExporter.RECALL_INDEX] == "0.0"
+            }
+            others = relevantTasks - zeroPrecisionAndRecall
+            tasksWithText = entries.findAll {
+                !it[EvaluationExporter.IREAL_INDEX].empty && (it[EvaluationExporter.GHERKIN_TEST_INDEX] as int) > 0
+            }
         }
     }
 

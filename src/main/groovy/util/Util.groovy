@@ -108,7 +108,7 @@ abstract class Util {
     }
 
     private static configureRepositoryFolderPath() {
-        def value = configureMandatoryProperties(properties.(ConstantData.PROP_REPOSITORY), ConstantData.DEFAULT_REPOSITORY_FOLDER)
+        def value = configureMandatoryProperties("", ConstantData.DEFAULT_REPOSITORY_FOLDER)
         if (!value.endsWith(File.separator)) value += File.separator
         value
     }

@@ -7,7 +7,6 @@ abstract class ConstantData {
 
     public static final String PROPERTIES_FILE_NAME = "configuration.properties"
     public static final String PROP_TASK_FILE = "spgroup.task.file.path"
-    public static final String PROP_REPOSITORY = "spgroup.task.repositories.path"
     public static final String PROP_CODE_LANGUAGE = "spgroup.language"
     public static final String PROP_GHERKIN = "spgroup.gherkin.files.relative.path"
     public static final String PROP_STEPS = "spgroup.steps.files.relative.path"

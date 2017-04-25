@@ -250,12 +250,10 @@ class DataManager {
 
         try {
             relevantEntries.each { entry ->
-                if (entry[2].size() > 4) {
-                    def hashes = entry[3].tokenize(',[]')*.trim()
-                    def task = new DoneTask(entry[1], entry[2], hashes)
-                    if(task.hasTest()) tasks += task
-                    else tasksThatSeemsToHaveTest += entry[2]
-                }
+                def hashes = entry[3].tokenize(',[]')*.trim()
+                def task = new DoneTask(entry[1], entry[2], hashes)
+                if(task.hasTest()) tasks += task
+                else tasksThatSeemsToHaveTest += entry[2]
             }
         } catch (Exception ex) {
             log.error ex.message

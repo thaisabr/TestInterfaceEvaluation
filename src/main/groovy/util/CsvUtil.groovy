@@ -2,9 +2,10 @@ package util
 
 import au.com.bytecode.opencsv.CSVReader
 import au.com.bytecode.opencsv.CSVWriter
+import groovy.util.logging.Slf4j
 import taskAnalyser.TaskAnalyser
 
-
+@Slf4j
 class CsvUtil {
 
     private static writeCsv(String filename, List content, boolean append){
@@ -23,7 +24,7 @@ class CsvUtil {
             entries = reader.readAll()
             reader.close()
         } catch (Exception ex) {
-            TaskAnalyser.log.error ex.message
+            log.error ex.message
         }
         entries
     }

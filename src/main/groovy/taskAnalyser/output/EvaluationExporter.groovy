@@ -1,9 +1,9 @@
 package taskAnalyser.output
 
-import au.com.bytecode.opencsv.CSVWriter
 import taskAnalyser.task.AnalysedTask
 import taskAnalyser.task.AnalysisResult
 import util.ConstantData
+import util.CsvUtil
 
 class EvaluationExporter {
 
@@ -37,20 +37,22 @@ class EvaluationExporter {
         configureTextFilePrefix()
     }
 
-    private writeHeader(CSVWriter writer) {
+    private generateHeader() {
+        List<String[]> header = []
         String[] text = ["Repository", analysisResult.url]
-        writer.writeNext(text)
+        header += text
         text = ["Tasks", analysisResult.allTasks]
-        writer.writeNext(text)
+        header += text
         text = ["P&T code", analysisResult.validTasks.size()]
-        writer.writeNext(text)
+        header += text
         text = ["Changed stepdef", analysisResult.stepCounter]
-        writer.writeNext(text)
+        header += text
         text = ["Changed Gherkin", analysisResult.gherkinCounter]
-        writer.writeNext(text)
+        header += text
         text = ["Have test", analysisResult.testsCounter]
-        writer.writeNext(text)
-        writer.writeNext(HEADER)
+        header += text
+        header += HEADER
+        header
     }
 
     private configureTextFilePrefix(){
@@ -74,8 +76,8 @@ class EvaluationExporter {
     }
 
     def save(){
-        CSVWriter writer = new CSVWriter(new FileWriter(file))
-        writeHeader(writer)
+        List<String[]> content = []
+        content += generateHeader()
 
         def saveText = false
         if (analysisResult.validTasks && analysisResult.validTasks.size() > 1) saveText = true
@@ -115,10 +117,10 @@ class EvaluationExporter {
                              task.itest.timestamp, rails, gems, task.itest.visitCallCounter, viewFileFromITest,
                              filesFromViewAnalysis.size(), filesFromViewAnalysis]
 
-            writer.writeNext(line)
+            content += line
             if (saveText) writeITextFile(task) //dealing with long textual description of a task
         }
 
-        writer.close()
+        CsvUtil.write(file.path, content)
     }
 }

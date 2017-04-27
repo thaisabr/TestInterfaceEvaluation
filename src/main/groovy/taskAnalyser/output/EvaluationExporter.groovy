@@ -102,7 +102,7 @@ class EvaluationExporter {
             def rails = ""
             def gems = []
             if(task.gems.size()>0) {
-                rails = task.gems.first()
+                rails = task.gems.first().replaceAll(/[^\.\d]/,"")
                 gems = task.gems.subList(1, task.gems.size())
             }
             String[] line = [task.doneTask.id, dates, task.doneTask.days,

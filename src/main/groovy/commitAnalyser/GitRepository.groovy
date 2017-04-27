@@ -506,7 +506,6 @@ class GitRepository {
                 }
             }
         }
-        tw.release()
         git.close()
         codeChanges
     }

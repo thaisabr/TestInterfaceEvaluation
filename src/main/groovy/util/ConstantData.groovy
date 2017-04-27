@@ -41,6 +41,7 @@ abstract class ConstantData {
     public static final String SIMILARITY_ORGANIZED_FILE_SUFIX = "-similarity-org.csv"
     public static final String CONTROLLER_FILE_SUFIX = "-controller.csv"
     public static final String CONTROLLER_ORGANIZED_FILE_SUFIX = "-controller-org.csv"
+    public static final String TEST_EXECUTION_FILE_SUFIX = "-tests.csv"
 
     public static final String NON_PRIMITIVE_ARRAY_PREFIX = "[L"
     public static final String HTML_EXTENSION = ".html"

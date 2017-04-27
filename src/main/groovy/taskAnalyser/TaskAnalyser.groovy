@@ -5,6 +5,7 @@ import taskAnalyser.output.ControllerFilterExporter
 import taskAnalyser.output.EvaluationExporter
 import taskAnalyser.output.EvaluationOrganizerExporter
 import taskAnalyser.output.SimilarityExporter
+import taskAnalyser.output.TestExecutionExporter
 import taskAnalyser.task.AnalysedTask
 import taskAnalyser.task.AnalysisResult
 import taskAnalyser.task.DoneTask
@@ -20,6 +21,7 @@ class TaskAnalyser {
     String filteredFile
     String similarityFile
     String similarityOrganizedFile
+    String testFile
     List<DoneTask> tasks
     AnalysisResult analysisResult
 
@@ -31,6 +33,7 @@ class TaskAnalyser {
         filteredFile = name + ConstantData.FILTERED_FILE_SUFIX
         similarityFile = name + ConstantData.SIMILARITY_FILE_SUFIX
         similarityOrganizedFile = name + ConstantData.SIMILARITY_ORGANIZED_FILE_SUFIX
+        testFile = name + ConstantData.TEST_EXECUTION_FILE_SUFIX
         tasks = []
     }
 
@@ -72,6 +75,7 @@ class TaskAnalyser {
 
     def analyseAll() {
         generateResult()
+        organizeResultForTestExecution()
         filterResult() //TEMPORARY CODE
         organizeResultForSimilarityAnalysis()
         analyseSimilarity()
@@ -79,6 +83,7 @@ class TaskAnalyser {
 
     def analysePrecisionAndRecall() {
         generateResult()
+        organizeResultForTestExecution()
         filterResult() //TEMPORARY CODE
         organizeResult()
     }
@@ -152,6 +157,11 @@ class TaskAnalyser {
     def filterResult() {
         ControllerFilterExporter controllerFilterExporter = new ControllerFilterExporter(evaluationFile)
         controllerFilterExporter.save()
+    }
+
+    def organizeResultForTestExecution(){
+        TestExecutionExporter testExecutionExporter = new TestExecutionExporter(testFile, analysisResult)
+        testExecutionExporter.save()
     }
 
 }

@@ -3,7 +3,6 @@ package util
 import au.com.bytecode.opencsv.CSVReader
 import au.com.bytecode.opencsv.CSVWriter
 import groovy.util.logging.Slf4j
-import taskAnalyser.TaskAnalyser
 
 @Slf4j
 class CsvUtil {

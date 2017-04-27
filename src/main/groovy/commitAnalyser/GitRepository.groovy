@@ -502,7 +502,7 @@ class GitRepository {
                 if (Util.isUnitTestFile(tw.pathString)) {
                     //codeChanges += extractUnitChanges(commit, tw.pathString, lines, parser)
                 } else {
-                    codeChanges += new CoreChange(path: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: 0..<lines)
+                    codeChanges += new CoreChange(path: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: lines)
                 }
             }
         }

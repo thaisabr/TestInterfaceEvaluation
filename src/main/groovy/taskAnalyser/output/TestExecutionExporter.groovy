@@ -40,6 +40,8 @@ class TestExecutionExporter {
     def save(){
         List<String[]> content = []
 
+        if(!analysisResult || !analysisResult.validTasks || analysisResult.validTasks.empty) return
+
         def tasks = analysisResult.validTasks.findAll{ it.itest.foundAcceptanceTests.size() > 0 }
         if(tasks.empty) return
 

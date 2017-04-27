@@ -16,10 +16,9 @@ class EvaluationExporter {
                               "#Step_Match_Error", "AST_Errors", "#AST_Errors", "Gherkin_AST_Errors", "#Gherkin_AST_Errors",
                               "Steps_AST_Errors", "#Steps_AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views",
                               "#Views", "#ITest", "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp",
-                              "Rails", "Simplecov", "FactoryGirl", "#Visit_Call", "#Views_ITest", "#Code_View_Analysis",
-                              "Code_View_Analysis"]
+                              "Rails", "Gems", "#Visit_Call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis"]
 
-    public static final int RECALL_INDEX = HEADER.size() - 10
+    public static final int RECALL_INDEX = HEADER.size() - 9
     public static final int PRECISION_INDEX = RECALL_INDEX - 1
     public static final int IREAL_INDEX = PRECISION_INDEX - 1
     public static final int ITEST_INDEX = IREAL_INDEX - 1
@@ -38,7 +37,7 @@ class EvaluationExporter {
         configureTextFilePrefix()
     }
 
-    private writeHeaderAllResult(CSVWriter writer) {
+    private writeHeader(CSVWriter writer) {
         String[] text = ["Repository", analysisResult.url]
         writer.writeNext(text)
         text = ["Tasks", analysisResult.allTasks]
@@ -76,7 +75,7 @@ class EvaluationExporter {
 
     def save(){
         CSVWriter writer = new CSVWriter(new FileWriter(file))
-        writeHeaderAllResult(writer)
+        writeHeader(writer)
 
         def saveText = false
         if (analysisResult.validTasks && analysisResult.validTasks.size() > 1) saveText = true
@@ -98,6 +97,12 @@ class EvaluationExporter {
             if (views.empty) views = ""
             def filesFromViewAnalysis = task.filesFromViewAnalysis()
             def viewFileFromITest = task.itestViewFiles().size()
+            def rails = ""
+            def gems = []
+            if(task.gems.size()>0) {
+                rails = task.gems.first()
+                gems = task.gems.subList(1, task.gems.size())
+            }
             String[] line = [task.doneTask.id, dates, task.doneTask.days,
                              task.doneTask.commitsQuantity, msgs, devs,
                              task.doneTask.gherkinTestQuantity, task.itest.foundAcceptanceTests.size(),
@@ -107,8 +112,8 @@ class EvaluationExporter {
                              task.gherkinCompilationErrors, task.stepDefCompilationErrorsText,
                              task.stepDefCompilationErrors, renames, removes, views, views.size(), itestSize,
                              irealSize, itestFiles, irealFiles, precision, recall, task.doneTask.hashes,
-                             task.itest.timestamp, task.rails, task.simplecov, task.factorygirl,
-                             task.itest.visitCallCounter, viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis]
+                             task.itest.timestamp, rails, gems, task.itest.visitCallCounter, viewFileFromITest,
+                             filesFromViewAnalysis.size(), filesFromViewAnalysis]
 
             writer.writeNext(line)
             if (saveText) writeITextFile(task) //dealing with long textual description of a task

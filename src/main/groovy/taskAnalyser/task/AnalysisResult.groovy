@@ -12,6 +12,7 @@ class AnalysisResult {
     int stepCounter
     int gherkinCounter
     int testsCounter
+    int allTasks
 
     void setUrl(String url){
         this.url = url - Util.REPOSITORY_FOLDER_PATH

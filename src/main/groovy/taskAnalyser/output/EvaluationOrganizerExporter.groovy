@@ -85,11 +85,10 @@ class EvaluationOrganizerExporter {
 
     private fillEntries(){
         entries = CsvUtil.read(evaluationFile)
-        resultHeader1 = entries.get(EvaluationExporter.INITIAL_TEXT_SIZE).findAll { !it.allWhitespace }
-        resultHeader2 = resultHeader1 + ["Empty_ITest", "Empty_IReal"]
-
-        if(entries.size()<=EvaluationExporter.INITIAL_TEXT_SIZE+1) basicInit()
+        if(entries.size() <= EvaluationExporter.INITIAL_TEXT_SIZE+1) basicInit()
         else {
+            resultHeader1 = entries.get(EvaluationExporter.INITIAL_TEXT_SIZE).findAll { !it.allWhitespace }
+            resultHeader2 = resultHeader1 + ["Empty_ITest", "Empty_IReal"]
             def entries = entries.subList(EvaluationExporter.INITIAL_TEXT_SIZE+1, entries.size())
             def emptyIReal = entries.findAll { it[EvaluationExporter.IREAL_SIZE_INDEX] == "0" }
             entries -= emptyIReal
@@ -153,6 +152,7 @@ class EvaluationOrganizerExporter {
     }
 
     def save(){
+        if (!evaluationFile || evaluationFile.empty || !(new File(evaluationFile).exists()) || entries.empty) return
         List<String[]> content = configureMainHeader()
         content += generateContent()
         content += resultHeader2

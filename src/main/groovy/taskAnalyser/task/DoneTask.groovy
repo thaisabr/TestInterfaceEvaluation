@@ -405,7 +405,6 @@ class DoneTask extends Task {
     AnalysedTask computeInterfaces() {
         def analysedTask = new AnalysedTask(this)
         TimeDuration timestamp = null
-        def gems
 
         if (!commits || commits.empty) {
             log.warn "TASK ID: $id; NO COMMITS!"
@@ -418,7 +417,7 @@ class DoneTask extends Task {
         log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }*.hash}"
 
         if (!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
-            //try {
+            try {
                 // resets repository to the state of the last commit to extract changes
                 gitRepository.reset(commits?.last()?.hash)
 
@@ -444,18 +443,16 @@ class DoneTask extends Task {
                 analysedTask.ireal.timestamp = timestamp
 
                 //it is only necessary in the evaluation study
-                gems = RubyUtil.checkRailsVersionAndGems(gitRepository.localPath)
+                analysedTask.gems = RubyUtil.checkRailsVersionAndGems(gitRepository.localPath)
 
                 // resets repository to last version
                 gitRepository.reset()
-            /*} catch(Exception ex){
+            } catch(Exception ex){
                 log.error ex.message
-            }*/
+                ex.stackTrace.each{ log.error it.toString() }
+            }
         }
 
-        analysedTask.rails = gems?.rails
-        analysedTask.simplecov = gems?.simplecov
-        analysedTask.factorygirl = gems?.factorygirl
         analysedTask
     }
 

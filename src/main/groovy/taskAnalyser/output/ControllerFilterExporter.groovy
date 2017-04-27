@@ -32,8 +32,8 @@ class ControllerFilterExporter {
     }
 
     def save() {
-        if (!evaluationFile || evaluationFile.empty || !(new File(evaluationFile).exists())) return
-        if (entries.size() <= EvaluationExporter.INITIAL_TEXT_SIZE) return
+        if (!evaluationFile || evaluationFile.empty || !(new File(evaluationFile).exists()) ||
+                entries.size() <= EvaluationExporter.INITIAL_TEXT_SIZE) return
 
         List<String[]> content = []
         content += generateMainHeader()

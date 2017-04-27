@@ -11,9 +11,6 @@ class AnalysedTask {
     List<String> methods
     int stepCalls
     String itext
-    String rails
-    boolean simplecov
-    boolean factorygirl
     Set<String> trace
     String stepMatchErrorsText
     int stepMatchErrors
@@ -23,13 +20,14 @@ class AnalysedTask {
     int gherkinCompilationErrors
     String stepDefCompilationErrorsText
     int stepDefCompilationErrors
+    List<String> gems
 
     AnalysedTask(DoneTask doneTask){
         this.doneTask = doneTask
         this.itest = new TaskInterface()
         this.ireal = new TaskInterface()
         this.itext = ""
-        this.rails = ""
+        this.gems = []
     }
 
     private void extractStepMatchErrors() {

@@ -9,6 +9,7 @@ import taskAnalyser.TaskAnalyser
 class CsvUtil {
 
     private static writeCsv(String filename, List content, boolean append){
+        if(content==null || content.empty) return
         def file = new File(filename)
         CSVWriter writer = new CSVWriter(new FileWriter(file, append))
         writer.writeAll(content)

@@ -108,7 +108,8 @@ class TaskAnalyser {
             }
         } catch (Exception ex) {
             log.error ex.message
-            return [tasks: [], allTasksQuantity: 0]
+            ex.stackTrace.each{ log.error it.toString() }
+            this.tasks = []
         }
 
         log.info "Number of invalid tasks: ${invalid}"

@@ -10,5 +10,6 @@ interface RubyConstantData {
     List<String> EXCLUDED_PATH_METHODS = ["current_path", "recognize_path", "assert_routing", "assert_recognizes", " assert_response"]
     String VIEW_ANALYSER_FILE = "view_analyser.rb"
     String GEM_FILE = "Gemfile"
+    List<String> GEMS_OF_INTEREST = ["rails", "cucumber-rails", "rspec-rails", "simplecov", "coveralls", "factory_girl"]
 
 }

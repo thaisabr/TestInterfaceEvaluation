@@ -43,17 +43,17 @@ class TestExecutionExporter {
         if(!analysisResult || !analysisResult.validTasks || analysisResult.validTasks.empty) return
 
         def tasks = analysisResult.validTasks.findAll{ it.itest.foundAcceptanceTests.size() > 0 }
-        if(tasks.empty) return
+        if(tasks.empty || tasks.doneTask.commits.empty) return
 
         String[] url = [tasks.first().doneTask.gitRepository.url]
         content +=  url
-        String[] header = ["TASK", "RAILS", "COVERAGE", "TESTS"]
+        String[] header = ["TASK", "SHA", "RAILS", "COVERAGE", "TESTS"]
         content += header
 
         tasks.each { task ->
             def scenarios = extractTests(task)
             def gems = extractGems(task)
-            String[] line = [task.doneTask.id, gems.rails, gems.coverage, scenarios]
+            String[] line = [task.doneTask.id, task.doneTask.commits.last().hash, gems.rails, gems.coverage, scenarios]
             content += line
         }
         CsvUtil.write(testFile, content)

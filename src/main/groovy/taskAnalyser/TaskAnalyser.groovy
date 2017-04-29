@@ -115,7 +115,7 @@ class TaskAnalyser {
             def tasks = relevantTaskExporter.relevantTasks + relevantTaskExporter.emptyITestTasks
             EvaluationExporter evaluationExporter = new EvaluationExporter(relevantTasksDetailsFile, tasks)
             evaluationExporter.save()
-
+            organizeResultForTestExecution()
         }
     }
 
@@ -126,7 +126,7 @@ class TaskAnalyser {
         }
     }
 
-    def analyseSimilarity() {
+    private analyseSimilarity() {
         log.info "<  Analysing similarity among tasks from '$relevantTasksFile'  >"
         SimilarityExporter similarityExporter = new SimilarityExporter(relevantTasksFile, similarityFile)
         similarityExporter.save()
@@ -134,20 +134,19 @@ class TaskAnalyser {
     }
 
     /* filter results to only consider controller files (via csv) - TEMPORARY CODE */
-    def filterResult() {
-        ControllerFilterExporter controllerFilterExporter = new ControllerFilterExporter(relevantTasksFile, )
+    private filterResult() {
+        ControllerFilterExporter controllerFilterExporter = new ControllerFilterExporter(relevantTasksFile)
         controllerFilterExporter.save()
     }
 
-    def organizeResultForTestExecution(){
+    private organizeResultForTestExecution(){
         TestExecutionExporter testExecutionExporter = new TestExecutionExporter(testFile, relevantTaskExporter.relevantTasks)
         testExecutionExporter.save()
     }
 
-    def commonSteps(){
+    private commonSteps(){
         generateResult()
         exportRelevantTasks()
-        organizeResultForTestExecution()
         exportAllDetailedInfo()
         filterResult() //TEMPORARY CODE
     }

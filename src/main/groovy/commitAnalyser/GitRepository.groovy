@@ -342,29 +342,35 @@ class GitRepository {
         treeWalk.addTree(tree)
         treeWalk.setRecursive(true)
         if (filename) treeWalk.setFilter(PathFilter.create(filename))
-        treeWalk.next()
+        if(!treeWalk.next()){
+            log.error "Did not find expected file '${filename}'"
+            treeWalk = null
+        }
         git.close()
         return treeWalk
     }
 
     String extractFileContent(RevCommit commit, String filename) {
         def result = ""
+        if(!filename || filename.empty) return result
+        def searchedFile = filename.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
+
         def git = Git.open(new File(localPath))
-        filename = filename.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
-        RevWalk revWalk = new RevWalk(git.repository)
-        TreeWalk treeWalk = generateTreeWalk(commit?.tree, filename)
-        ObjectId objectId = treeWalk.getObjectId(0)
-        try {
-            ObjectLoader loader = git.repository.open(objectId)
-            ByteArrayOutputStream stream = new ByteArrayOutputStream()
-            loader.copyTo(stream)
-            revWalk.dispose()
-            result = stream.toString("UTF-8")
-            stream.reset()
-        }
-        catch (ignored) {
-            if (objectId.equals(ObjectId.zeroId()))
-                log.error "There is no ObjectID for the commit tree. Verify the file separator used in the filename '$filename'."
+        TreeWalk treeWalk = generateTreeWalk(commit?.tree, searchedFile)
+        if(treeWalk){
+            ObjectId objectId = treeWalk.getObjectId(0)
+            if (objectId.equals(ObjectId.zeroId())) return result
+            try {
+                ObjectLoader loader = git.repository.open(objectId)
+                ByteArrayOutputStream stream = new ByteArrayOutputStream()
+                loader.copyTo(stream)
+                result = stream.toString("UTF-8")
+                stream.reset()
+            }
+            catch (Exception ex) {
+                log.error "Error while trying to retrieve content of file '${searchedFile}' for commit '${commit.name}'"
+                ex.stackTrace.each{ log.error it.toString() }
+            }
         }
 
         git.close()
@@ -388,6 +394,7 @@ class GitRepository {
             oldTreeParser.reset(oldReader, tree.getId())
         } catch (Exception ex) {
             log.error ex.message
+            ex.stackTrace.each{ log.error it.toString() }
         }
         finally {
             walk?.dispose()

@@ -297,6 +297,13 @@ class DoneTask extends Task {
         removedFiles = changes?.collect { gitRepository.name + File.separator + it.path }?.unique()?.sort()
     }
 
+    private showTaskInfo(){
+        log.info "TASK ID: $id"
+        log.info "COMMITS: ${this.commits*.hash}"
+        log.info "COMMITS CHANGED GHERKIN FILE: ${this.commits?.findAll { it.gherkinChanges && !it.gherkinChanges.isEmpty() }*.hash}"
+        log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }*.hash}"
+    }
+
     @Override
     List<GherkinFile> getAcceptanceTests() {
         changedGherkinFiles
@@ -314,11 +321,7 @@ class DoneTask extends Task {
             log.warn "TASK ID: $id; NO COMMITS!"
             return taskInterface
         }
-
-        log.info "TASK ID: $id"
-        log.info "COMMITS: ${this.commits*.hash}"
-        log.info "COMMITS CHANGED GHERKIN FILE: ${this.commits?.findAll { it.gherkinChanges && !it.gherkinChanges.isEmpty() }*.hash}"
-        log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }*.hash}"
+        showTaskInfo()
 
         try {
             if (!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
@@ -332,14 +335,16 @@ class DoneTask extends Task {
                 use(TimeCategory) {
                     timestamp = endTime - initTime
                 }
-                log.info "Timestamp: $timestamp"
+                //log.info "Timestamp: $timestamp"
                 taskInterface.timestamp = timestamp
 
                 // resets repository to last version
                 gitRepository.reset()
             }
         } catch (Exception ex) {
+            log.error "Error while computing test-based task interface."
             log.error ex.message
+            ex.stackTrace.each{ log.error it.toString() }
         }
 
         taskInterface
@@ -366,7 +371,9 @@ class DoneTask extends Task {
                 gitRepository.reset()
             }
         } catch (Exception ex) {
+            log.error "Error while computing text-based task interface."
             log.error ex.message
+            ex.stackTrace.each{ log.error it.toString() }
         }
         text
     }
@@ -396,7 +403,9 @@ class DoneTask extends Task {
             // resets repository to last version
             gitRepository.reset()
         } catch (Exception ex) {
+            log.error "Error while computing real task interface."
             log.error ex.message
+            ex.stackTrace.each{ log.error it.toString() }
         }
 
         taskInterface
@@ -410,11 +419,7 @@ class DoneTask extends Task {
             log.warn "TASK ID: $id; NO COMMITS!"
             analysedTask
         }
-
-        log.info "TASK ID: $id"
-        log.info "COMMITS: ${this.commits*.hash}"
-        log.info "COMMITS CHANGED GHERKIN FILE: ${this.commits?.findAll { it.gherkinChanges && !it.gherkinChanges.isEmpty() }*.hash}"
-        log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }*.hash}"
+        showTaskInfo()
 
         if (!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
             try {
@@ -448,6 +453,7 @@ class DoneTask extends Task {
                 // resets repository to last version
                 gitRepository.reset()
             } catch(Exception ex){
+                log.error "Error while computing task interfaces."
                 log.error ex.message
                 ex.stackTrace.each{ log.error it.toString() }
             }
@@ -474,9 +480,10 @@ class DoneTask extends Task {
 
     /* When this method is called, there is no information about test code.
     That is, it is only checked if the task has some gherkin scenario or step definition changed by any commit.
-    The test code is found when the task interface is computed, during another phase. */
+    The test code is found when the task interface is computed, during another phase. This means this result may include
+    scenarios that are not implemented. */
     def hasTest(){
-        if(getGherkinTestQuantity()==0 && getStepDefQuantity()==0) false
+        if(getGherkinTestQuantity()==0 /*&& getStepDefQuantity()==0*/) false
         else true
     }
 

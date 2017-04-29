@@ -34,6 +34,7 @@ abstract class Util {
     public static final boolean CONTROLLER_FILTER
     public static final boolean VIEW_FILTER
     public static final boolean MULTIPLE_TASK_FILES
+    public static final List<String> COVERAGE_GEMS
 
     static {
         properties = new Properties()
@@ -83,8 +84,8 @@ abstract class Util {
         VIEW_ANALYSIS = configureViewAnalysis()
         CONTROLLER_FILTER = configureControllerFilter()
         VIEW_FILTER = configureViewFilter()
-
         createFolders()
+        COVERAGE_GEMS = configureCoverageGems()
     }
 
     private static loadProperties() {
@@ -182,6 +183,15 @@ abstract class Util {
         createFolder(ConstantData.DEFAULT_EVALUATION_FOLDER)
         createFolder(ConstantData.DEFAULT_REPOSITORY_FOLDER)
         createFolder(ConstantData.DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER)
+    }
+
+    private static configureCoverageGems(){
+        def result = []
+        String gems = properties.(ConstantData.PROP_COVERAGE_GEMS)
+        if(gems && !gems.empty){
+            result = gems.tokenize(',')*.trim()
+        }
+        result
     }
 
     static String configureGitRepositoryName(String url) {

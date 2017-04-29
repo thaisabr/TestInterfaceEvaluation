@@ -3,11 +3,10 @@ package taskAnalyser
 import groovy.util.logging.Slf4j
 import taskAnalyser.output.ControllerFilterExporter
 import taskAnalyser.output.EvaluationExporter
-import taskAnalyser.output.EvaluationOrganizerExporter
+import taskAnalyser.output.RelevantTaskExporter
 import taskAnalyser.output.SimilarityExporter
 import taskAnalyser.output.TestExecutionExporter
 import taskAnalyser.task.AnalysedTask
-import taskAnalyser.task.AnalysisResult
 import taskAnalyser.task.DoneTask
 import util.ConstantData
 import util.CsvUtil
@@ -22,146 +21,143 @@ class TaskAnalyser {
     String similarityFile
     String similarityOrganizedFile
     String testFile
-    List<DoneTask> tasks
-    AnalysisResult analysisResult
+    String relevantTasksFile
+    String relevantTasksDetailsFile
+    String url
+
+    /* before task analysis */
+    List<String> ptCandidateTasks //tasks extracted from the input CSV file that seems that have production and test code
+    int allInputTasks
+    int notPtTasks //tasks extracted from the input CSV file that do not have production and test code
+    List<String> falsePtTasks //tasks that have production and test code, but not gherkin scenarios
+    List<DoneTask> candidateTasks //tasks extracted from the input CSV file that changed production code and gherkin scenarios
+
+    /* after task analysis */
+    List<AnalysedTask> analysedTasks
+    RelevantTaskExporter relevantTaskExporter
 
     TaskAnalyser(String tasksFile) {
         file = new File(tasksFile)
-        evaluationFile = ConstantData.DEFAULT_EVALUATION_FOLDER + File.separator + file.name
+        def projectFolder = ConstantData.DEFAULT_EVALUATION_FOLDER + File.separator + (file.name - ConstantData.CSV_FILE_EXTENSION)
+        File folder = new File(projectFolder)
+        if(!folder.exists()) folder.mkdir()
+        evaluationFile = folder.path + File.separator + file.name
         def name = evaluationFile - ConstantData.CSV_FILE_EXTENSION
         organizedFile = name + ConstantData.ORGANIZED_FILE_SUFIX
         filteredFile = name + ConstantData.FILTERED_FILE_SUFIX
         similarityFile = name + ConstantData.SIMILARITY_FILE_SUFIX
         similarityOrganizedFile = name + ConstantData.SIMILARITY_ORGANIZED_FILE_SUFIX
         testFile = name + ConstantData.TEST_EXECUTION_FILE_SUFIX
-        tasks = []
+        relevantTasksFile = name + ConstantData.RELEVANT_TASKS_FILE_SUFIX
+        relevantTasksDetailsFile = name + ConstantData.RELEVANT_TASKS_DETAILS_FILE_SUFIX
+        reset()
     }
 
-    private computeTaskData() {
-        List<AnalysedTask> analysedTasks = []
-        def gherkinTasks = []
-        def stepTasks = []
-
-        tasks?.each { task ->
-            def analysedTask = task.computeInterfaces()
-            if (!task.changedStepDefinitions.empty) stepTasks += task.id
-            if (!task.changedGherkinFiles.empty) gherkinTasks += task.id
-            analysedTasks += analysedTask
-        }
-
-        def stepCounter = stepTasks.unique().size()
-        def gherkinCounter = gherkinTasks.unique().size()
-        def testsCounter = (stepTasks + gherkinTasks).unique().size()
-
-        log.info "Number of tasks that contain step definitions: $stepCounter"
-        log.info "Number of tasks that changed Gherkin files: $gherkinCounter"
-        log.info "Number of tasks that contain tests: $testsCounter"
-
-        analysisResult = new AnalysisResult(stepCounter:stepCounter, gherkinCounter:gherkinCounter,
-                testsCounter:testsCounter, validTasks:analysedTasks, url: tasks?.first()?.testCodeParser?.repositoryPath,
-                allTasks: tasks.size())
-    }
-
-    private generateResult() {
-        log.info "<  Analysing tasks from '${file.path}'  >"
-        extractProductionAndTestTasks()
-        if(tasks && !tasks.empty) {
-            computeTaskData()
-            EvaluationExporter evaluationExporter = new EvaluationExporter(evaluationFile, analysisResult)
-            evaluationExporter.save()
-        }
-        log.info "The results were saved!"
-    }
-
-    def analyseAll() {
-        generateResult()
-        organizeResultForTestExecution()
-        filterResult() //TEMPORARY CODE
-        organizeResultForSimilarityAnalysis()
-        analyseSimilarity()
-    }
-
-    def analysePrecisionAndRecall() {
-        generateResult()
-        organizeResultForTestExecution()
-        filterResult() //TEMPORARY CODE
-        organizeResult()
+    private reset(){
+        allInputTasks = 0
+        notPtTasks = 0
+        ptCandidateTasks = []
+        falsePtTasks = []
+        candidateTasks = []
+        analysedTasks = []
+        url = ""
     }
 
     /***
      * Extracts all tasks in a CSV file that changed production and test files.
-     * @filename cvs file organized by 7 columns: "index","repository_url","task_id","commits_hash",
-     *           "changed_production_files","changed_test_files","commits_message".
-     * @return a list of tasks.
      */
     private extractProductionAndTestTasks() {
         List<String[]> entries = CsvUtil.read(file.path)?.unique { it[2] } //bug: input csv can contain duplicated values
         entries.remove(0)
 
-        List<String[]> relevantEntries = entries.findAll { ((it[4] as int)>0 && (it[5] as int)>0)  ||
-                ((it[4] as int)>50 && (it[5] as int)==0)} //avoiding the exclusion of corrupted tasks at the entry csv
-        def invalid = entries.size() - relevantEntries.size()
-        List<DoneTask> tasks = []
-        def tasksThatSeemsToHaveTest = []
+        allInputTasks = entries.size()
+        if(allInputTasks>0) url = entries.first()[1]
 
+        List<String[]> ptEntries = entries.findAll { ((it[4] as int)>0 && (it[5] as int)>0) }
+        notPtTasks = entries.size() - ptEntries.size()
+
+        List<DoneTask> tasks = []
         try {
-            relevantEntries.each { entry ->
+            ptEntries.each { entry ->
                 def hashes = entry[3].tokenize(',[]')*.trim()
                 def task = new DoneTask(entry[1], entry[2], hashes)
                 if(task.hasTest()) tasks += task
-                else tasksThatSeemsToHaveTest += entry[2]
+                else falsePtTasks += entry[2]
             }
         } catch (Exception ex) {
+            log.error "Error while extracting tasks from CSV file."
             log.error ex.message
             ex.stackTrace.each{ log.error it.toString() }
-            this.tasks = []
+            candidateTasks = []
         }
-
-        log.info "Number of invalid tasks: ${invalid}"
-        log.info "Number of extracted valid tasks: ${tasks.size()}"
-
-        /* Tasks that had changed test code but when the task is concluded, its Gherkin scenarios or step code definitions
-        * were removed by other tasks*/
-        log.info "Tasks that seem to have test but actually do not: ${tasksThatSeemsToHaveTest.size()}"
-        tasksThatSeemsToHaveTest.each{ log.info it }
-
-        this.tasks = tasks.sort { it.id }
+        candidateTasks = tasks.sort { it.id }
     }
 
-    def organizeResult() {
-        EvaluationOrganizerExporter evaluationOrganizerExporter = new EvaluationOrganizerExporter(evaluationFile,
-                organizedFile, null)
-        evaluationOrganizerExporter.save()
+    private generateResult() {
+        reset()
+
+        log.info "<  Analysing tasks from '${file.path}'  >"
+        extractProductionAndTestTasks()
+        log.info "All tasks extracted from '${file.path}': ${allInputTasks}"
+        log.info "Invalid tasks (do not have production and test code): ${notPtTasks}"
+        log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${candidateTasks.size()}"
+        log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${falsePtTasks.size()}"
+
+        if(candidateTasks && !candidateTasks.empty) candidateTasks.each { analysedTasks += it.computeInterfaces()}
+        log.info "Task interfaces were computed for ${candidateTasks.size()} tasks!"
     }
 
-    def organizeResultForSimilarityAnalysis() {
-        log.info "<  Organizing tasks from '$evaluationFile'  >"
-        EvaluationOrganizerExporter evaluationOrganizerExporter = new EvaluationOrganizerExporter(evaluationFile,
-                organizedFile, filteredFile)
-        evaluationOrganizerExporter.save()
-        log.info "The results were saved!"
+    private exportRelevantTasks(){
+        if(!analysedTasks.empty){
+            relevantTaskExporter = new RelevantTaskExporter(relevantTasksFile, analysedTasks)
+            relevantTaskExporter.filter()
+            relevantTaskExporter.save()
+            def tasks = relevantTaskExporter.relevantTasks + relevantTaskExporter.emptyITestTasks
+            EvaluationExporter evaluationExporter = new EvaluationExporter(relevantTasksDetailsFile, tasks)
+            evaluationExporter.save()
+
+        }
+    }
+
+    private exportAllDetailedInfo(){
+        if(!analysedTasks.empty){
+            EvaluationExporter evaluationExporter = new EvaluationExporter(evaluationFile, analysedTasks)
+            evaluationExporter.save()
+        }
     }
 
     def analyseSimilarity() {
-        log.info "<  Analysing similarity among tasks from '$filteredFile'  >"
-        SimilarityExporter similarityExporter = new SimilarityExporter(filteredFile, similarityFile, similarityOrganizedFile)
+        log.info "<  Analysing similarity among tasks from '$relevantTasksFile'  >"
+        SimilarityExporter similarityExporter = new SimilarityExporter(relevantTasksFile, similarityFile)
         similarityExporter.save()
-        log.info "The results were saved!"
-
-        log.info "<  Organizing tasks from '$similarityFile'  >"
-        similarityExporter.saveOrganized()
         log.info "The results were saved!"
     }
 
     /* filter results to only consider controller files (via csv) - TEMPORARY CODE */
     def filterResult() {
-        ControllerFilterExporter controllerFilterExporter = new ControllerFilterExporter(evaluationFile)
+        ControllerFilterExporter controllerFilterExporter = new ControllerFilterExporter(relevantTasksFile, )
         controllerFilterExporter.save()
     }
 
     def organizeResultForTestExecution(){
-        TestExecutionExporter testExecutionExporter = new TestExecutionExporter(testFile, analysisResult)
+        TestExecutionExporter testExecutionExporter = new TestExecutionExporter(testFile, relevantTaskExporter.relevantTasks)
         testExecutionExporter.save()
     }
 
+    def commonSteps(){
+        generateResult()
+        exportRelevantTasks()
+        organizeResultForTestExecution()
+        exportAllDetailedInfo()
+        filterResult() //TEMPORARY CODE
+    }
+
+    def analyseAll() {
+        commonSteps()
+        analyseSimilarity()
+    }
+
+    def analysePrecisionAndRecall() {
+        commonSteps()
+    }
 }

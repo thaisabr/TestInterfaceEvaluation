@@ -1,18 +1,17 @@
 package taskAnalyser.output
 
-import taskAnalyser.task.AnalysisResult
+import taskAnalyser.task.AnalysedTask
 import testCodeAnalyser.AcceptanceTest
 import util.CsvUtil
-
 
 class TestExecutionExporter {
 
     String testFile
-    AnalysisResult analysisResult
+    List<AnalysedTask> tasks
 
-    TestExecutionExporter(String testFile, AnalysisResult analysisResult){
+    TestExecutionExporter(String testFile, List<AnalysedTask> tasks){
         this.testFile = testFile
-        this.analysisResult = analysisResult
+        this.tasks = tasks
     }
 
     private static extractTests(task){
@@ -40,14 +39,11 @@ class TestExecutionExporter {
     def save(){
         List<String[]> content = []
 
-        if(!analysisResult || !analysisResult.validTasks || analysisResult.validTasks.empty) return
+        if(!tasks || tasks.empty) return
 
-        def tasks = analysisResult.validTasks.findAll{ it.itest.foundAcceptanceTests.size() > 0 }
-        if(tasks.empty || tasks.doneTask.commits.empty) return
-
-        String[] url = [tasks.first().doneTask.gitRepository.url]
-        content +=  url
-        String[] header = ["TASK", "SHA", "RAILS", "COVERAGE", "TESTS"]
+        def url = tasks.first().doneTask.gitRepository.url
+        content += ["Repository", url] as String[]
+        String[] header = ["TASK", "HASH", "RAILS", "COVERAGE", "TESTS"]
         content += header
 
         tasks.each { task ->

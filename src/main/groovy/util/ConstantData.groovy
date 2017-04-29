@@ -33,7 +33,7 @@ abstract class ConstantData {
     public static final String DEFAULT_GEM_AST_FOLDER = "ast-2.3.0"
 
     public static final String DEFAULT_EVALUATION_FOLDER = "output"
-    public static final String DEFAULT_TEXT_FOLDER = "${DEFAULT_EVALUATION_FOLDER}${File.separator}text"
+    public static final String DEFAULT_TEXT_FOLDER = "text"
     public static final String DEFAULT_EVALUATION_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result.csv"
     public static final String ORGANIZED_FILE_SUFIX = "-org.csv"
     public static final String FILTERED_FILE_SUFIX = "-filtered.csv"
@@ -42,6 +42,8 @@ abstract class ConstantData {
     public static final String CONTROLLER_FILE_SUFIX = "-controller.csv"
     public static final String CONTROLLER_ORGANIZED_FILE_SUFIX = "-controller-org.csv"
     public static final String TEST_EXECUTION_FILE_SUFIX = "-tests.csv"
+    public static final String RELEVANT_TASKS_FILE_SUFIX = "-relevant.csv"
+    public static final String RELEVANT_TASKS_DETAILS_FILE_SUFIX = "-relevant-detailed.csv"
 
     public static final String NON_PRIMITIVE_ARRAY_PREFIX = "[L"
     public static final String HTML_EXTENSION = ".html"
@@ -56,6 +58,7 @@ abstract class ConstantData {
     public static final String JAVA_EXTENSION = ".java"
     public static final String RUBY_EXTENSION = ".rb"
     public static final String GIT_EXTENSION = ".git"
+    public static final String TEXT_EXTENSION = ".txt"
     public static final String GITHUB_URL = "https://github.com/"
 
     public static final List<String> STEP_KEYWORDS = new GherkinDialectProvider().defaultDialect.stepKeywords.unique()*.trim()
@@ -74,5 +77,7 @@ abstract class ConstantData {
 
     public static final String PROP_VIEW_FILTER = "spgroup.itest.filter.view"
     public static final boolean DEFAULT_VIEW_FILTER = false
+
+    public static final String PROP_COVERAGE_GEMS = "spgroup.gems.coverage"
 
 }

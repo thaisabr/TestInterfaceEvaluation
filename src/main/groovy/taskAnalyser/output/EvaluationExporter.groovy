@@ -1,15 +1,29 @@
 package taskAnalyser.output
 
+import groovy.util.logging.Slf4j
 import taskAnalyser.task.AnalysedTask
-import taskAnalyser.task.AnalysisResult
-import util.ConstantData
 import util.CsvUtil
 
+@Slf4j
 class EvaluationExporter {
 
     File file
-    AnalysisResult analysisResult
-    String textFilePrefix
+    List<AnalysedTask> tasks
+    String url
+    int stepCounter
+    int gherkinCounter
+    List<AnalysedTask> emptyIReal
+    List<AnalysedTask> hasGherkinTest
+    List<AnalysedTask> stepMatchError
+    List<AnalysedTask> gherkinCompilationErrors
+    List<AnalysedTask> compilationErrors
+    List<AnalysedTask> stepDefCompilationErrors
+    List<AnalysedTask> invalidTasks
+    List<AnalysedTask> validTasks
+    List<AnalysedTask> emptyITest
+    List<AnalysedTask> zeroPrecisionAndRecall
+    List<AnalysedTask> others
+    List<String[]> initialData
 
     public static String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests",
                               "#Impl_Gherkin_Tests", "#StepDef", "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors",
@@ -26,63 +40,63 @@ class EvaluationExporter {
     public static final int IREAL_SIZE_INDEX = IREAL_INDEX - 2
     public static final int STEP_MATCH_ERROR_INDEX = 12
     public static final int AST_ERROR_INDEX = 14
-    public static final int INITIAL_TEXT_SIZE = 6
     public static final int GHERKIN_TEST_INDEX = 7
     public static final int STEP_DEF_INDEX = GHERKIN_TEST_INDEX + 1
+    public static final int INITIAL_TEXT_SIZE = 15
 
 
-    EvaluationExporter(String evaluationFile, AnalysisResult analysisResult){
+    EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks){
         this.file = new File(evaluationFile)
-        this.analysisResult = analysisResult
-        configureTextFilePrefix()
+        this.tasks = tasks
+        if(tasks && !tasks.empty) url = tasks.first().doneTask.gitRepository.url
+        else url = ""
+        filter()
+        generateHeader()
+    }
+
+    private filter() {
+        emptyIReal = tasks.findAll{ it.irealFiles().empty }
+        tasks -= emptyIReal
+        stepCounter = tasks.findAll{ !it.doneTask.changedStepDefinitions.empty }.size()
+        gherkinCounter = tasks.findAll{ !it.doneTask.changedGherkinFiles.empty }.size()
+        hasGherkinTest = tasks.findAll{ !it.itest.foundAcceptanceTests.empty }
+        stepMatchError = tasks.findAll{ it.stepMatchErrors>0 }
+        compilationErrors = tasks.findAll{ it.compilationErrors>0 }
+        gherkinCompilationErrors = tasks.findAll{ it.gherkinCompilationErrors>0 }
+        stepDefCompilationErrors = tasks.findAll{ it.stepDefCompilationErrors>0 }
+        invalidTasks = ((tasks - hasGherkinTest) + stepMatchError + compilationErrors).unique()
+        validTasks = tasks - invalidTasks
+        emptyITest = validTasks.findAll{ it.itestFiles().empty }
+        def noEmptyITest = validTasks - emptyITest
+        zeroPrecisionAndRecall = noEmptyITest.findAll{ it.precision()==0 && it.recall()==0 }
+        others = noEmptyITest - zeroPrecisionAndRecall
     }
 
     private generateHeader() {
-        List<String[]> header = []
-        String[] text = ["Repository", analysisResult.url]
-        header += text
-        text = ["Tasks", analysisResult.allTasks]
-        header += text
-        text = ["P&T code", analysisResult.validTasks.size()]
-        header += text
-        text = ["Changed stepdef", analysisResult.stepCounter]
-        header += text
-        text = ["Changed Gherkin", analysisResult.gherkinCounter]
-        header += text
-        text = ["Have test", analysisResult.testsCounter]
-        header += text
-        header += HEADER
-        header
-    }
-
-    private configureTextFilePrefix(){
-        def folder = new File(ConstantData.DEFAULT_TEXT_FOLDER)
-        if(!folder.exists()) folder.mkdir()
-        def i = file.path.lastIndexOf(File.separator)
-        def name = file.path.substring(i+1, file.path.size()) - ConstantData.CSV_FILE_EXTENSION
-        textFilePrefix = "${ConstantData.DEFAULT_TEXT_FOLDER}${File.separator}${name}_text_"
-    }
-
-    private writeITextFile(AnalysedTask analysedTask) {
-        def name = "${textFilePrefix}${analysedTask.doneTask.id}.txt"
-        if (analysedTask.itext && !analysedTask.itext.empty) {
-            File file = new File(name)
-            file.withWriter("utf-8") { out ->
-                out.write(analysedTask.itext)
-                out.write("\n-----------------------------------------------------------\n")
-                analysedTask.trace.each{ out.write(it + "\n") }
-            }
-        }
+        initialData = []
+        initialData += ["Repository", url] as String[]
+        initialData += ["No-empty IReal", tasks.size()] as String[]
+        initialData += ["Compilation errors", compilationErrors.size()] as String[]
+        initialData += ["Compilation errors of Gherkin files", gherkinCompilationErrors.size()] as String[]
+        initialData += ["Compilation errors of StepDef files", stepDefCompilationErrors.size()] as String[]
+        initialData += ["Step match error", stepMatchError.size()] as String[]
+        initialData += ["Changed stepdef", stepCounter] as String[]
+        initialData += ["Changed Gherkin", gherkinCounter] as String[]
+        initialData += ["Implemented Gherkin scenarios", hasGherkinTest.size()] as String[]
+        initialData += ["All invalid tasks", invalidTasks.size()] as String[]
+        initialData += ["All valid (Gherkin scenario, no empty IReal, no error)", validTasks.size()] as String[]
+        initialData += ["Valid, but empty ITest", emptyITest.size()] as String[]
+        initialData += ["Valid, no empty ITest, but zero precision-recall", zeroPrecisionAndRecall.size()] as String[]
+        initialData += ["Valid, no empty ITest, no zero precision-recall", others.size()] as String[]
+        initialData += HEADER
     }
 
     def save(){
-        List<String[]> content = []
-        content += generateHeader()
-
+        if(!tasks || tasks.empty) return
+        List<String[]> content = initialData
         def saveText = false
-        if (analysisResult.validTasks && analysisResult.validTasks.size() > 1) saveText = true
 
-        analysisResult.validTasks?.each { task ->
+        tasks?.each { task ->
             def itestFiles = task.itestFiles()
             def itestSize = itestFiles.size()
             def irealFiles = task.irealFiles()
@@ -118,7 +132,6 @@ class EvaluationExporter {
                              filesFromViewAnalysis.size(), filesFromViewAnalysis]
 
             content += line
-            if (saveText) writeITextFile(task) //dealing with long textual description of a task
         }
 
         CsvUtil.write(file.path, content)

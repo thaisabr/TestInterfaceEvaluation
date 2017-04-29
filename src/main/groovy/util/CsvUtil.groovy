@@ -24,7 +24,9 @@ class CsvUtil {
             entries = reader.readAll()
             reader.close()
         } catch (Exception ex) {
+            log.error "Error while reading CSV file ('${filename}')"
             log.error ex.message
+            ex.stackTrace.each{ log.error it.toString() }
         }
         entries
     }

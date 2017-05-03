@@ -114,12 +114,24 @@ class RubyConfigRoutesVisitor {
     }
 
     private static getNameForNamespace(Node iVisited, String prefix, String methodName) {
-        String path, name
-        List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll { it instanceof SymbolNode }
-        if (prefix) path = prefix + "/" + entities.first().name
-        else path = entities.first().name
-        if (methodName && methodName!= prefix) name = methodName + "_" + path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-        else name = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
+        String path, name, aux
+        def child = iVisited?.args?.childNodes()
+        List<SymbolNode> entities = child?.findAll { it instanceof SymbolNode }
+        if(entities.empty){
+            entities = child?.findAll{ it instanceof StrNode }
+            if(!entities.empty) aux = entities.first().value
+            else{
+                log.error "Unexpected value: call testCodeAnalyser.ruby.routes.RubyConfigRoutesVisitor: 116"
+                log.error "Position: ${iVisited.position.startLine+1}"
+            }
+        } else aux = entities.first().name
+
+        if(aux){
+            if (prefix) path = prefix + "/" + aux
+            else path = aux
+            if (methodName && methodName!= prefix) name = methodName + "_" + path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
+            else name = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
+        }
         [path:path, name:name]
     }
 

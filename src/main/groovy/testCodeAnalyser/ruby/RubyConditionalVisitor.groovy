@@ -130,15 +130,17 @@ class RubyConditionalVisitor extends NoopVisitor {
     Object visitWhenNode(WhenNode iVisited) {
         super.visitWhenNode(iVisited)
         def condition = extractStringFromWhenCondition(iVisited.expression)
-        def resultNodes = []
-        def assgn = iVisited.body.childNodes().findAll{ it instanceof LocalAsgnNode }
-        if(!assgn.empty) resultNodes += assgn.last().value
-        resultNodes += extractResultNodesFromWhen(iVisited)
-        def result = resultNodes?.collect { extractIfResult(it) }?.findAll { it != null }
-        if (result && !result.empty) {
-            result = result.last()
-            expressions += new ConditionalExpression(line: iVisited.position.startLine, expression: condition.exp,
-                    result: result.name, resultIsMethod: result.isMethod)
+        if(condition){
+            def resultNodes = []
+            def assgn = iVisited.body.childNodes().findAll{ it instanceof LocalAsgnNode }
+            if(!assgn.empty) resultNodes += assgn.last().value
+            resultNodes += extractResultNodesFromWhen(iVisited)
+            def result = resultNodes?.collect { extractIfResult(it) }?.findAll { it != null }
+            if (result && !result.empty) {
+                result = result.last()
+                expressions += new ConditionalExpression(line: iVisited.position.startLine, expression: condition.exp,
+                        result: result.name, resultIsMethod: result.isMethod)
+            }
         }
         iVisited
     }

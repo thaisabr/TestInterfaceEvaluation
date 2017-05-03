@@ -59,13 +59,19 @@ class Haml_end_adder
     mid_block_keywords = /(?=(else|elsif| rescue| ensure| end| when))/
     array_index = 1
     next_indentations_values.each do |next_indentation_value|
+      pass = false
       actual_line = line_num + array_index
       has_mid_block = mid_block_keywords.match($lines_array[actual_line])
       line_break = '
       '
       linejump = /^(?:\n)|\A\s*\z/
+      if has_mid_block
+        if check_indentation_value($lines_array[actual_line]) < indentation_value
+          pass = true
+        end
+      end
       if $lines_array[actual_line] != line_break && !commentary.match($lines_array[actual_line]) && !linejump.match($lines_array[actual_line])
-        if next_indentation_value <= indentation_value && !has_mid_block
+        if next_indentation_value <= indentation_value && (!has_mid_block || pass)
           if past_line_has_mid_block && past_line_indentation_value < indentation_value
             actual_line -= 1
           end

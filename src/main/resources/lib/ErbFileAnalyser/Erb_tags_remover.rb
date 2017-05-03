@@ -6,7 +6,7 @@ class ErbTagsRemover
     all_tagged_chunks = text.scan(/(?<=\<%)(.*?)(?=\%>)/m)
     all_tagged_chunks.each do |tagged_chunks|
       tagged_chunks.each do |tagged_chunk|
-        if tagged_chunk[0] == '='
+        if tagged_chunk[0] == '=' || tagged_chunk[0] == '-'
          tagged_chunk.slice!(0)
         end
         if tagged_chunk[-1] == '-'

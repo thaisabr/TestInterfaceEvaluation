@@ -155,8 +155,10 @@ def look_for_submit_calls(code, instance_variable)
     else
       if method_argument_type == $send
         if code.children[3].nil?
-          method_argument = code.children[2].children[0].children[0]
-          father_node = code.children[2].children[0]
+          if is_still_a_node code.children[2].children[0]
+            method_argument = code.children[2].children[0].children[0]
+            father_node = code.children[2].children[0]
+          end
         else
           method_argument = code.children[3].children[0].children[1].children[0]
           father_node = code.children[3].children[0].children[1]

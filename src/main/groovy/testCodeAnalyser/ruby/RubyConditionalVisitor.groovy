@@ -62,6 +62,10 @@ class RubyConditionalVisitor extends NoopVisitor {
         else [exp: condition]
     }
 
+    private static extractStringFromWhenCondition(Node node) {
+        null //we cannot deal with a result that is neither a string or method call
+    }
+
     private static extractStringFromWhenCondition(RegexpNode node) {
         [exp: node.value]
     }
@@ -76,10 +80,11 @@ class RubyConditionalVisitor extends NoopVisitor {
     }
 
     private static extractResultNodesFromWhen(WhenNode iVisited) {
+        def child = iVisited.body.childNodes()
         def result = []
-        def r1 = iVisited.body.childNodes().findAll { isOfInterest(it) }
+        def r1 = child.findAll { isOfInterest(it) }
         if (!r1.empty) result += r1
-        def r2 = iVisited.body.childNodes().findAll { it instanceof NewlineNode }*.childNodes()?.flatten()?.findAll {
+        def r2 = child.findAll { it instanceof NewlineNode }*.childNodes()?.flatten()?.findAll {
             isOfInterest(it)
         }
         if (!r2.empty) result += r2
@@ -109,10 +114,14 @@ class RubyConditionalVisitor extends NoopVisitor {
         super.visitIfNode(iVisited)
         def condition = extractStringFromIfEqualCondition(iVisited)
         if (condition) {
-            def result = iVisited.thenBody.childNodes().collect { extractIfResult(it) }.findAll { it != null }?.last()
-            def exp = new ConditionalExpression(line: iVisited.position.startLine, expression: condition.exp,
-                    result: result.name, resultIsMethod: result.isMethod)
-            expressions += exp
+            def expression
+            def result = iVisited.thenBody.childNodes().collect { extractIfResult(it) }.findAll { it != null }
+            if(!result.empty) {
+                expression = result.last()
+                def exp = new ConditionalExpression(line: iVisited.position.startLine, expression: condition.exp,
+                        result: expression.name, resultIsMethod: expression.isMethod)
+                expressions += exp
+            }
         }
         iVisited
     }
@@ -121,7 +130,10 @@ class RubyConditionalVisitor extends NoopVisitor {
     Object visitWhenNode(WhenNode iVisited) {
         super.visitWhenNode(iVisited)
         def condition = extractStringFromWhenCondition(iVisited.expression)
-        def resultNodes = extractResultNodesFromWhen(iVisited)
+        def resultNodes = []
+        def assgn = iVisited.body.childNodes().findAll{ it instanceof LocalAsgnNode }
+        if(!assgn.empty) resultNodes += assgn.last().value
+        resultNodes += extractResultNodesFromWhen(iVisited)
         def result = resultNodes?.collect { extractIfResult(it) }?.findAll { it != null }
         if (result && !result.empty) {
             result = result.last()

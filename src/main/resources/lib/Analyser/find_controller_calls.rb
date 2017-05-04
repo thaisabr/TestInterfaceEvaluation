@@ -169,7 +169,9 @@ def look_for_submit_calls(code, instance_variable)
       if $submit_name != ''
         insert_outputs_on_array(Transform_into.var_into_method($submit_name),'' ,"#{method_argument}".downcase,count_method_arguments(father_node))
       else
-        insert_outputs_on_array("#{method_argument}".downcase,Transform_into.var_into_controller(instance_variable),'',count_method_arguments(father_node))
+        if !is_still_a_node instance_variable
+          insert_outputs_on_array("#{method_argument}".downcase,Transform_into.var_into_controller(instance_variable),'',count_method_arguments(father_node))
+        end
       end
     end
   end
@@ -183,9 +185,11 @@ def look_for_auto_gen_methods(code, instance_variable,lvar_derived_from_ivar)
       method_argument_value = code.children[2].children[0]
       father_node = code.children[2]
       if method_argument_value.is_a?(Parser::AST::Node)
-        if !code.children[2].children[0].children[0].children[2].nil?
-          method_argument_value = code.children[2].children[0].children[0].children[2].children[0]
-          father_node = code.children[2].children[0].children[0].children[2]
+        if is_still_a_node code.children[2].children[0].children[0]
+          if !code.children[2].children[0].children[0].children[2].nil?
+            method_argument_value = code.children[2].children[0].children[0].children[2].children[0]
+            father_node = code.children[2].children[0].children[0].children[2]
+          end
         end
       end
     end
@@ -289,8 +293,10 @@ def look_for_confirm_call(code)
       else
         link_to_argument_variable = code.children[3].children[0]
       end
-      insert_outputs_on_array("#{link_to_redirect_name}".downcase,Transform_into.var_into_controller(link_to_argument_variable),'',count_method_arguments(father_node))
-      true
+      if !is_still_a_node link_to_argument_variable
+        insert_outputs_on_array("#{link_to_redirect_name}".downcase,Transform_into.var_into_controller(link_to_argument_variable),'',count_method_arguments(father_node))
+        true
+      end
     end
   else
     false
@@ -326,7 +332,9 @@ def look_for_form_for_action(code, instance_variable)
               father_node = code.children[3].children[0].children[1].children[0].children[1]
             end
           else
-            possible_hash = code.children[3].children[1].children[1].type
+            if is_still_a_node code.children[3].children[1]
+              possible_hash = code.children[3].children[1].children[1].type
+            end
             if possible_hash == $hash
               if code.children[3].children[1].children[1].children[1].nil?
                 loop_action = code.children[3].children[1].children[1].children[0].children[1].children[0]
@@ -456,8 +464,10 @@ def look_for_form_tag_call(code, instance_variable)
       method_argument = code.children[2].children[1]
       father_node = code.children[2]
       if is_still_a_node(method_argument)
-        father_node = method_argument.children[0].children[0]
-        method_argument = method_argument.children[0].children[0].children[1]
+        if is_still_a_node method_argument.children[0]
+          father_node = method_argument.children[0].children[0]
+          method_argument = method_argument.children[0].children[0].children[1]
+        end
       end
       if !method_argument.to_s == ''
         insert_outputs_on_array(method_argument, instance_variable,'',count_method_arguments(father_node))

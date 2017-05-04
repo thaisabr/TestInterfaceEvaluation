@@ -102,10 +102,7 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
         def values = propsValues.sort { it.line }.sort { it.position }
         if (values.size() < 2) return
 
-        String actionName = values.get(1).value
-        if (actionName.startsWith("/:")) actionName = actionName.replace("/:", "/")
-        actionName = actionName.replaceAll("/:.*\$", "/.*").replaceAll("/:.*/", "/.*/")
-
+        String actionName = RubyConfigRoutesVisitor.configureActionName(values.get(1).value)
         def actionValue = actionName //action que sera realmente chamada
         String controllerActionString = null
         String toValue = null

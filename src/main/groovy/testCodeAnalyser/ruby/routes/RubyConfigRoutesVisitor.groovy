@@ -33,14 +33,30 @@ class RubyConfigRoutesVisitor {
         }
     }
 
+    private static formatRouteValue(String name){
+        name.replaceAll("/:.[^/]*\$", "(/.*)").replaceAll("/\\(:.*\\)\$", "(/.*)")
+                .replaceAll("/:.*/", "(/.*)/").replaceAll("/\\(:.*\\)/", "(/.*)/")
+    }
+
+    static configureActionName(String entry){
+        def actionName = entry
+        if(actionName.startsWith("/:")){
+            actionName = formatRouteValue(actionName)
+        } else if( actionName ==~ /.+\(\/:.+\)/ ){ //ex.: settings(/:tab)
+            def index = actionName.indexOf("(")
+            def name = formatRouteValue(actionName.substring(index+1))
+            actionName = actionName.substring(0,index) + name
+        }
+        actionName
+    }
+
     def getRoutingMethods(){
         routingMethods.collect{
             if(it.value.startsWith(":") || it.value.startsWith("(:")) {
                 it.value = it.value.replaceFirst("\\(:.*\\)", ".*").replaceFirst(":.*/", ".*/")
             }
             if(!it.value.startsWith("/") && !it.value.startsWith(".") ) it.value = "/" + it.value
-            it.value = it.value.replaceAll("/:.[^/]*\$", "(/.*)").replaceAll("/\\(:.*\\)\$", "(/.*)")
-                    .replaceAll("/:.*/", "(/.*)/").replaceAll("/\\(:.*\\)/", "(/.*)/")
+            it.value = configureActionName(it.value)
             if(it.arg.startsWith("/")) it.arg = it.arg.substring(1)
             if(it.name.startsWith("_")) it.name = it.name.substring(1)
             it.name = it.name.replaceAll(/_{2,}/, "_")

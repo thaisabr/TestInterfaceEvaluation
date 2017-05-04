@@ -174,7 +174,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         def index = value.indexOf("?")
         if (index > 0) value = value.substring(0, index)//ignoring params
         taskInterface.calledPageMethods += [file: RubyConstantData.ROUTES_ID, name: value, args: []]
-        log.info "param is literal: $value"
+        //log.info "param is literal: $value"
     }
 
     private registryVisitDynamicStringArg(DStrNode node) {
@@ -188,7 +188,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
            Extracted url: /portal/classes//remove_offering  */
         name = name.replaceAll("//", "/:id/")
         taskInterface.calledPageMethods += [file: RubyConstantData.ROUTES_ID, name: name, args: []]
-        log.info "param is dynamic literal: $name"
+        //log.info "param is dynamic literal: $name"
 
     }
 
@@ -212,6 +212,9 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
             if (arg) {
                 registryVisitStringArg(arg)
             }
+        } else {
+            log.warn "Visit call with local variable as receiver inside a method that is not a step definition:" +
+                    "\n${lastVisitedFile} (${node.position.startLine+1})"
         }
     }
 
@@ -223,9 +226,10 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         visit @path
       end
     * */
-
     private registryVisitCall(InstVarNode node) {
         log.info "param is a instance variable: ${node.name}"
+        def method = (node.name - "@") + "_path"
+        registryMethodCallVisitArg(method)
     }
 
     /* https://github.com/leihs/leihs/blob/8fb0eace3f441320b6aa70980acf5ee1d279dc6c/features/
@@ -251,7 +255,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
         whenNodeVisitor.pages?.each { page ->
             taskInterface.calledPageMethods += [file: RubyConstantData.ROUTES_ID, name: page, args: []]
-            log.info "Page in casenode: $page"
+            //log.info "Page in casenode: $page"
         }
 
         whenNodeVisitor.auxiliaryMethods.each { method ->
@@ -307,7 +311,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
 
     /* default case */
     private registryVisitCall(Node node) {
-        log.info "information about argument of visit call:"
+        log.warn "information about argument of visit call:"
         node.properties.each { k, v -> log.info "$k: $v" }
     }
 
@@ -412,7 +416,8 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     }
 
     private registry(CallNode iVisited, Node receiver) {
-        def excluded = [ArrayNode, NewlineNode, StrNode, DStrNode, FixnumNode, OrNode, IfNode, CaseNode, NthRefNode]
+        def excluded = [ArrayNode, NewlineNode, FixnumNode, OrNode, IfNode, CaseNode, NthRefNode,
+                        StrNode, DStrNode, DXStrNode, XStrNode, EvStrNode, DRegexpNode, HashNode]
         if (receiver instanceof GlobalVarNode) {
             log.warn "CALL BY GLOBAL VARIABLE \nPROPERTIES:"
             receiver.properties.each { k, v -> log.warn "$k: $v" }
@@ -491,7 +496,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
         super.visitFCallNode(iVisited)
 
         if (iVisited.name in EXCLUDED_METHODS) return iVisited
-        log.info "Method call (fcallnode): ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1})"
+        //log.info "Method call (fcallnode): ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1})"
 
         if ((iVisited.grandParent instanceof FCallNode) && iVisited.grandParent.name == "visit") return iVisited
         else if (RubyUtil.isRouteMethod(iVisited.name)) {

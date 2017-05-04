@@ -418,10 +418,11 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
     private registry(CallNode iVisited, Node receiver) {
         def excluded = [ArrayNode, NewlineNode, FixnumNode, OrNode, IfNode, CaseNode, NthRefNode,
                         StrNode, DStrNode, DXStrNode, XStrNode, EvStrNode, DRegexpNode, HashNode]
-        if (receiver instanceof GlobalVarNode) {
-            log.warn "CALL BY GLOBAL VARIABLE \nPROPERTIES:"
-            receiver.properties.each { k, v -> log.warn "$k: $v" }
-            if (!(receiver.name == "?")) log.warn "GLOBAL VARIABLE IS '?'"
+
+        //special meaning: see https://gist.github.com/LogaJ/5945449
+        def invalidGlobalNames = [":", "0", "*", "?", "\$", "~", "1-\$9", "&", "+", "`", "'", "!", "@"]
+        if (receiver instanceof GlobalVarNode && !(receiver.name in invalidGlobalNames) ) {
+            taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
         } else if (!(receiver.class in excluded)) {
             log.warn "RECEIVER DEFAULT! called: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine + 1}); " +
                     "Receiver type: ${iVisited.receiver.class}"

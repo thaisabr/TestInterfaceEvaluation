@@ -142,7 +142,7 @@ class RubyConfigRoutesVisitor {
         if(!entities.empty) value = entities.first().name
         else {
             entities = iVisited?.args?.childNodes()?.findAll { it instanceof StrNode }
-            value = entities.first().value
+            if(!entities.empty) value = entities.first().value
         }
         if (prefix) {
             path = prefix + "/" + value

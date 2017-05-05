@@ -14,12 +14,12 @@ import util.CsvUtil
 @Slf4j
 class TaskAnalyser {
 
-    static int URL_INDEX = 1
-    static int TASK_INDEX = 2
-    static int COMMITS_SIZE_INDEX = 3
-    static int HASHES_INDEX = 4
-    static int PROD_FILES_INDEX = 5
-    static int TEST_FILES_INDEX = 6
+    static int URL_INDEX = 0
+    static int TASK_INDEX = 1
+    static int COMMITS_SIZE_INDEX = 2
+    static int HASHES_INDEX = 3
+    static int PROD_FILES_INDEX = 4
+    static int TEST_FILES_INDEX = 5
 
     int taskLimit
 

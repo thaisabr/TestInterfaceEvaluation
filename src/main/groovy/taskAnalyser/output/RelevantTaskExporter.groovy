@@ -58,42 +58,21 @@ class RelevantTaskExporter {
         content
     }
 
-
     private initTasks(List<AnalysedTask> tasks){
         if(!tasks || tasks.empty) {
             this.tasks = []
             url = ""
         }
         else {
-            this.tasks = tasks.findAll{ it.compilationErrors == 0  && it.stepMatchErrors == 0}
+            this.tasks = tasks.findAll{ it.isValid() }
             url = tasks.first().doneTask.gitRepository.url
         }
-    }
-
-    private filterTasksByGem(){
-        if(Util.COVERAGE_GEMS.empty) coverageTasks = tasks
-        else coverageTasks = tasks.findAll{ Util.COVERAGE_GEMS.intersect(it.gems).size() > 0 }
+        filterTasksByAcceptanceTests()
     }
 
     private filterTasksByAcceptanceTests(){
-        if(!coverageTasks || coverageTasks.empty) {
-            relevantTasks = []
-            emptyITestTasks = []
-        }
-
-        def candidates = coverageTasks.findAll {
-            !it.irealFiles().empty && !it.itest.foundAcceptanceTests.empty
-        }
-
-        relevantTasks = candidates.findAll{ it.itestFiles().size() > 0 }
-        emptyITestTasks = candidates - relevantTasks
-        relevantTasks.sort{ -it.itest.foundAcceptanceTests.size() }
-        emptyITestTasks.sort{ -it.itest.foundAcceptanceTests.size() }
-    }
-
-    def filter(){
-        filterTasksByGem()
-        filterTasksByAcceptanceTests()
+        relevantTasks = tasks.findAll{ it.itestFiles().size() > 0 }?.sort{ -it.itest.foundAcceptanceTests.size() }
+        emptyITestTasks = (tasks - relevantTasks)?.sort{ -it.itest.foundAcceptanceTests.size() }
     }
 
     def save(){

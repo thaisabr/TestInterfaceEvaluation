@@ -6,8 +6,7 @@ import util.Util
 @Slf4j
 class Main {
 
-    static void main(String[] args) {
-
+    static analyseAll(){
         /* analyse a set of csv files */
         if(Util.MULTIPLE_TASK_FILES){
             def cvsFiles = Util.findTaskFiles()
@@ -22,7 +21,31 @@ class Main {
             analyser.analyseAll()
             //analyser.analysePrecisionAndRecall()
         }
+    }
 
+    static analyseLimited(int limit){
+        /* analyse a set of csv files */
+        if(Util.MULTIPLE_TASK_FILES){
+            def cvsFiles = Util.findTaskFiles()
+            cvsFiles?.each {
+                TaskAnalyser analyser = new TaskAnalyser(it, limit)
+                analyser.analyseAll()
+                //analyser.analysePrecisionAndRecall()
+            }
+        } else {
+            /* analyse a csv file */
+            TaskAnalyser analyser = new TaskAnalyser(Util.TASKS_FILE, limit)
+            analyser.analyseAll()
+            //analyser.analysePrecisionAndRecall()
+        }
+    }
+
+    static void main(String[] args) {
+        int taskLimit = -1
+        if(args) taskLimit = args[0]
+
+        if(taskLimit>0) analyseLimited(taskLimit)
+        else analyseAll()
     }
 
 }

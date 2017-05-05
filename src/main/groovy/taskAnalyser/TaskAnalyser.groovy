@@ -14,6 +14,15 @@ import util.CsvUtil
 @Slf4j
 class TaskAnalyser {
 
+    static int URL_INDEX = 1
+    static int TASK_INDEX = 2
+    static int COMMITS_SIZE_INDEX = 3
+    static int HASHES_INDEX = 4
+    static int PROD_FILES_INDEX = 5
+    static int TEST_FILES_INDEX = 6
+
+    int taskLimit
+
     File file
     String evaluationFile
     String organizedFile
@@ -35,6 +44,11 @@ class TaskAnalyser {
     /* after task analysis */
     List<AnalysedTask> analysedTasks
     RelevantTaskExporter relevantTaskExporter
+
+    TaskAnalyser(String tasksFile, int taskLimit){
+        this(tasksFile)
+        this.taskLimit = taskLimit
+    }
 
     TaskAnalyser(String tasksFile) {
         file = new File(tasksFile)
@@ -67,30 +81,45 @@ class TaskAnalyser {
      * Extracts all tasks in a CSV file that changed production and test files.
      */
     private extractProductionAndTestTasks() {
-        List<String[]> entries = CsvUtil.read(file.path)?.unique { it[2] } //bug: input csv can contain duplicated values
+        List<String[]> entries = CsvUtil.read(file.path)?.unique { it[TASK_INDEX] } //bug: input csv can contain duplicated values
         entries.remove(0)
 
         allInputTasks = entries.size()
-        if(allInputTasks>0) url = entries.first()[1]
+        if(allInputTasks>0) url = entries.first()[URL_INDEX]
 
-        List<String[]> ptEntries = entries.findAll { ((it[4] as int)>0 && (it[5] as int)>0) }
+        List<String[]> ptEntries = entries.findAll { ((it[PROD_FILES_INDEX] as int)>0 && (it[TEST_FILES_INDEX] as int)>0) }
         notPtTasks = entries.size() - ptEntries.size()
 
         List<DoneTask> tasks = []
         try {
             ptEntries.each { entry ->
-                def hashes = entry[3].tokenize(',[]')*.trim()
-                def task = new DoneTask(entry[1], entry[2], hashes)
+                def hashes = entry[HASHES_INDEX].tokenize(',[]')*.trim()
+                def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX], hashes)
                 if(task.hasTest()) tasks += task
-                else falsePtTasks += entry[2]
+                else falsePtTasks += entry[TASK_INDEX]
             }
         } catch (Exception ex) {
             log.error "Error while extracting tasks from CSV file."
-            log.error ex.message
             ex.stackTrace.each{ log.error it.toString() }
             candidateTasks = []
         }
         candidateTasks = tasks.sort { it.id }
+    }
+
+    private analyseLimitedTasks(){
+        if(candidateTasks && !candidateTasks.empty) {
+            for(int j=0; j<candidateTasks.size() && analysedTasks.size()<taskLimit; j++){
+                def candidate = candidateTasks.get(j)
+                def analysedTask = candidate.computeInterfaces()
+                if(analysedTask.isValid()) analysedTasks += analysedTask
+            }
+        }
+    }
+
+    private analyseAllTasks() {
+        if(candidateTasks && !candidateTasks.empty) {
+            candidateTasks.each { analysedTasks += it.computeInterfaces() }
+        }
     }
 
     private generateResult() {
@@ -103,14 +132,15 @@ class TaskAnalyser {
         log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${candidateTasks.size()}"
         log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${falsePtTasks.size()}"
 
-        if(candidateTasks && !candidateTasks.empty) candidateTasks.each { analysedTasks += it.computeInterfaces()}
+        if(taskLimit>0) analyseLimitedTasks()
+        else analyseAllTasks()
+
         log.info "Task interfaces were computed for ${candidateTasks.size()} tasks!"
     }
 
     private exportRelevantTasks(){
         if(!analysedTasks.empty){
             relevantTaskExporter = new RelevantTaskExporter(relevantTasksFile, analysedTasks)
-            relevantTaskExporter.filter()
             relevantTaskExporter.save()
             def tasks = relevantTaskExporter.relevantTasks + relevantTaskExporter.emptyITestTasks
             EvaluationExporter evaluationExporter = new EvaluationExporter(relevantTasksDetailsFile, tasks)

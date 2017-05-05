@@ -130,4 +130,21 @@ class AnalysedTask {
         itest.notFoundViews
     }
 
+    def satisfiesGemsFilter(){
+        if(Util.COVERAGE_GEMS.empty) true
+        else {
+            if(Util.COVERAGE_GEMS.intersect(gems).size() > 0) true
+            else false
+        }
+    }
+
+    def hasImplementedAcceptanceTests(){
+        if(itest.foundAcceptanceTests.size()>0) true
+        else false
+    }
+
+    def isValid(){
+        compilationErrors==0 && stepMatchErrors==0 && satisfiesGemsFilter() && hasImplementedAcceptanceTests() && !irealFiles().empty
+    }
+
 }

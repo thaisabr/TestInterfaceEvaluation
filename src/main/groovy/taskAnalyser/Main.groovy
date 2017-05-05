@@ -42,7 +42,7 @@ class Main {
 
     static void main(String[] args) {
         int taskLimit = -1
-        if(args) taskLimit = args[0]
+        if(args) taskLimit = Integer.parseInt(args[0])
 
         if(taskLimit>0) analyseLimited(taskLimit)
         else analyseAll()

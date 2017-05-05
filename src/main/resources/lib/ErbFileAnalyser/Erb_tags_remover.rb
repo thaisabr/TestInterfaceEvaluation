@@ -12,8 +12,11 @@ class ErbTagsRemover
         if tagged_chunk[-1] == '-'
           tagged_chunk.slice!(-1)
         end
-          if tagged_chunk[0] == '#'
-          tagged_chunks - [tagged_chunk]
+      end
+      tagged_chunks.delete_if do |tagged_chunk|
+        if tagged_chunk[0] == '#'
+          tagged_chunk = ''
+          true
         end
       end
     end

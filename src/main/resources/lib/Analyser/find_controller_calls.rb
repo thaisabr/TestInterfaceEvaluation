@@ -458,8 +458,10 @@ def look_for_form_tag_call(code, instance_variable)
       else
         method_argument = ''
       end
-      controller_called = code.children[2].children[0].children[1].children[0]
-      insert_outputs_on_array(method_argument, controller_called,'',count_method_arguments(father_node))
+      if is_still_a_node code.children[2].children[0]
+        controller_called = code.children[2].children[0].children[1].children[0]
+        insert_outputs_on_array(method_argument, controller_called,'',count_method_arguments(father_node))
+      end
     else
       method_argument = code.children[2].children[1]
       father_node = code.children[2]

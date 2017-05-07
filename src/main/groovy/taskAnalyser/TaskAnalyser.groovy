@@ -32,6 +32,7 @@ class TaskAnalyser {
     String testFile
     String relevantTasksFile
     String relevantTasksDetailsFile
+    String invalidTasksFile
     String url
 
     /* before task analysis */
@@ -43,11 +44,13 @@ class TaskAnalyser {
 
     /* after task analysis */
     List<AnalysedTask> analysedTasks
+    List<AnalysedTask> invalidTasks
     RelevantTaskExporter relevantTaskExporter
 
     TaskAnalyser(String tasksFile, int taskLimit){
         this(tasksFile)
         this.taskLimit = taskLimit
+        log.info "TASK LIMIT: $taskLimit"
     }
 
     TaskAnalyser(String tasksFile) {
@@ -64,6 +67,7 @@ class TaskAnalyser {
         testFile = name + ConstantData.TEST_EXECUTION_FILE_SUFIX
         relevantTasksFile = name + ConstantData.RELEVANT_TASKS_FILE_SUFIX
         relevantTasksDetailsFile = name + ConstantData.RELEVANT_TASKS_DETAILS_FILE_SUFIX
+        invalidTasksFile = name + ConstantData.INVALID_TASKS_FILE_SUFIX
         reset()
     }
 
@@ -74,6 +78,7 @@ class TaskAnalyser {
         falsePtTasks = []
         candidateTasks = []
         analysedTasks = []
+        invalidTasks = []
         url = ""
     }
 
@@ -107,19 +112,24 @@ class TaskAnalyser {
     }
 
     private analyseLimitedTasks(){
+        def counter = 0
         if(candidateTasks && !candidateTasks.empty) {
             for(int j=0; j<candidateTasks.size() && analysedTasks.size()<taskLimit; j++){
+                counter++
                 def candidate = candidateTasks.get(j)
                 def analysedTask = candidate.computeInterfaces()
                 if(analysedTask.isValid()) analysedTasks += analysedTask
+                else invalidTasks += analysedTask
             }
         }
+        log.info "Task interfaces were computed for ${counter} tasks!"
     }
 
     private analyseAllTasks() {
         if(candidateTasks && !candidateTasks.empty) {
             candidateTasks.each { analysedTasks += it.computeInterfaces() }
         }
+        log.info "Task interfaces were computed for ${candidateTasks.size()} tasks!"
     }
 
     private generateResult() {
@@ -134,19 +144,33 @@ class TaskAnalyser {
 
         if(taskLimit>0) analyseLimitedTasks()
         else analyseAllTasks()
+    }
 
-        log.info "Task interfaces were computed for ${candidateTasks.size()} tasks!"
+    private exportInvalidTasks(){
+        if(invalidTasks.empty)log.info "There is no invalid tasks to save!"
+        else {
+            EvaluationExporter evaluationExporter = new EvaluationExporter(invalidTasksFile, invalidTasks)
+            evaluationExporter.save()
+            log.info "Invalid tasks were saved in ${invalidTasksFile}."
+        }
     }
 
     private exportRelevantTasks(){
-        if(!analysedTasks.empty){
+        if(analysedTasks.empty) log.info "There is no valid tasks to save!"
+        else {
             relevantTaskExporter = new RelevantTaskExporter(relevantTasksFile, analysedTasks)
             relevantTaskExporter.save()
             def tasks = relevantTaskExporter.relevantTasks + relevantTaskExporter.emptyITestTasks
             EvaluationExporter evaluationExporter = new EvaluationExporter(relevantTasksDetailsFile, tasks)
             evaluationExporter.save()
             organizeResultForTestExecution()
+            log.info "Valid tasks were saved in ${relevantTasksFile}, ${relevantTasksDetailsFile} and ${testFile}."
         }
+    }
+
+    private exportTasks(){
+        exportRelevantTasks()
+        exportInvalidTasks()
     }
 
     private exportAllDetailedInfo(){
@@ -176,7 +200,7 @@ class TaskAnalyser {
 
     private commonSteps(){
         generateResult()
-        exportRelevantTasks()
+        exportTasks()
         exportAllDetailedInfo()
         filterResult() //TEMPORARY CODE
     }

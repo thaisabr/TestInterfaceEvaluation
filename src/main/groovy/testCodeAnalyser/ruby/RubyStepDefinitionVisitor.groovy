@@ -24,6 +24,7 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
     }
 
     private static ignoreArgs(String value){
+        if(!value && value.empty) return ""
         def result
         def pipeIndex1 = value.indexOf("|")
         if(pipeIndex1<0) result = value
@@ -39,24 +40,22 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
     private static extractBodyStyle1(String text){
         def init = " do "
         def end = " end"
-
         def index1 = text.indexOf(init)
-        if(index1<0) return null
-        def i = index1 + (init.size()-1)
-
         def index2 = text.indexOf(end)
-        if(index2<0) return null
-
+        if(index1<0 || index2<0) return null
+        def i = index1 + (init.size()-1)
         def value = text.substring(i, index2)
         ignoreArgs(value)
     }
 
     private static extractBodyStyle2(String text){
         def index1 = text.indexOf("{")
-        def i = index1 + 1
         def index2 = text.lastIndexOf("}")
-        def value = text.substring(i, index2)
-        ignoreArgs(value)
+        if(index1>0 && index2>0){
+            def i = index1 + 1
+            def value = text.substring(i, index2)
+            ignoreArgs(value)
+        } else null
     }
 
     private extractNoLineBody(int startLine){

@@ -68,7 +68,6 @@ class TaskAnalyser {
         relevantTasksFile = name + ConstantData.RELEVANT_TASKS_FILE_SUFIX
         relevantTasksDetailsFile = name + ConstantData.RELEVANT_TASKS_DETAILS_FILE_SUFIX
         invalidTasksFile = name + ConstantData.INVALID_TASKS_FILE_SUFIX
-        reset()
     }
 
     private reset(){
@@ -101,7 +100,7 @@ class TaskAnalyser {
                 def hashes = entry[HASHES_INDEX].tokenize(',[]')*.trim()
                 def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX], hashes)
                 if(task.hasTest()) tasks += task
-                else falsePtTasks += entry[TASK_INDEX]
+                else falsePtTasks += task.id
             }
         } catch (Exception ex) {
             log.error "Error while extracting tasks from CSV file."

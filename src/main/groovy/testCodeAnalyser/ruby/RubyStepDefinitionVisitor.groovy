@@ -38,10 +38,10 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
     }
 
     private static extractBodyStyle1(String text){
-        def init = " do "
-        def end = " end"
+        def init = " do"
+        def end = "end"
         def index1 = text.indexOf(init)
-        def index2 = text.indexOf(end)
+        def index2 = text.lastIndexOf(end)
         if(index1<0 || index2<0) return null
         def i = index1 + (init.size()-1)
         def value = text.substring(i, index2)
@@ -60,25 +60,25 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
 
     private extractNoLineBody(int startLine){
         def body = []
-        def text = content[startLine]
+        def text = content.get(startLine)
         def aux = extractBodyStyle1(text)
         if(!aux) aux = extractBodyStyle2(text)
         if(aux) body += aux
         else {
-            log.error "Error to extract body from step (File: $path, start line:${startLine+1}"
+            log.error "Error to extract body from step (File: $path, start line:${startLine+1})"
         }
         body
     }
 
     private extractOneLineBody(int startLine, int endLine){
         def body = []
-        def text = content[startLine..endLine]
+        def text = content.subList(startLine, endLine+1)
         def line = text.join("\n")
         def aux = extractBodyStyle1(line)
         if(!aux) aux = extractBodyStyle2(line)
         if(aux) body += aux
         else {
-            log.error "Error to extract body from step (File: $path, start line:${startLine+1}"
+            log.error "Error to extract body from step (File: $path, start line:${startLine+1})"
         }
         body
     }

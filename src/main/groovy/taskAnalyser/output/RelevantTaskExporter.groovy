@@ -3,7 +3,6 @@ package taskAnalyser.output
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 import taskAnalyser.task.AnalysedTask
 import util.CsvUtil
-import util.Util
 
 /**
  * Filter and export analysed tasks that contain acceptance test and no empty IReal.
@@ -28,16 +27,12 @@ class RelevantTaskExporter {
     String filename
     String url
     List<AnalysedTask> tasks
-    List<AnalysedTask> coverageTasks
     List<AnalysedTask> relevantTasks
     List<AnalysedTask> emptyITestTasks
 
     RelevantTaskExporter(String filename, List<AnalysedTask> tasks){
         this.filename = filename
         initTasks(tasks)
-        coverageTasks = []
-        relevantTasks = []
-        emptyITestTasks = []
     }
 
     private generateNumeralData(){

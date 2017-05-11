@@ -1,8 +1,10 @@
 package commitAnalyser
 
+import gherkin.AstBuilder
 import gherkin.Parser
 import gherkin.ParserException
 import gherkin.ast.Feature
+import gherkin.ast.GherkinDocument
 import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
 import org.eclipse.jgit.revwalk.RevCommit
@@ -21,8 +23,8 @@ class GherkinManager {
             compilationErrors += [path: filename, msg: "Commit $sha deleted it."]
         } else {
             try {
-                Parser<Feature> parser = new Parser<>()
-                feature = parser.parse(content)
+                Parser<GherkinDocument> parser = new Parser<>(new AstBuilder())
+                feature = parser.parse(content)?.feature
             } catch (ParserException ex) {
                 log.warn "Problem to parse Gherkin file '$filename' (commit $sha). ${ex.class}: ${ex.message}."
                 compilationErrors += [path: filename, msg: ex.class]
@@ -66,7 +68,7 @@ class GherkinManager {
         if (featureIndex < locations.size() - 1) {
             //excludes tag of next scenario definition
             int max = locations.get(featureIndex + 1) - 1 as int
-            def scenDef = feature.scenarioDefinitions?.first()
+            def scenDef = feature.children?.first()
             if (!scenDef?.tags?.empty) max--
 
             for (int i = featureLocation - 1; i < max; i++) {
@@ -82,7 +84,7 @@ class GherkinManager {
     }
 
     static extractTextFromGherkin(Feature feature, GherkinFile gherkinFile) {
-        def locations = feature.scenarioDefinitions*.location*.line.flatten().sort()
+        def locations = feature.children*.location*.line.flatten().sort()
         def lines = gherkinFile.featureFileText.readLines()
 
         gherkinFile.baseText = extractCommonText(locations, feature, lines)
@@ -120,8 +122,8 @@ class GherkinManager {
     static GherkinFile extractGherkinAdds(RevCommit commit, String content, String path) {
         GherkinFile changedGherkinFile = null
         def newFeature = parseGherkinFile(content, path, commit.name)
-        if(newFeature && newFeature.scenarioDefinitions && !newFeature.scenarioDefinitions.empty){
-            changedGherkinFile = new GherkinFile(path: path, feature: newFeature, changedScenarioDefinitions: newFeature.scenarioDefinitions)
+        if(newFeature && newFeature.children && !newFeature.children.empty){
+            changedGherkinFile = new GherkinFile(path: path, feature: newFeature, changedScenarioDefinitions: newFeature.children)
         }
         changedGherkinFile
     }

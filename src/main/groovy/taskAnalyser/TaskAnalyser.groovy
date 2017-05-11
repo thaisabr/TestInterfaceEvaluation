@@ -22,6 +22,7 @@ class TaskAnalyser {
     static int TEST_FILES_INDEX = 5
 
     int taskLimit
+    boolean incrementalAnalysis
 
     File file
     String evaluationFile
@@ -36,8 +37,7 @@ class TaskAnalyser {
     String url
 
     /* before task analysis */
-    List<String> ptCandidateTasks //tasks extracted from the input CSV file that seems that have production and test code
-    int allInputTasks
+    List<String[]> allInputTasks
     int notPtTasks //tasks extracted from the input CSV file that do not have production and test code
     List<String> falsePtTasks //tasks that have production and test code, but not gherkin scenarios
     List<DoneTask> candidateTasks //tasks extracted from the input CSV file that changed production code and gherkin scenarios
@@ -50,7 +50,6 @@ class TaskAnalyser {
     TaskAnalyser(String tasksFile, int taskLimit){
         this(tasksFile)
         this.taskLimit = taskLimit
-        log.info "TASK LIMIT: $taskLimit"
     }
 
     TaskAnalyser(String tasksFile) {
@@ -68,12 +67,31 @@ class TaskAnalyser {
         relevantTasksFile = name + ConstantData.RELEVANT_TASKS_FILE_SUFIX
         relevantTasksDetailsFile = name + ConstantData.RELEVANT_TASKS_DETAILS_FILE_SUFIX
         invalidTasksFile = name + ConstantData.INVALID_TASKS_FILE_SUFIX
+        decideAnalysisStrategy()
+    }
+
+    private configureDefaultTaskLimit(){
+        if(taskLimit <= 0) {
+            taskLimit = 10
+            String message = "Because no task limit was defined, the default value '${taskLimit}' will be used." +
+                    "\nIt is necessary for incremental analysis works fine."
+            log.warn message
+        } else log.info "TASK LIMIT: $taskLimit"
+    }
+
+    private decideAnalysisStrategy(){
+        log.info "<  Analysing tasks from '${file.path}'  >"
+        extractTaskFromCsv()
+        log.info "All tasks extracted from '${file.path}': ${allInputTasks.size()}"
+        if(allInputTasks.size()>200) {
+            incrementalAnalysis = true
+            configureDefaultTaskLimit()
+        }
+        else incrementalAnalysis = false
     }
 
     private reset(){
-        allInputTasks = 0
         notPtTasks = 0
-        ptCandidateTasks = []
         falsePtTasks = []
         candidateTasks = []
         analysedTasks = []
@@ -81,19 +99,7 @@ class TaskAnalyser {
         url = ""
     }
 
-    /***
-     * Extracts all tasks in a CSV file that changed production and test files.
-     */
-    private extractProductionAndTestTasks() {
-        List<String[]> entries = CsvUtil.read(file.path)?.unique { it[TASK_INDEX] } //bug: input csv can contain duplicated values
-        entries.remove(0)
-
-        allInputTasks = entries.size()
-        if(allInputTasks>0) url = entries.first()[URL_INDEX]
-
-        List<String[]> ptEntries = entries.findAll { ((it[PROD_FILES_INDEX] as int)>0 && (it[TEST_FILES_INDEX] as int)>0) }
-        notPtTasks = entries.size() - ptEntries.size()
-
+    private extractAllPtTasks(List<String[]> ptEntries){
         List<DoneTask> tasks = []
         try {
             ptEntries.each { entry ->
@@ -108,6 +114,45 @@ class TaskAnalyser {
             candidateTasks = []
         }
         candidateTasks = tasks.sort { it.id }
+    }
+
+    private extractPtTasksPartially(List<String[]> ptEntries) {
+        def value = ptEntries.size()
+        def groups = value.intdiv(100)
+        def r = value%100
+        log.info "Tasks to analyse: ${value}"
+        log.info "Groups of 100 units: ${groups} + Remainder: ${r}"
+
+        def i = 0, j = 100, analysedGroups = 0
+        while(analysedGroups<groups && analysedTasks.size()<taskLimit) {
+            candidateTasks = []
+            List<String[]> entries = ptEntries.subList(i, j)
+            extractAllPtTasks(entries)
+            i=j
+            j+=100
+            analysedGroups++
+            log.info "Candidate tasks (have production code and candidate gherkin scenarios) until now: ${candidateTasks.size()}"
+            log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${falsePtTasks.size()}"
+            analyseLimitedTasks()
+        }
+
+        if(r>0 && analysedTasks.size()<taskLimit){
+            log.info "Last try to find valid tasks!"
+            candidateTasks = []
+            List<String[]> entries = ptEntries.subList(i, i+r)
+            extractAllPtTasks(entries)
+            log.info "Candidate tasks (have production code and candidate gherkin scenarios) until now: ${candidateTasks.size()}"
+            log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${falsePtTasks.size()}"
+            analyseLimitedTasks()
+        }
+
+    }
+
+    private extractTaskFromCsv(){
+        List<String[]> entries = CsvUtil.read(file.path)?.unique { it[TASK_INDEX] } //bug: input csv can contain duplicated values
+        entries.remove(0)
+        allInputTasks = entries
+        if(allInputTasks.size()>0) url = entries.first()[URL_INDEX]
     }
 
     private analyseLimitedTasks(){
@@ -134,15 +179,26 @@ class TaskAnalyser {
     private generateResult() {
         reset()
 
-        log.info "<  Analysing tasks from '${file.path}'  >"
-        extractProductionAndTestTasks()
-        log.info "All tasks extracted from '${file.path}': ${allInputTasks}"
+        List<String[]> ptEntries = allInputTasks.findAll { ((it[PROD_FILES_INDEX] as int)>0 && (it[TEST_FILES_INDEX] as int)>0) }
+        notPtTasks = allInputTasks.size() - ptEntries.size()
         log.info "Invalid tasks (do not have production and test code): ${notPtTasks}"
+
+        extractAllPtTasks(ptEntries)
         log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${candidateTasks.size()}"
         log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${falsePtTasks.size()}"
 
         if(taskLimit>0) analyseLimitedTasks()
         else analyseAllTasks()
+    }
+
+    private generateIncrementalResult() {
+        reset()
+
+        List<String[]> ptEntries = allInputTasks.findAll { ((it[PROD_FILES_INDEX] as int)>0 && (it[TEST_FILES_INDEX] as int)>0) }
+        notPtTasks = allInputTasks.size() - ptEntries.size()
+        log.info "Invalid tasks (do not have production and test code): ${notPtTasks}"
+
+        extractPtTasksPartially(ptEntries)
     }
 
     private exportInvalidTasks(){
@@ -197,19 +253,16 @@ class TaskAnalyser {
         testExecutionExporter.save()
     }
 
-    private commonSteps(){
-        generateResult()
-        exportTasks()
-        exportAllDetailedInfo()
-        filterResult() //TEMPORARY CODE
-    }
-
     def analyseAll() {
-        commonSteps()
+        analysePrecisionAndRecall()
         analyseSimilarity()
     }
 
     def analysePrecisionAndRecall() {
-        commonSteps()
+        if(incrementalAnalysis) generateIncrementalResult()
+        else generateResult()
+        exportTasks()
+        exportAllDetailedInfo()
+        filterResult() //TEMPORARY CODE
     }
 }

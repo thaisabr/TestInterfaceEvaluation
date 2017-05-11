@@ -142,11 +142,11 @@ class DoneTask extends Task {
             Feature feature = GherkinManager.parseGherkinFile(content, gherkinFile.path, lastCommit.name)
             if(feature){
                 gherkinFile.feature = feature
-                def scenarios = feature?.scenarioDefinitions*.name
+                def scenarios = feature?.children*.name
                 if(scenarios && !scenarios.empty){
                     def initialSet = gherkinFile.changedScenarioDefinitions
                     def valid = initialSet.findAll { it.name in scenarios }
-                    def finalScenarios = feature?.scenarioDefinitions?.findAll{ it.name in valid*.name && !it.steps.empty }
+                    def finalScenarios = feature?.children?.findAll{ it.name in valid*.name && !it.steps.empty }
                     def invalid = initialSet - valid
                     if(!invalid?.empty) notFoundScenarios += [file:gherkinFile.path, scenarios:invalid*.name]
                     if(!valid?.empty) {

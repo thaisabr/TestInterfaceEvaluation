@@ -1,6 +1,7 @@
 package testCodeAnalyser
 
 import commitAnalyser.GherkinManager
+import gherkin.ast.Background
 import gherkin.ast.Scenario
 import gherkin.ast.ScenarioOutline
 import gherkin.ast.Step
@@ -84,8 +85,9 @@ abstract class TestCodeAbstractParser {
         gherkinFiles?.each { gherkinFile ->
             /* finds step code of background from a Gherkin file */
             List<StepCode> backgroundCode = []
-            if (gherkinFile.feature.background) {
-                backgroundCode = findCodeForSteps(gherkinFile.feature.background.steps, gherkinFile.path)
+            Background background = gherkinFile.feature.children.find{ it instanceof Background }
+            if (background) {
+                backgroundCode = findCodeForSteps(background.steps, gherkinFile.path)
             }
 
             /* finds step code of changed scenario definitions from a Gherkin file */

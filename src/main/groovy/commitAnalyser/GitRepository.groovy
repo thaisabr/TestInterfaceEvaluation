@@ -6,7 +6,6 @@ import org.eclipse.jgit.api.BlameCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.blame.BlameResult
 import org.eclipse.jgit.diff.DiffEntry
-import org.eclipse.jgit.diff.DiffFormatter
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.ObjectLoader
 import org.eclipse.jgit.lib.ObjectReader
@@ -124,29 +123,6 @@ class GitRepository {
         result.findAll { file -> (Util.isValidFile(file.newPath) || Util.isValidFile(file.oldPath)) }
     }
 
-    /***
-     * Prints a file content showing the differences between it and its previous version.
-     *
-     * @param entry the DiffEntry object that represents the difference between two versions of a file.
-     */
-    private showDiff(DiffEntry entry) {
-        def git = Git.open(new File(localPath))
-        ByteArrayOutputStream stream = new ByteArrayOutputStream()
-        DiffFormatter formatter = new DiffFormatter(stream)
-        formatter.setRepository(git.repository)
-        formatter.setDetectRenames(true)
-        formatter.setContext(1000) //to show all lines
-        formatter.format(entry)
-        def lines = stream.toString("UTF-8").readLines()
-        def result = lines.getAt(5..lines.size() - 1)
-        result.eachWithIndex { val, index ->
-            println "($index) $val"
-        }
-        git.close()
-        stream.reset()
-        formatter.release()
-    }
-
     private StepDefinitionFile extractStepDefinitionChanges(RevCommit commit, RevCommit parent, DiffEntry entry,
                                                             TestCodeAbstractParser parser) {
         StepDefinitionFile changedStepFile = null
@@ -219,8 +195,8 @@ class GitRepository {
 
         if (!newFeature || !oldFeature) return changedGherkinFile
 
-        def newScenarioDefinitions = newFeature?.scenarioDefinitions
-        def oldScenarioDefinitions = oldFeature?.scenarioDefinitions
+        def newScenarioDefinitions = newFeature?.children
+        def oldScenarioDefinitions = oldFeature?.children
 
         //searches for changed or removed scenario definitions
         List<ScenarioDefinition> changedScenarioDefinitions = []
@@ -267,7 +243,7 @@ class GitRepository {
     }
 
     private CodeChange configureAddChange(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser) {
-        CodeChange change
+        CodeChange change = null
         if (Util.isGherkinFile(entry.newPath))
             change = extractGherkinAdds(commit, entry)
         else if (Util.isStepDefinitionFile(entry.newPath))
@@ -461,10 +437,22 @@ class GitRepository {
         blamer.setFilePath(filename.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/")))
         BlameResult blameResult = blamer.call()
 
-        List<String> fileContent = extractFileContent(commit, filename)?.readLines()
-        fileContent?.eachWithIndex { line, i ->
-            RevCommit c = blameResult?.getSourceCommit(i)
-            if (c?.name?.equals(commit.name)) changedLines += i
+        String text =  extractFileContent(commit, filename)
+        if(!text && text.empty) {
+            git.close()
+            return changedLines
+        }
+
+        List<String> fileContent = []
+        try {
+            fileContent = text.readLines()
+            fileContent?.eachWithIndex { line, i ->
+                RevCommit c = blameResult?.getSourceCommit(i)
+                if (c?.name?.equals(commit.name)) changedLines += i
+            }
+        } catch (ignored){
+            log.error "Error: git blame '${filename}'"
+            fileContent.each{ log.error it.toString() }
         }
 
         git.close()

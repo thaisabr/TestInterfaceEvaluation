@@ -1,0 +1,22 @@
+package br.ufpe.cin.tan.test
+
+import br.ufpe.cin.tan.analysis.itask.ITest
+
+
+trait TestCodeVisitor {
+
+    abstract ITest getTaskInterface()
+
+    abstract void setLastVisitedFile(String path)
+
+    abstract getCalledSteps()
+
+    MethodToAnalyse getStepDefinitionMethod() {
+        null
+    }
+
+    int getVisitCallCounter(){
+        0
+    }
+
+}

@@ -73,7 +73,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>taskAnalyser.Main</mainClass>
+                            <mainClass>br.ufpe.cin.tan.main.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

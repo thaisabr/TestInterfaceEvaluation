@@ -1,11 +1,11 @@
 package caseStudy
 
 import au.com.bytecode.opencsv.CSVWriter
-import evaluation.TaskInterfaceEvaluator
+import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
-import taskAnalyser.task.DoneTask
-import taskAnalyser.task.TodoTask
-import util.ConstantData
+import br.ufpe.cin.tan.analysis.task.DoneTask
+import br.ufpe.cin.tan.analysis.task.TodoTask
+import br.ufpe.cin.tan.util.ConstantData
 
 @Slf4j
 class RGMS_Study {

@@ -1,8 +1,8 @@
 package caseStudy
 
 import groovy.util.logging.Slf4j
-import similarityAnalyser.test.TestSimilarityAnalyser
-import taskAnalyser.task.TodoTask
+import br.ufpe.cin.tan.similarity.test.TestSimilarityAnalyser
+import br.ufpe.cin.tan.analysis.task.TodoTask
 
 @Slf4j
 class ProposalExample {

@@ -68,6 +68,7 @@ class Find_controller_calls
 end
 
 def look_for_link_to_calls(code)
+  confirm_variable = /[A-Za-z]/
   controller_name = ''
   method_name = code.children[1]
   if method_name == $link_to
@@ -169,7 +170,7 @@ def look_for_submit_calls(code, instance_variable)
       if $submit_name != ''
         insert_outputs_on_array(Transform_into.var_into_method($submit_name),'' ,"#{method_argument}".downcase,count_method_arguments(father_node))
       else
-        if !is_still_a_node instance_variable
+        if (!is_still_a_node instance_variable) && (!is_still_a_node method_argument)
           insert_outputs_on_array("#{method_argument}".downcase,Transform_into.var_into_controller(instance_variable),'',count_method_arguments(father_node))
         end
       end
@@ -178,6 +179,7 @@ def look_for_submit_calls(code, instance_variable)
 end
 
 def look_for_auto_gen_methods(code, instance_variable,lvar_derived_from_ivar)
+  confirm_variable = /[A-Za-z]/
   father_node = ''
   method_name = code.children[1]
   if method_name == $label
@@ -195,7 +197,9 @@ def look_for_auto_gen_methods(code, instance_variable,lvar_derived_from_ivar)
     end
     if !method_argument_value.nil?
       if instance_variable != '' || (method_argument_value.to_s.include?('/') || method_argument_value.to_s.include?('_path'))
-        insert_outputs_on_array(method_argument_value, instance_variable,'',count_method_arguments(father_node))
+        if (!is_still_a_node method_argument_value) && (confirm_variable.match method_argument_value)
+          insert_outputs_on_array(method_argument_value, instance_variable,'',count_method_arguments(father_node))
+        end
       end
     end
   end
@@ -207,7 +211,9 @@ def look_for_auto_gen_methods(code, instance_variable,lvar_derived_from_ivar)
       if method_argument == lvar_derived_from_ivar
         if method_name != $empty_array && method_name.class != Parser::AST::Node
           if instance_variable != '' || ((method_name.to_s).include?('/') || (method_name.to_s).include?('_path'))
-            insert_outputs_on_array(method_name, instance_variable,'','0')
+            if (!is_still_a_node method_name) && (confirm_variable.match method_name)
+              insert_outputs_on_array(method_name, instance_variable,'','0')
+            end
           end
         end
       end
@@ -271,6 +277,7 @@ def look_for_instance_variable(code)
 end
 
 def look_for_confirm_call(code)
+  confirm_variable = /[A-Za-z]/
   father_node = ''
   has_adictional_call = !code.children[4].nil?
   if has_adictional_call
@@ -293,7 +300,8 @@ def look_for_confirm_call(code)
       else
         link_to_argument_variable = code.children[3].children[0]
       end
-      if !is_still_a_node link_to_argument_variable
+      if (!is_still_a_node link_to_argument_variable) && confirm_variable.match(link_to_redirect_name)
+        puts link_to_redirect_name
         insert_outputs_on_array("#{link_to_redirect_name}".downcase,Transform_into.var_into_controller(link_to_argument_variable),'',count_method_arguments(father_node))
         true
       end

@@ -9,7 +9,7 @@ class ErbTagsRemover
         if tagged_chunk[0] == '=' || tagged_chunk[0] == '-'
          tagged_chunk.slice!(0)
         end
-        if tagged_chunk[-1] == '-'
+        if tagged_chunk[-1] == '-' || tagged_chunk[-1] == '='
           tagged_chunk.slice!(-1)
         end
       end

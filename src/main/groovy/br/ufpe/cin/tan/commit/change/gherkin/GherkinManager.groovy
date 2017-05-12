@@ -3,6 +3,7 @@ package br.ufpe.cin.tan.commit.change.gherkin
 import gherkin.AstBuilder
 import gherkin.Parser
 import gherkin.ParserException
+import gherkin.ast.Background
 import gherkin.ast.Feature
 import gherkin.ast.GherkinDocument
 import gherkin.ast.ScenarioDefinition
@@ -18,7 +19,6 @@ class GherkinManager {
         Feature feature = null
         if (!content || content == "") {
             log.warn "Problem to parse Gherkin file '$filename'. Reason: The commit deleted it."
-            compilationErrors += [path: filename, msg: "Commit $sha deleted it."]
         } else {
             try {
                 Parser<GherkinDocument> parser = new Parser<>(new AstBuilder())
@@ -67,7 +67,7 @@ class GherkinManager {
             //excludes tag of next scenario definition
             int max = locations.get(featureIndex + 1) - 1 as int
             def scenDef = feature.children?.first()
-            if (!scenDef?.tags?.empty) max--
+            if (!(scenDef instanceof Background) && !scenDef?.tags?.empty) max--
 
             for (int i = featureLocation - 1; i < max; i++) {
                 text += lines.get(i).trim() + "\n"
@@ -91,14 +91,16 @@ class GherkinManager {
         scenDefinitions.each { change ->
             def text = ""
             def initialLine = change.location.line
-            if (!change.tags.empty) text += change.tags*.name.flatten().join(" ") + "\n"
+            if( !(change instanceof Background) && !change.tags.empty ) {
+                text += change.tags*.name.flatten().join(" ") + "\n"
+            }
             def index = locations.indexOf(initialLine)
 
             if (index < locations.size() - 1) {
                 //excludes tag of next scenario definition
                 int max = locations.get(index + 1) - 1 as int
                 def scenDef = scenDefinitions.find { it.location.line == max + 1 }
-                if (!scenDef?.tags?.empty) max--
+                if (!(scenDef instanceof Background) && !scenDef?.tags?.empty) max--
 
                 //extracts all text until it reaches the next scenario definition
                 for (int i = initialLine - 1; i < max; i++) {

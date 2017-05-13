@@ -250,16 +250,18 @@ class GitRepository {
 
     private CodeChange configureAddChange(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser) {
         CodeChange change = null
-        if (Util.isGherkinFile(entry.newPath))
+        if (Util.isGherkinFile(entry.newPath)) {
             change = extractGherkinAdds(commit, entry)
-        else if (Util.isStepDefinitionFile(entry.newPath))
+        } else if (Util.isStepDefinitionFile(entry.newPath))
             change = extractStepDefinitionAdds(commit, entry, parser)
         else {
             def result = extractFileContent(commit, entry.newPath)
             def lines = 0..<result.readLines().size()
             if (Util.isUnitTestFile(entry.newPath)) {
                 //change = extractUnitChanges(commit, entry.newPath, lines, parser)
-            } else change = new ChangedProdFile(path: entry.newPath, type: entry.changeType, lines: lines)
+            } else if(Util.isProductionFile(entry.newPath)){
+                change = new ChangedProdFile(path: entry.newPath, type: entry.changeType, lines: lines)
+            }
         }
         change
     }
@@ -274,7 +276,7 @@ class GitRepository {
             def lines = computeChanges(commit, entry.newPath)
             if (Util.isUnitTestFile(entry.newPath)) {
                 //change = extractUnitChanges(commit, entry.newPath, lines, parser)
-            } else {
+            } else if(Util.isProductionFile(entry.newPath)){
                 change = new ChangedProdFile(path: entry.newPath, type: entry.changeType, lines: lines)
             }
         }
@@ -325,7 +327,7 @@ class GitRepository {
         treeWalk.setRecursive(true)
         if (filename) treeWalk.setFilter(PathFilter.create(filename))
         if(!treeWalk.next()){
-            log.error "Did not find expected file '${filename}'"
+            log.warn "Did not find expected file '${filename}'. It does not exist anymore!"
             treeWalk = null
         }
         git.close()

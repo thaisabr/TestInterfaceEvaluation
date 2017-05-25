@@ -24,8 +24,9 @@ class EvaluationExporter {
     List<AnalysedTask> zeroPrecisionAndRecall
     List<AnalysedTask> others
     List<String[]> initialData
+    boolean filterEmptyIReal
 
-    public static String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests",
+    public static final String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests",
                               "#Impl_Gherkin_Tests", "#StepDef", "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors",
                               "#Step_Match_Error", "AST_Errors", "#AST_Errors", "Gherkin_AST_Errors", "#Gherkin_AST_Errors",
                               "Steps_AST_Errors", "#Steps_AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views",
@@ -46,17 +47,22 @@ class EvaluationExporter {
 
 
     EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks){
+        this(evaluationFile, tasks, true)
+    }
+
+    EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks, boolean toFilter){
         this.file = new File(evaluationFile)
         this.tasks = tasks
+        filterEmptyIReal = toFilter
         if(tasks && !tasks.empty) url = tasks.first().doneTask.gitRepository.url
         else url = ""
-        filter()
+        init()
         generateHeader()
     }
 
-    private filter() {
+    private init() {
         emptyIReal = tasks.findAll{ it.irealFiles().empty }
-        tasks -= emptyIReal
+        if(filterEmptyIReal) tasks -= emptyIReal
         stepCounter = tasks.findAll{ !it.doneTask.changedStepDefinitions.empty }.size()
         gherkinCounter = tasks.findAll{ !it.doneTask.changedGherkinFiles.empty }.size()
         hasGherkinTest = tasks.findAll{ !it.itest.foundAcceptanceTests.empty }
@@ -64,7 +70,9 @@ class EvaluationExporter {
         compilationErrors = tasks.findAll{ it.compilationErrors>0 }
         gherkinCompilationErrors = tasks.findAll{ it.gherkinCompilationErrors>0 }
         stepDefCompilationErrors = tasks.findAll{ it.stepDefCompilationErrors>0 }
-        invalidTasks = ((tasks - hasGherkinTest) + stepMatchError + compilationErrors).unique()
+        def invalid = ((tasks - hasGherkinTest) + stepMatchError + compilationErrors).unique()
+        if(filterEmptyIReal) invalidTasks = invalid
+        else invalidTasks = (invalid + emptyIReal).unique()
         validTasks = tasks - invalidTasks
         emptyITest = validTasks.findAll{ it.itestFiles().empty }
         def noEmptyITest = validTasks - emptyITest
@@ -75,7 +83,9 @@ class EvaluationExporter {
     private generateHeader() {
         initialData = []
         initialData += ["Repository", url] as String[]
-        initialData += ["No-empty IReal", tasks.size()] as String[]
+        initialData += ["Empty IReal", emptyIReal.size()] as String[]
+        if(filterEmptyIReal) initialData += ["No-empty IReal", tasks.size()] as String[]
+        else initialData += ["No-empty IReal", (tasks-emptyIReal).size()] as String[]
         initialData += ["Compilation errors", compilationErrors.size()] as String[]
         initialData += ["Compilation errors of Gherkin files", gherkinCompilationErrors.size()] as String[]
         initialData += ["Compilation errors of StepDef files", stepDefCompilationErrors.size()] as String[]
@@ -113,12 +123,6 @@ class EvaluationExporter {
             if (views.empty) views = ""
             def filesFromViewAnalysis = task.filesFromViewAnalysis()
             def viewFileFromITest = task.itestViewFiles().size()
-            def rails = ""
-            def gems = []
-            if(task.gems.size()>0) {
-                rails = task.gems.first().replaceAll(/[^\.\d]/,"")
-                gems = task.gems.subList(1, task.gems.size())
-            }
             String[] line = [task.doneTask.id, dates, task.doneTask.days,
                              task.doneTask.commitsQuantity, msgs, devs,
                              task.doneTask.gherkinTestQuantity, task.itest.foundAcceptanceTests.size(),
@@ -128,7 +132,7 @@ class EvaluationExporter {
                              task.gherkinCompilationErrors, task.stepDefCompilationErrorsText,
                              task.stepDefCompilationErrors, renames, removes, views, views.size(), itestSize,
                              irealSize, itestFiles, irealFiles, precision, recall, task.doneTask.hashes,
-                             task.itest.timestamp, rails, gems, task.itest.visitCallCounter, viewFileFromITest,
+                             task.itest.timestamp, task.rails, task.gems, task.itest.visitCallCounter, viewFileFromITest,
                              filesFromViewAnalysis.size(), filesFromViewAnalysis]
 
             content += line

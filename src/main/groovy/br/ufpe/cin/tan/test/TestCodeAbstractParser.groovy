@@ -11,7 +11,6 @@ import gherkin.ast.Scenario
 import gherkin.ast.ScenarioOutline
 import gherkin.ast.Step
 import groovy.util.logging.Slf4j
-import br.ufpe.cin.tan.analysis.task.*
 import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.Util
 
@@ -37,13 +36,16 @@ abstract class TestCodeAbstractParser {
     Set codeFromViewAnalysis
     int visitCallCounter
 
+    GherkinManager gherkinManager
+
     /***
      * Initializes fields used to link step declaration and code.
      *
      * @param repositoryPath It could be a URL or a local path.
      */
-    TestCodeAbstractParser(String repositoryPath) {
+    TestCodeAbstractParser(String repositoryPath, GherkinManager gherkinManager) {
         this.repositoryPath = repositoryPath
+        this.gherkinManager = gherkinManager
         stepsFilePath = repositoryPath + File.separator + Util.STEPS_FILES_RELATIVE_PATH
         regexList = []
         methods = [] as Set
@@ -70,14 +72,12 @@ abstract class TestCodeAbstractParser {
     }
 
     private organizeCompilationErrors() {
-        compilationErrors += GherkinManager.compilationErrors
+        compilationErrors += gherkinManager.compilationErrors
         def result = [] as Set
         def files = compilationErrors*.path.unique()
         files.each { file ->
-            def index = file.indexOf(repositoryPath)
-            def name = index >= 0 ? file.substring(index) - (repositoryPath + File.separator) : file
             def msgs = compilationErrors.findAll { it.path == file }*.msg
-            result += [path: name, msgs: msgs.unique()]
+            result += [path: file, msgs: msgs.unique()]
         }
         result
     }
@@ -508,7 +508,7 @@ abstract class TestCodeAbstractParser {
         }
 
         /* identifies more step definitions to analyse */
-        log.info "calledSteps:"
+        log.info "calledSteps: ${calledSteps.size()}"
         calledSteps.each{ log.info it.toString() }
 
         List<FileToAnalyse> newStepsToAnalyse = identifyMethodsPerFileToVisitByStepCalls(calledSteps)
@@ -578,5 +578,7 @@ abstract class TestCodeAbstractParser {
     abstract ChangedUnitTestFile doExtractUnitTest(String path, String content, List<Integer> changedLines)
 
     abstract String getClassForFile(String path)
+
+    abstract boolean hasCompilationError(String path)
 
 }

@@ -38,14 +38,14 @@ class ChangedGherkinFile implements CodeChange {
     String baseText
 
     /***
-     *  Textual representation of gherkin file from wich the feature node is extracted
+     *  Textual representation of gherkin file from which the feature node is extracted
      */
     String featureFileText
 
     @Override
     String toString() {
         def text = "Gherkin file: ${path}\nFeature: ${feature.name}\n"
-        Background background = feature.children.find{ it instanceof Background }
+        Background background = feature?.children?.find{ it instanceof Background }
         if (background) {
             text += "Background (line ${background.location.line}):${background.name}\n"
             background.steps.each {

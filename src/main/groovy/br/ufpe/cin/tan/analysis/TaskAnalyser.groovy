@@ -46,12 +46,12 @@ class TaskAnalyser {
     List<AnalysedTask> invalidTasks
     RelevantTaskExporter relevantTaskExporter
 
-    TaskAnalyser(String tasksFile, int taskLimit){
-        this(tasksFile)
-        this.taskLimit = taskLimit
+    TaskAnalyser(String tasksFile){
+        this(tasksFile, 0)
     }
 
-    TaskAnalyser(String tasksFile) {
+    TaskAnalyser(String tasksFile, int taskLimit) {
+        this.taskLimit = taskLimit
         file = new File(tasksFile)
         def projectFolder = ConstantData.DEFAULT_EVALUATION_FOLDER + File.separator + (file.name - ConstantData.CSV_FILE_EXTENSION)
         File folder = new File(projectFolder)
@@ -170,7 +170,11 @@ class TaskAnalyser {
 
     private analyseAllTasks() {
         if(candidateTasks && !candidateTasks.empty) {
-            candidateTasks.each { analysedTasks += it.computeInterfaces() }
+            candidateTasks.each {
+                def analysedTask = it.computeInterfaces()
+                if(analysedTask.isValid()) analysedTasks += analysedTask
+                else invalidTasks += analysedTask
+            }
         }
         log.info "Task interfaces were computed for ${candidateTasks.size()} tasks!"
     }
@@ -201,9 +205,9 @@ class TaskAnalyser {
     }
 
     private exportInvalidTasks(){
-        if(invalidTasks.empty)log.info "There is no invalid tasks to save!"
+        if(invalidTasks.empty) log.info "There is no invalid tasks to save!"
         else {
-            EvaluationExporter evaluationExporter = new EvaluationExporter(invalidTasksFile, invalidTasks)
+            EvaluationExporter evaluationExporter = new EvaluationExporter(invalidTasksFile, invalidTasks, false)
             evaluationExporter.save()
             log.info "Invalid tasks were saved in ${invalidTasksFile}."
         }

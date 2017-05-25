@@ -1,18 +1,17 @@
-package taskAnalyser
+package temporary
 
 import au.com.bytecode.opencsv.CSVReader
 import au.com.bytecode.opencsv.CSVWriter
-import evaluation.TaskInterfaceEvaluator
+import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
 import groovy.util.logging.Slf4j
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
-import similarityAnalyser.test.TestSimilarityAnalyser
-import similarityAnalyser.text.TextualSimilarityAnalyser
-import taskAnalyser.task.AnalysedTask
-import taskAnalyser.task.AnalysisResult
-import taskAnalyser.task.DoneTask
-import util.ConstantData
-import util.RegexUtil
-import util.Util
+import br.ufpe.cin.tan.similarity.test.TestSimilarityAnalyser
+import br.ufpe.cin.tan.similarity.text.TextualSimilarityAnalyser
+import br.ufpe.cin.tan.analysis.AnalysedTask
+import br.ufpe.cin.tan.analysis.task.DoneTask
+import br.ufpe.cin.tan.util.ConstantData
+import br.ufpe.cin.tan.util.RegexUtil
+import br.ufpe.cin.tan.util.Util
 
 
 @Slf4j
@@ -23,8 +22,8 @@ class DataManager {
                              "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors", "#Step_Match_Error", "AST_Errors",
                              "#AST_Errors", "Gherkin_AST_Errors", "#Gherkin_AST_Errors", "Steps_AST_Errors",
                              "#Steps_AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views", "#Views", "#ITest",
-                             "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp", "Rails", "Simplecov",
-                             "FactoryGirl", "#Visit_Call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis"]
+                             "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp", "Gems", "#Visit_Call",
+                             "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis"]
     static final int RECALL_INDEX = HEADER.size() - 10
     static final int PRECISION_INDEX = RECALL_INDEX - 1
     static final int IREAL_INDEX = PRECISION_INDEX - 1
@@ -273,13 +272,13 @@ class DataManager {
 
     static saveAllResult(String filename, int allTasksCounter, AnalysisResult result) {
         CSVWriter writer = new CSVWriter(new FileWriter(filename))
-        writeHeaderAllResult(writer, result.url, allTasksCounter, result.validTasks.size(),
+        writeHeaderAllResult(writer, result.url, allTasksCounter, result.tasks.size(),
                 result.stepCounter, result.gherkinCounter, result.testsCounter)
 
         def saveText = false
-        if (result.validTasks && result.validTasks.size() > 1) saveText = true
+        if (result.tasks && result.tasks.size() > 1) saveText = true
 
-        result.validTasks?.each { task ->
+        result.tasks?.each { task ->
             def itestFiles = task.itestFiles()
             def itestSize = itestFiles.size()
             def irealFiles = task.irealFiles()
@@ -305,8 +304,8 @@ class DataManager {
                              task.gherkinCompilationErrors, task.stepDefCompilationErrorsText,
                              task.stepDefCompilationErrors, renames, removes, views, views.size(), itestSize,
                              irealSize, itestFiles, irealFiles, precision, recall, task.doneTask.hashes,
-                             task.itest.timestamp, task.rails, task.simplecov, task.factorygirl,
-                             task.itest.visitCallCounter, viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis]
+                             task.itest.timestamp, task.gems, task.itest.visitCallCounter, viewFileFromITest,
+                             filesFromViewAnalysis.size(), filesFromViewAnalysis]
 
             writer.writeNext(line)
             if (saveText) writeITextFile(filename, task) //dealing with long textual description of a task

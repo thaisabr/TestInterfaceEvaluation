@@ -25,7 +25,7 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
 
     private static ignoreArgs(String value){
         if(!value && value.empty) return ""
-        def result
+        def result = ""
         def pipeIndex1 = value.indexOf("|")
         if(pipeIndex1<0) result = value
         else{
@@ -62,8 +62,8 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
         def body = []
         def text = content.get(startLine)
         def aux = extractBodyStyle1(text)
-        if(!aux) aux = extractBodyStyle2(text)
-        if(aux) body += aux
+        if(aux==null) aux = extractBodyStyle2(text)
+        if(aux!=null) body += aux
         else {
             log.error "Error to extract body from step (File: $path, start line:${startLine+1})"
         }
@@ -75,8 +75,8 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
         def text = content.subList(startLine, endLine+1)
         def line = text.join("\n")
         def aux = extractBodyStyle1(line)
-        if(!aux) aux = extractBodyStyle2(line)
-        if(aux) body += aux
+        if(aux==null) aux = extractBodyStyle2(line)
+        if(aux!=null) body += aux
         else {
             log.error "Error to extract body from step (File: $path, start line:${startLine+1})"
         }

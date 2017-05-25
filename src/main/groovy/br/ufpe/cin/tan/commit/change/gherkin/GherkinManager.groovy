@@ -13,9 +13,13 @@ import org.eclipse.jgit.revwalk.RevCommit
 @Slf4j
 class GherkinManager {
 
-    static Set compilationErrors = [] as Set
+    Set compilationErrors
 
-    static Feature parseGherkinFile(String content, String filename, String sha) {
+    GherkinManager(){
+        compilationErrors = [] as Set
+    }
+
+    Feature parseGherkinFile(String content, String filename, String sha) {
         Feature feature = null
         if (!content || content == "") {
             log.warn "Problem to parse Gherkin file '$filename'. Reason: The commit deleted it."
@@ -119,11 +123,13 @@ class GherkinManager {
      * Identifies scenarios definitions at added gherkin files (features) by the first commit of the repository.
      * It is used only when dealing with done tasks.
      */
-    static ChangedGherkinFile extractGherkinAdds(RevCommit commit, String content, String path) {
+    ChangedGherkinFile extractGherkinAdds(RevCommit commit, String content, String path) {
         ChangedGherkinFile changedGherkinFile = null
         def newFeature = parseGherkinFile(content, path, commit.name)
-        if(newFeature && newFeature.children && !newFeature.children.empty){
-            changedGherkinFile = new ChangedGherkinFile(path: path, feature: newFeature, changedScenarioDefinitions: newFeature.children)
+        def scenarios = []
+        if(newFeature && newFeature.children) scenarios = newFeature.children.findAll{ !(it instanceof Background) }
+        if(!scenarios.empty){
+            changedGherkinFile = new ChangedGherkinFile(path: path, feature: newFeature, changedScenarioDefinitions: scenarios)
         }
         changedGherkinFile
     }

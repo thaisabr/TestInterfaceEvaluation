@@ -4,12 +4,12 @@ import br.ufpe.cin.tan.analysis.AnalysedTask
 import br.ufpe.cin.tan.analysis.itask.IReal
 import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.commit.Commit
-import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
 import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
 import br.ufpe.cin.tan.commit.change.stepdef.StepdefManager
 import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
 import br.ufpe.cin.tan.commit.change.stepdef.ChangedStepdefFile
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
+import gherkin.ast.Background
 import gherkin.ast.Feature
 import groovy.time.TimeCategory
 import groovy.time.TimeDuration
@@ -121,13 +121,13 @@ class DoneTask extends Task {
         }
 
         if(!notFoundFiles.empty){
-            def text = "No long valid step definition files:\n"
+            def text = "No long valid step definition files (task ${id}):\n"
             notFoundFiles?.each{ text += it+"\n" }
             log.warn text
         }
 
         if(!notFoundSteps.empty){
-            def text = "No long valid step definitions:\n"
+            def text = "No long valid step definitions (task ${id}):\n"
             notFoundSteps?.each{ n ->
                 text += "File: ${n.file}\nSteps:\n"
                 n.steps?.each{ text += it+"\n" }
@@ -145,20 +145,20 @@ class DoneTask extends Task {
         List<ChangedGherkinFile> finalGherkinFilesSet = []
 
         gherkinFiles?.each { gherkinFile ->
-            def content = gitRepository.extractFileContent(lastCommit, gherkinFile.path)
-            Feature feature = GherkinManager.parseGherkinFile(content, gherkinFile.path, lastCommit.name)
+            def result = gitRepository.parseGherkinFile(gherkinFile.path, lastCommit.name)
+            Feature feature = result.feature
             if(feature){
-                gherkinFile.feature = feature
-                def scenarios = feature?.children*.name
-                if(scenarios && !scenarios.empty){
-                    def initialSet = gherkinFile.changedScenarioDefinitions
-                    def valid = initialSet.findAll { it.name in scenarios }
-                    def finalScenarios = feature?.children?.findAll{ it.name in valid*.name && !it.steps.empty }
+                def currentScenarios = feature?.children?.findAll{ !(it instanceof Background) }*.name
+                if(currentScenarios && !currentScenarios.empty){
+                    def initialSet = gherkinFile.changedScenarioDefinitions.findAll{ !(it instanceof Background) }
+                    def valid = initialSet.findAll { it.name in currentScenarios }
+                    def validNames = valid*.name
+                    def finalScenarios = feature?.children?.findAll{ !(it instanceof Background) && it.name in validNames && !it.steps.empty }
                     def invalid = initialSet - valid
                     if(!invalid?.empty) notFoundScenarios += [file:gherkinFile.path, scenarios:invalid*.name]
                     if(!valid?.empty) {
                         def newGherkinFile = new ChangedGherkinFile(path: gherkinFile.path, feature: feature,
-                                changedScenarioDefinitions: finalScenarios, featureFileText: content)
+                                changedScenarioDefinitions: finalScenarios, featureFileText: result.content)
                         finalGherkinFilesSet += newGherkinFile
                     }
                 }
@@ -168,13 +168,13 @@ class DoneTask extends Task {
         }
 
         if(!notFoundFiles.empty){
-            def text = "No long valid gherkin files:\n"
+            def text = "No long valid gherkin files (task ${id}):\n"
             notFoundFiles?.each{ text += it+"\n" }
             log.warn text
         }
 
         if(!notFoundScenarios.empty){
-            def text = "No long valid scenarios:\n"
+            def text = "No long valid scenarios (task ${id}):\n"
             notFoundScenarios?.each{ n ->
                 text += "File: ${n.file}\nScenarios:\n"
                 n.scenarios?.each{ text += it+"\n" }
@@ -311,6 +311,46 @@ class DoneTask extends Task {
         log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }*.hash}"
     }
 
+    private registryCompilationErrors(AnalysedTask task){
+        def finalErrorSet = []
+        def errors = task.itest.compilationErrors
+
+        def gherkinErrors = errors.findAll{ Util.isGherkinFile(it.path) }
+        gherkinErrors?.each{ error ->
+            def result = gitRepository.parseGherkinFile(error.path, commits?.last()?.hash)
+            if(!result.feature) finalErrorSet += error
+        }
+
+        def rubyErrors = errors - gherkinErrors
+        rubyErrors?.each{ error ->
+            def hasError = testCodeParser.hasCompilationError(error.path)
+            if(hasError) finalErrorSet += error
+        }
+
+        def formatedResult = []
+        finalErrorSet.each{ error ->
+            def file = error.path
+            def index = error.path.indexOf(gitRepository.localPath)
+            def name = index >= 0 ? file.substring(index) - (gitRepository.localPath + File.separator) : file
+            formatedResult += [path: name, msgs:error.msgs]
+        }
+
+        def itest = new ITest()
+        itest.collapseInterfaces(task.itest)
+        itest.compilationErrors = formatedResult
+        task.itest = itest
+    }
+
+    private registryCompilationErrors(ITest iTest){
+        def finalErrorSet = []
+        def errors = iTest.compilationErrors
+        errors?.each{ error ->
+            def result = gitRepository.parseGherkinFile(error.path, commits?.last()?.hash)
+            if(!result.feature) finalErrorSet += error
+        }
+        iTest.compilationErrors = finalErrorSet
+    }
+
     @Override
     List<ChangedGherkinFile> getAcceptanceTests() {
         changedGherkinFiles
@@ -342,8 +382,9 @@ class DoneTask extends Task {
                 use(TimeCategory) {
                     timestamp = endTime - initTime
                 }
-                //log.info "Timestamp: $timestamp"
                 taskInterface.timestamp = timestamp
+
+                registryCompilationErrors(taskInterface)
 
                 // resets repository to last version
                 gitRepository.reset()
@@ -372,7 +413,7 @@ class DoneTask extends Task {
                 gitRepository.reset(commits?.last()?.hash)
 
                 //computes task text based in gherkin scenarios
-                text = Object.computeTextBasedInterface()
+                text = super.computeTextBasedInterface()
 
                 // resets repository to last version
                 gitRepository.reset()
@@ -441,6 +482,7 @@ class DoneTask extends Task {
                     timestamp = endTime - initTime
                 }
                 analysedTask.itest.timestamp = timestamp
+                registryCompilationErrors(analysedTask)
 
                 //computes task text based in gherkin scenarios
                 analysedTask.itext = super.computeTextBasedInterface()
@@ -455,7 +497,7 @@ class DoneTask extends Task {
                 analysedTask.ireal.timestamp = timestamp
 
                 //it is only necessary in the evaluation study
-                analysedTask.gems = RubyUtil.checkRailsVersionAndGems(gitRepository.localPath)
+                analysedTask.configureGems(gitRepository.localPath)
 
                 // resets repository to last version
                 gitRepository.reset()

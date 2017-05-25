@@ -1,5 +1,6 @@
 package br.ufpe.cin.tan.test.ruby
 
+import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
 import groovy.util.logging.Slf4j
 import org.jrubyparser.CompatVersion
 import org.jrubyparser.Parser
@@ -37,8 +38,8 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     ViewCodeExtractor viewCodeExtractor
     static counter = 1
 
-    RubyTestCodeParser(String repositoryPath) {
-        super(repositoryPath)
+    RubyTestCodeParser(String repositoryPath, GherkinManager gherkinManager) {
+        super(repositoryPath, gherkinManager)
         this.routesFile = repositoryPath + RubyConstantData.ROUTES_FILE
         this.routes = [] as Set
         this.problematicRoutes = [] as Set
@@ -51,7 +52,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
      * @param path path of interest file
      * @return the root node of the AST
      */
-    private Node generateAst(reader, String path){
+    Node generateAst(reader, String path){
         Parser rubyParser = new Parser()
         CompatVersion version = CompatVersion.RUBY2_0
         ParserConfiguration config = new ParserConfiguration(0, version)
@@ -61,8 +62,11 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
             result = rubyParser.parse("<code>", reader, config)
         } catch (SyntaxException ex) {
             log.error "Problem to visit file $path: ${ex.message}"
-            def index = ex.message.indexOf(",")
-            def msg = index >= 0 ? ex.message.substring(index + 1).trim() : ex.message.trim()
+            def msg = ""
+            if(ex.message && !ex.message.empty) {
+                def index = ex.message.indexOf(",")
+                msg = index >= 0 ? ex.message.substring(index + 1).trim() : ex.message.trim()
+            }
             compilationErrors += [path: path, msg: msg]
         }
         finally {
@@ -71,12 +75,12 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         result
     }
 
-    private Node generateAst(String path) {
+    Node generateAst(String path) {
         FileReader reader = new FileReader(path)
         this.generateAst(reader, path)
     }
 
-    private Node generateAst(String path, String content) {
+    Node generateAst(String path, String content) {
         StringReader reader = new StringReader(content)
         this.generateAst(reader, path)
     }
@@ -416,12 +420,11 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     }
 
     private extractCallsFromViewFiles(RubyTestCodeVisitor visitor, Set<String> analysedViewFiles){
-        def viewFiles = visitor.taskInterface.findAllProdFiles().findAll{ Util.isViewFile(it) }
+        def viewFiles = visitor.taskInterface.getViewFilesForFurtherAnalysis()
         if(analysedViewFiles && !analysedViewFiles.empty) viewFiles -= analysedViewFiles
         def calls = []
         viewFiles?.each{ viewFile ->
-            def path = Util.REPOSITORY_FOLDER_PATH + viewFile
-            path = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
+            def path = viewFile.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
             try{
                 def r = []
                 String code = viewCodeExtractor?.extractCode(path)
@@ -544,7 +547,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
         log.info "All calls from view file(s): ${calls.size()}"
         calls?.each{ log.info it.toString() }
 
-        analysedViewFiles += visitor.taskInterface.findAllProdFiles().findAll{ Util.isViewFile(it) }
+        analysedViewFiles += visitor.taskInterface.getViewFilesForFurtherAnalysis()
         def files = organizeViewFileAccess(calls, visitor)
 
         def noFiles = calls - files
@@ -717,5 +720,11 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     @Override
     Set<String> getCodeFromViewAnalysis() {
         interfaceFromViews.findAllProdFiles().sort()
+    }
+
+    @Override
+    boolean hasCompilationError(String path){
+        def node = generateAst(path)
+        if (!node) true else false
     }
 }

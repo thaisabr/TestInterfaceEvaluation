@@ -1,5 +1,6 @@
 package br.ufpe.cin.tan.test.groovy
 
+import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationUnit
@@ -28,8 +29,8 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
         /** ************************************************************************************************************/
     }
 
-    GroovyTestCodeParser(String repositoryPath) {
-        super(repositoryPath)
+    GroovyTestCodeParser(String repositoryPath, GherkinManager gherkinManager) {
+        super(repositoryPath, gherkinManager)
     }
 
     private static configureClassLoader(String productionPath, String testPath) {
@@ -150,5 +151,10 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
     @Override
     String getClassForFile(String path) {
         return null
+    }
+
+    @Override
+    boolean hasCompilationError(String path) {
+        return false
     }
 }

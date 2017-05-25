@@ -208,7 +208,10 @@ abstract class Util {
     }
 
     static boolean isTestFile(String path) {
-        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        if(!path || path.empty) return false
+        def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def root = extractRootFolder(path)
+        p = p - root
         if (p?.contains("${UNIT_TEST_FILES_RELATIVE_PATH}${File.separator}") ||
                 p?.contains("${GHERKIN_FILES_RELATIVE_PATH}${File.separator}") ||
                 p?.contains("${STEPS_FILES_RELATIVE_PATH}${File.separator}") ||
@@ -218,29 +221,41 @@ abstract class Util {
     }
 
     static boolean isValidFile(String path) {
-        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        if (VALID_FOLDERS.any { p?.contains(it + File.separator) } && VALID_EXTENSIONS.any {
-            p?.endsWith(it) }) true
-        else if(VALID_FOLDERS.any { p?.contains(it + File.separator) } && p?.count(".")==1 &&
-                (p?.endsWith(ConstantData.ERB_EXTENSION) || p?.endsWith(ConstantData.HAML_EXTENSION) || p?.endsWith(".slim"))) true
+        if(!path || path.empty) return false
+        def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def root = extractRootFolder(path)
+        p = p - root
+        if (VALID_FOLDERS.any { p.startsWith(it + File.separator) } && VALID_EXTENSIONS.any {
+            p.endsWith(it) }) true
+        else if(VALID_FOLDERS.any { p.startsWith(it + File.separator) } && p.count(".")==1 &&
+                (p.endsWith(ConstantData.ERB_EXTENSION) || p.endsWith(ConstantData.HAML_EXTENSION) || p.endsWith(".slim"))) true
         else false
     }
 
     static boolean isStepDefinitionFile(String path) {
-        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        if (p?.contains(STEPS_FILES_RELATIVE_PATH + File.separator) && p?.endsWith(VALID_EXTENSION)) true
+        if(!path || path.empty) return false
+        def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def root = extractRootFolder(path)
+        p = p - root
+        if (p.startsWith(STEPS_FILES_RELATIVE_PATH + File.separator) && p.endsWith(VALID_EXTENSION)) true
         else false
     }
 
     static boolean isGherkinFile(String path) {
-        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        if (p?.endsWith(ConstantData.FEATURE_EXTENSION)) true
+        if(!path || path.empty) return false
+        def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def root = extractRootFolder(path)
+        p = p - root
+        if (p.startsWith(ConstantData.DEFAULT_GHERKIN_FOLDER+File.separator) && p.endsWith(ConstantData.FEATURE_EXTENSION)) true
         else false
     }
 
     static boolean isUnitTestFile(String path) {
-        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        if (p?.contains(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) && p?.endsWith(VALID_EXTENSION)) true
+        if(!path || path.empty) return false
+        def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def root = extractRootFolder(path)
+        p = p - root
+        if (p.startsWith(UNIT_TEST_FILES_RELATIVE_PATH + File.separator) && p.endsWith(VALID_EXTENSION)) true
         else false
     }
 
@@ -250,17 +265,49 @@ abstract class Util {
     }
 
     static boolean isViewFile(String path){
-        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        if ( p?.contains("${VIEWS_FILES_RELATIVE_PATH}${File.separator}") &&
-                ( p?.endsWith(ConstantData.ERB_EXTENSION) || p?.endsWith(ConstantData.HAML_EXTENSION) )
+        if(!path || path.empty) return false
+        def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def root = extractRootFolder(path)
+        p = p - root
+        if ( p.startsWith("${VIEWS_FILES_RELATIVE_PATH}${File.separator}") &&
+                ( p.endsWith(ConstantData.ERB_EXTENSION) || p.endsWith(ConstantData.HAML_EXTENSION) )
         ) true
         else false
     }
 
     static boolean isControllerFile(String path){
-        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        if (p?.contains("${CONTROLLER_FILES_RELATIVE_PATH}${File.separator}")) true
+        if(!path || path.empty) return false
+        def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        def root = extractRootFolder(path)
+        p = p - root
+        if (p.startsWith("${CONTROLLER_FILES_RELATIVE_PATH}${File.separator}")) true
         else false
+    }
+
+    static extractRootFolder(String path){
+        def root = ""
+        if(!path || path.empty) return root
+        def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+
+        if(p?.contains(REPOSITORY_FOLDER_PATH)){
+            def i1 = p.indexOf(REPOSITORY_FOLDER_PATH)
+            def begin = p.substring(0, i1)
+            def temp = p.substring(i1+REPOSITORY_FOLDER_PATH.size())
+            def i2 = temp.indexOf(File.separator)
+            def projectFolder = temp.substring(0,i2)
+            root = begin + REPOSITORY_FOLDER_PATH + projectFolder + File.separator
+            root = root.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        }
+        root
+    }
+
+    static organizePathsForInterfaces(Collection<String> files){
+        files?.findResults { i ->
+            if(i){
+                def root = extractRootFolder(i)
+                i - root
+            } else null
+        }
     }
 
     static emptyFolder(String folder) {
@@ -284,13 +331,13 @@ abstract class Util {
         def files = findFilesFromDirectory(directory)
         switch (CODE_LANGUAGE) {
             case LanguageOption.JAVA:
-                files = files.findAll { it.contains(ConstantData.JAVA_EXTENSION) }
+                files = files.findAll { it.endsWith(ConstantData.JAVA_EXTENSION) }
                 break
             case LanguageOption.GROOVY:
-                files = files.findAll { it.contains(ConstantData.GROOVY_EXTENSION) }
+                files = files.findAll { it.endsWith(ConstantData.GROOVY_EXTENSION) }
                 break
             case LanguageOption.RUBY:
-                files = files.findAll { it.contains(ConstantData.RUBY_EXTENSION) }
+                files = files.findAll { it.endsWith(ConstantData.RUBY_EXTENSION) }
                 break
             default: throw new InvalidLanguageException()
         }

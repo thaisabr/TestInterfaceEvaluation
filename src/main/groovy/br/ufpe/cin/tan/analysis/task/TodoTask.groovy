@@ -3,6 +3,7 @@ package br.ufpe.cin.tan.analysis.task
 import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
 import gherkin.Parser
+import gherkin.ast.Background
 import gherkin.ast.Feature
 import groovy.time.TimeCategory
 import groovy.time.TimeDuration
@@ -46,7 +47,7 @@ class TodoTask extends Task {
                 def reader = new FileReader(path)
                 Feature feature = featureParser.parse(reader)
                 reader.close()
-                def scenarioDefinitions = feature?.scenarioDefinitions?.findAll { it.location.line in scenario.lines }
+                def scenarioDefinitions = feature?.children?.findAll { it.location.line in scenario.lines && !(it instanceof Background)}
                 if (scenarioDefinitions) {
                     gherkinFiles += new ChangedGherkinFile(path: scenario.path, feature: feature, changedScenarioDefinitions: scenarioDefinitions)
                 }

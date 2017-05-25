@@ -1,5 +1,8 @@
 package br.ufpe.cin.tan.test.ruby
 
+import org.jrubyparser.ast.EvStrNode
+import org.jrubyparser.ast.StrNode
+import org.jrubyparser.ast.DRegexpNode
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.ast.RegexpNode
 import org.jrubyparser.util.NoopVisitor
@@ -28,6 +31,12 @@ class RubyStepRegexVisitor extends NoopVisitor {
         else false
     }
 
+    private static boolean isStepDefinitionNode(DRegexpNode node) {
+        if (node.grandParent instanceof FCallNode && node.grandParent.name in ConstantData.ALL_STEP_KEYWORDS
+                && node.grandParent.position.startLine == node.position.startLine) true
+        else false
+    }
+
     @Override
     Object visitRegexpNode(RegexpNode iVisited) {
         super.visitRegexpNode(iVisited)
@@ -38,4 +47,16 @@ class RubyStepRegexVisitor extends NoopVisitor {
         return iVisited
     }
 
+    Object visitDRegxNode(DRegexpNode iVisited) {
+        super.visitDRegxNode(iVisited)
+        if (isStepDefinitionNode(iVisited)) {
+            def value = ""
+            iVisited.childNodes()?.each{
+                if(it instanceof StrNode) value += "${it.value}"
+                else if(it instanceof EvStrNode) value += ".+"
+            }
+            if(!value.empty) regexs += new StepRegex(path: path, value: value, line: iVisited.position.startLine)
+        }
+        return iVisited
+    }
 }

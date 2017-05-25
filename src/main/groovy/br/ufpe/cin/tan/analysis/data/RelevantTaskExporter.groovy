@@ -98,13 +98,9 @@ class RelevantTaskExporter {
             if (views.empty) views = ""
             def filesFromViewAnalysis = task.filesFromViewAnalysis()
             def viewFileFromITest = task.itestViewFiles().size()
-            def rails = ""
-            if(task.gems.size()>0) {
-                rails = task.gems.first().replaceAll(/[^\.\d]/,"")
-            }
             String[] line = [task.doneTask.id, task.doneTask.days, devs, task.doneTask.commitsQuantity,
                              task.doneTask.hashes, gherkinTestsSize, itestSize, irealSize,
-                             itest, ireal, precision, recall, rails, task.itest.visitCallCounter, viewFileFromITest,
+                             itest, ireal, precision, recall, task.rails, task.itest.visitCallCounter, viewFileFromITest,
                              filesFromViewAnalysis.size(), filesFromViewAnalysis, task.methods, renames, removes, views, views.size(),
                              task.itest.timestamp]
 

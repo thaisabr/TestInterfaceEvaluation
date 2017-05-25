@@ -44,26 +44,41 @@ class RubyUtil extends Util {
         projectFiles?.findAll { it ==~ /$exp/ }
     }
 
+    static checkRubyVersion(List<String> lines){
+        def rubyRegex = /\s*ruby\s+"?'?.+"?'?.*/
+        def rubyVersion = ""
+        def foundRuby = lines.find{ !(it.trim().startsWith("#")) && it==~rubyRegex }
+        if(foundRuby){
+            def index = foundRuby.indexOf("'")
+            if(index<0) index = foundRuby.indexOf('"')
+            if(index<0) return rubyVersion
+            rubyVersion = foundRuby.substring(index+1)?.trim()
+            rubyVersion = rubyVersion.substring(0, rubyVersion.size()-1)
+        }
+        rubyVersion
+    }
+
     static checkRailsVersionAndGems(String path){
-        def result = []
+        List<String> gems = []
+        def railsVersion = ""
+        def rubyVersion = ""
         File file = new File(path+File.separator+RubyConstantData.GEM_FILE)
         if(file.exists()){
             def lines = file.readLines()
+            rubyVersion = checkRubyVersion(lines)
             RubyConstantData.GEMS_OF_INTEREST.each{ gem ->
                 def regex = /\s*gem\s+"?'?${gem}"?'?.*/
-                def version = ""
                 def foundGem = lines.find{ !(it.trim().startsWith("#")) && it==~regex }
                 if(foundGem){
                     if(gem == "rails"){
                         def index = foundGem.lastIndexOf(",")
-                        if(index>-1) version = foundGem?.substring(index+1)?.trim()
-                        result += version
-                    } else result += gem
+                        if(index>-1) railsVersion = foundGem?.substring(index+1)?.trim()
+                    } else gems += gem
 
                 }
             }
         }
-        result
+        [rails:railsVersion, ruby:rubyVersion, gems:gems]
     }
 
 }

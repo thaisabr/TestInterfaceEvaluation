@@ -20,7 +20,7 @@ abstract class ConstantData {
     public static final String PROP_GEM_AST = "spgroup.gems.ast"
 
     public static final String DEFAULT_TASKS_FOLDER = "tasks"
-    public static final String DEFAULT_REPOSITORY_FOLDER = "repositories"
+    public static final String DEFAULT_REPOSITORY_FOLDER = "spg_repos"
     public static final String DEFAULT_LANGUAGE = "ruby"
     public static final String DEFAULT_GHERKIN_FOLDER = "features"
     public static final String DEFAULT_STEPS_FOLDER = "features/step_definitions"

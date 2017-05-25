@@ -5,6 +5,7 @@ import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
 import br.ufpe.cin.tan.analysis.task.DoneTask
 import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.util.Util
+import br.ufpe.cin.tan.util.ruby.RubyUtil
 
 class AnalysedTask {
 
@@ -24,6 +25,9 @@ class AnalysedTask {
     String stepDefCompilationErrorsText
     int stepDefCompilationErrors
     List<String> gems
+    List<String> coverageGems
+    String rails
+    String ruby
 
     AnalysedTask(DoneTask doneTask){
         this.doneTask = doneTask
@@ -31,6 +35,9 @@ class AnalysedTask {
         this.ireal = new IReal()
         this.itext = ""
         this.gems = []
+        this.coverageGems = []
+        this.rails = ""
+        this.ruby = ""
     }
 
     private void extractStepMatchErrors() {
@@ -148,6 +155,16 @@ class AnalysedTask {
 
     def isValid(){
         compilationErrors==0 && stepMatchErrors==0 && satisfiesGemsFilter() && hasImplementedAcceptanceTests() && !irealFiles().empty
+    }
+
+    def configureGems(String path){
+        def result = RubyUtil.checkRailsVersionAndGems(path) //[rails, ruby, gems]
+        gems = result.gems
+        rails = result.rails.replaceAll(/[^\.\d]/,"")
+        ruby = result.ruby
+        if(gems.size()>0) {
+            coverageGems = gems.findAll{ it == "coveralls" || it == "simplecov" }
+        }
     }
 
 }

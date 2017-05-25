@@ -25,15 +25,10 @@ class TestExecutionExporter {
         scenarios
     }
 
-    private static extractGems(task){
-        def rails = ""
+    private static extractCoverageGems(AnalysedTask task){
         def coverage = ""
-        if(task.gems.size()>0) {
-            rails = task.gems.first().replaceAll(/[^\.\d]/,"")
-            def gems = task.gems.subList(1, task.gems.size()).findAll{ it == "coveralls" || it == "simplecov"}
-            if(!gems.empty) coverage = gems.join(",")
-        }
-        [rails:rails, coverage:coverage]
+        if(!task.coverageGems.empty) coverage = task.coverageGems.join(",")
+        coverage
     }
 
     def save(){
@@ -43,13 +38,13 @@ class TestExecutionExporter {
 
         def url = tasks.first().doneTask.gitRepository.url
         content += ["Repository", url] as String[]
-        String[] header = ["TASK", "HASH", "RAILS", "COVERAGE", "TESTS"]
+        String[] header = ["TASK", "HASH", "RUBY", "RAILS", "COVERAGE", "TESTS"]
         content += header
 
         tasks.each { task ->
             def scenarios = extractTests(task)
-            def gems = extractGems(task)
-            String[] line = [task.doneTask.id, task.doneTask.commits.last().hash, gems.rails, gems.coverage, scenarios]
+            def coverage = extractCoverageGems(task)
+            String[] line = [task.doneTask.id, task.doneTask.commits.last().hash, task.ruby, task.rails, coverage, scenarios]
             content += line
         }
         CsvUtil.write(testFile, content)

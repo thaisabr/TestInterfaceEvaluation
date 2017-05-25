@@ -17,7 +17,7 @@ class ITest extends TaskInterface {
     /** ****************************************************************************************************************/
 
     Set matchStepErrors
-    Set compilationErrors
+    Set compilationErrors //[path: String, msgs: List<String>]
     Set notFoundViews
     Set foundAcceptanceTests
     Set codeFromViewAnalysis
@@ -66,22 +66,30 @@ class ITest extends TaskInterface {
      * @return a list of files
      */
     Set<String> findAllProdFiles() {
-        //production classes
-        def classes = (classes?.findAll { Util.isProductionFile(it.file) })*.file
-
-        //production methods
-        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" && Util.isProductionFile(it.file) }*.file
-
-        //production files
-        def files = ((classes + methodFiles + referencedPages) as Set)?.sort()
-
-        def canonicalPath = Util.getRepositoriesCanonicalPath()
-        files?.findResults { i -> i ? i - canonicalPath : null } as Set
+        def files = getAllProdFiles()
+        Util.organizePathsForInterfaces(files) as Set
     }
 
     //filtering result to only identify view and/or controller files
     Set<String> findFilteredFiles(){
         Util.filterFiles(this.findAllProdFiles())
+    }
+
+    Set<String> getAllProdFiles(){
+        //production classes
+        def classes = (classes?.findAll { Util.isProductionFile(it.file) })*.file
+
+        //production methods
+        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" &&
+                it.file && Util.isProductionFile(it.file) }*.file
+
+        //production files
+        ((classes + methodFiles + referencedPages) as Set)?.sort()
+    }
+
+    Set<String> getViewFilesForFurtherAnalysis(){
+        def files = getAllProdFiles()
+        files?.findAll{ String f -> Util.isViewFile(f) }
     }
 
     def collapseInterfaces(ITest task) {

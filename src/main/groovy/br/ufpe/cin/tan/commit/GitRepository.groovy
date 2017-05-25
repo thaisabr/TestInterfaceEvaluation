@@ -6,8 +6,11 @@ import br.ufpe.cin.tan.commit.change.ChangedProdFile
 import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
 import br.ufpe.cin.tan.commit.change.stepdef.StepdefManager
 import br.ufpe.cin.tan.commit.change.unit.UnitTestManager
+import gherkin.ast.Background
+import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
+import org.apache.commons.io.IOUtils
 import org.eclipse.jgit.api.BlameCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.blame.BlameResult
@@ -40,6 +43,7 @@ import java.util.regex.Matcher
 @Slf4j
 class GitRepository {
 
+    GherkinManager gherkinManager
     static List<GitRepository> repositories = []
     String url
     String name
@@ -48,6 +52,7 @@ class GitRepository {
     Set removedSteps
 
     private GitRepository(String path) throws CloningRepositoryException {
+        this.gherkinManager = new GherkinManager()
         this.removedSteps = [] as Set
         if (path.startsWith("http")) {
             if(path.endsWith(ConstantData.GIT_EXTENSION)) this.url = path
@@ -70,7 +75,8 @@ class GitRepository {
 
     static GitRepository getRepository(String url) throws CloningRepositoryException {
         def repository = repositories.find { ((it.url - ConstantData.GIT_EXTENSION) == url) }
-        if (!repository) {
+        if(repository) repository.gherkinManager = new GherkinManager()
+        else {
             repository = new GitRepository(url)
             repositories += repository
         }
@@ -195,14 +201,14 @@ class GitRepository {
         ChangedGherkinFile changedGherkinFile = null
 
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newFeature = GherkinManager.parseGherkinFile(newVersion, entry.newPath, commit.name)
+        def newFeature = gherkinManager.parseGherkinFile(newVersion, entry.newPath, commit.name)
         def oldVersion = extractFileContent(parent, entry.oldPath)
-        def oldFeature = GherkinManager.parseGherkinFile(oldVersion, entry.oldPath, parent.name)
+        def oldFeature = gherkinManager.parseGherkinFile(oldVersion, entry.oldPath, parent.name)
 
         if (!newFeature || !oldFeature) return changedGherkinFile
 
-        def newScenarioDefinitions = newFeature?.children
-        def oldScenarioDefinitions = oldFeature?.children
+        def newScenarioDefinitions = newFeature?.children?.findAll{ !(it instanceof Background) }
+        def oldScenarioDefinitions = oldFeature?.children?.findAll{ !(it instanceof Background) }
 
         //searches for changed or removed scenario definitions
         List<ScenarioDefinition> changedScenarioDefinitions = []
@@ -245,7 +251,7 @@ class GitRepository {
      */
     private ChangedGherkinFile extractGherkinAdds(RevCommit commit, DiffEntry entry) {
         def newVersion = extractFileContent(commit, entry.newPath)
-        GherkinManager.extractGherkinAdds(commit, newVersion, entry.newPath)
+        gherkinManager.extractGherkinAdds(commit, newVersion, entry.newPath)
     }
 
     private CodeChange configureAddChange(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser) {
@@ -332,6 +338,13 @@ class GitRepository {
         }
         git.close()
         return treeWalk
+    }
+
+    def parseGherkinFile(String filename, String sha){
+        RevCommit revCommit = searchAllRevCommitsBySha(sha)?.first()
+        def content = extractFileContent(revCommit, filename)
+        def feature = gherkinManager.parseGherkinFile(content, filename, revCommit.name)
+        [feature:feature, content:content]
     }
 
     String extractFileContent(RevCommit commit, String filename) {
@@ -445,7 +458,7 @@ class GitRepository {
         blamer.setFilePath(filename.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/")))
         BlameResult blameResult = blamer.call()
 
-        String text =  extractFileContent(commit, filename)
+        String text = extractFileContent(commit, filename)
         if(!text && text.empty) {
             git.close()
             return changedLines
@@ -454,13 +467,14 @@ class GitRepository {
         List<String> fileContent = []
         try {
             fileContent = text.readLines()
-            fileContent?.eachWithIndex { line, i ->
+            for(int i=0; i<fileContent.size(); i++){
                 RevCommit c = blameResult?.getSourceCommit(i)
                 if (c?.name?.equals(commit.name)) changedLines += i
             }
-        } catch (ignored){
-            log.error "Error: git blame '${filename}'"
+        } catch (Exception ignored){
+            log.error "Error: git blame '${filename}' (size ${fileContent.size()}) (commit ${commit.name})"
             fileContent.each{ log.error it.toString() }
+            log.error "Exception: ${ignored.class}; '${ignored.message}'"
         }
 
         git.close()
@@ -495,7 +509,7 @@ class GitRepository {
             def result = extractFileContent(commit, tw.pathString)
 
             if (Util.isGherkinFile(tw.pathString)) {
-                def change = GherkinManager.extractGherkinAdds(commit, result, tw.pathString)
+                def change = gherkinManager.extractGherkinAdds(commit, result, tw.pathString)
                 if (change != null) codeChanges += change
             } else if (Util.isStepDefinitionFile(tw.pathString)) {
                 def change = StepdefManager.extractStepDefinitionAdds(commit, result, tw.pathString, parser)

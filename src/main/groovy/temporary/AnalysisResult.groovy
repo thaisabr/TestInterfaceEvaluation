@@ -1,5 +1,6 @@
-package br.ufpe.cin.tan.analysis
+package temporary
 
+import br.ufpe.cin.tan.analysis.AnalysedTask
 import br.ufpe.cin.tan.util.RegexUtil
 import br.ufpe.cin.tan.util.Util
 

@@ -8,10 +8,9 @@ import br.ufpe.cin.tan.util.CsvUtil
 class EvaluationExporter {
 
     File file
-    List<AnalysedTask> tasks
     String url
-    int stepCounter
-    int gherkinCounter
+
+    List<AnalysedTask> tasks
     List<AnalysedTask> emptyIReal
     List<AnalysedTask> hasGherkinTest
     List<AnalysedTask> stepMatchError
@@ -24,43 +23,41 @@ class EvaluationExporter {
     List<AnalysedTask> zeroPrecisionAndRecall
     List<AnalysedTask> others
     List<String[]> initialData
+
     boolean filterEmptyIReal
 
-    public static final String[] HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests",
-                              "#Impl_Gherkin_Tests", "#StepDef", "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors",
-                              "#Step_Match_Error", "AST_Errors", "#AST_Errors", "Gherkin_AST_Errors", "#Gherkin_AST_Errors",
-                              "Steps_AST_Errors", "#Steps_AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views",
-                              "#Views", "#ITest", "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp",
-                              "Rails", "Gems", "#Visit_Call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis"]
+    int stepCounter
+    int gherkinCounter
 
-    public static final int RECALL_INDEX = HEADER.size() - 9
-    public static final int PRECISION_INDEX = RECALL_INDEX - 1
-    public static final int IREAL_INDEX = PRECISION_INDEX - 1
-    public static final int ITEST_INDEX = IREAL_INDEX - 1
-    public static final int ITEST_SIZE_INDEX = ITEST_INDEX - 2
-    public static final int IREAL_SIZE_INDEX = IREAL_INDEX - 2
-    public static final int STEP_MATCH_ERROR_INDEX = 12
-    public static final int AST_ERROR_INDEX = 14
-    public static final int GHERKIN_TEST_INDEX = 7
-    public static final int STEP_DEF_INDEX = GHERKIN_TEST_INDEX + 1
-    public static final int INITIAL_TEXT_SIZE = 15
-
+    String[] MAIN_HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests",
+                            "#Impl_Gherkin_Tests", "#StepDef", "Methods_Unknown_Type", "#Step_Call", "Step_Match_Errors",
+                            "#Step_Match_Error", "AST_Errors", "#AST_Errors", "Gherkin_AST_Errors", "#Gherkin_AST_Errors",
+                            "Steps_AST_Errors", "#Steps_AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views",
+                            "#Views", "#ITest", "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp",
+                            "Rails", "Gems", "#Visit_Call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis"]
 
     EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks){
         this(evaluationFile, tasks, true)
     }
 
     EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks, boolean toFilter){
-        this.file = new File(evaluationFile)
+        file = new File(evaluationFile)
         this.tasks = tasks
         filterEmptyIReal = toFilter
         if(tasks && !tasks.empty) url = tasks.first().doneTask.gitRepository.url
         else url = ""
-        init()
-        generateHeader()
+        initializeValues()
+        generateSummaryData()
     }
 
-    private init() {
+    def save(){
+        if(!tasks || tasks.empty) return
+        List<String[]> content = initialData
+        tasks?.each { content += it.parseAllToArray() }
+        CsvUtil.write(file.path, content)
+    }
+
+    private initializeValues() {
         emptyIReal = tasks.findAll{ it.irealFiles().empty }
         if(filterEmptyIReal) tasks -= emptyIReal
         stepCounter = tasks.findAll{ !it.doneTask.changedStepDefinitions.empty }.size()
@@ -80,7 +77,7 @@ class EvaluationExporter {
         others = noEmptyITest - zeroPrecisionAndRecall
     }
 
-    private generateHeader() {
+    private generateSummaryData() {
         initialData = []
         initialData += ["Repository", url] as String[]
         initialData += ["Empty IReal", emptyIReal.size()] as String[]
@@ -98,46 +95,7 @@ class EvaluationExporter {
         initialData += ["Valid, but empty ITest", emptyITest.size()] as String[]
         initialData += ["Valid, no empty ITest, but zero precision-recall", zeroPrecisionAndRecall.size()] as String[]
         initialData += ["Valid, no empty ITest, no zero precision-recall", others.size()] as String[]
-        initialData += HEADER
+        initialData += MAIN_HEADER
     }
 
-    def save(){
-        if(!tasks || tasks.empty) return
-        List<String[]> content = initialData
-        def saveText = false
-
-        tasks?.each { task ->
-            def itestFiles = task.itestFiles()
-            def itestSize = itestFiles.size()
-            def irealFiles = task.irealFiles()
-            def irealSize = irealFiles.size()
-            def precision = task.precision()
-            def recall = task.recall()
-            def dates = task.dates
-            def devs = task.developers
-            def msgs = task.commitMsg
-            def renames = task.renamedFiles
-            def removes = task.removedFiles
-            if (renames.empty) renames = ""
-            def views = task.notFoundViews()
-            if (views.empty) views = ""
-            def filesFromViewAnalysis = task.filesFromViewAnalysis()
-            def viewFileFromITest = task.itestViewFiles().size()
-            String[] line = [task.doneTask.id, dates, task.doneTask.days,
-                             task.doneTask.commitsQuantity, msgs, devs,
-                             task.doneTask.gherkinTestQuantity, task.itest.foundAcceptanceTests.size(),
-                             task.doneTask.stepDefQuantity, task.methods, task.stepCalls,
-                             task.stepMatchErrorsText, task.stepMatchErrors, task.compilationErrorsText,
-                             task.compilationErrors, task.gherkinCompilationErrorsText,
-                             task.gherkinCompilationErrors, task.stepDefCompilationErrorsText,
-                             task.stepDefCompilationErrors, renames, removes, views, views.size(), itestSize,
-                             irealSize, itestFiles, irealFiles, precision, recall, task.doneTask.hashes,
-                             task.itest.timestamp, task.rails, task.gems, task.itest.visitCallCounter, viewFileFromITest,
-                             filesFromViewAnalysis.size(), filesFromViewAnalysis]
-
-            content += line
-        }
-
-        CsvUtil.write(file.path, content)
-    }
 }

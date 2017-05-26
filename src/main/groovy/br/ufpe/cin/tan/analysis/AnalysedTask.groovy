@@ -167,4 +167,68 @@ class AnalysedTask {
         }
     }
 
+    /**
+     * Represents an analysed task as an array in order to export content to CSV files.
+     * Task information is organized as follows: id, dates, #days, #commits, commit message, #developers,
+     * #(gherkin tests), #(implemented gherkin tests), #(step definitions), unknown methods, #(step calls),
+     * step match errors, #(step match errors), AST errors, #(AST errors), gherkin AST errors, #(gherkin AST errors),
+     * step AST errors, #(step AST errors), renamed files, deleted files, not found views, #views, #ITest, #IReal,
+     * ITest, IReal, precision, recall, hashes, timestamp, rails version, gems, #(calls to visit), #(views in ITest),
+     * #(files accessed by view analysis), files accessed by view analysis.
+     * Complete version with 37 fields.
+     * */
+    def parseAllToArray(){
+        def itestFiles = this.itestFiles()
+        def itestSize = itestFiles.size()
+        def irealFiles = this.irealFiles()
+        def irealSize = irealFiles.size()
+        def renames = renamedFiles
+        if (renames.empty) renames = ""
+        def views = notFoundViews()
+        if (views.empty) views = ""
+        def filesFromViewAnalysis = filesFromViewAnalysis()
+        def viewFileFromITest = itestViewFiles().size()
+        String[] array = [doneTask.id, dates, doneTask.days, doneTask.commitsQuantity, commitMsg, developers,
+                          doneTask.gherkinTestQuantity, itest.foundAcceptanceTests.size(), doneTask.stepDefQuantity,
+                          methods, stepCalls, stepMatchErrorsText, stepMatchErrors, compilationErrorsText,
+                          compilationErrors, gherkinCompilationErrorsText, gherkinCompilationErrors,
+                          stepDefCompilationErrorsText, stepDefCompilationErrors, renames, removedFiles, views,
+                          views.size(), itestSize, irealSize, itestFiles, irealFiles, precision(), recall(),
+                          doneTask.hashes, itest.timestamp, rails, gems, itest.visitCallCounter, viewFileFromITest,
+                          filesFromViewAnalysis.size(), filesFromViewAnalysis]
+        array
+    }
+
+    /**
+     * Represents an analysed task as an array in order to export content to CSV files.
+     * Task information is organized as follows: id, dates, #days, #developers, #commits, hashes,
+     * #(implemented gherkin tests), #ITest, #IReal, ITest, IReal, precision, recall, rails version, #(calls to visit),
+     * #(views in ITest), #(files accessed by view analysis), files accessed by view analysis, unknown methods,
+     * renamed files, deleted files, views, #views, timestamp.
+     * Partial version with 23 fields.
+     * */
+    def parseToArray(){
+        def itestFiles = this.itestFiles()
+        def itestSize = itestFiles.size()
+        def irealFiles = this.irealFiles()
+        def irealSize = irealFiles.size()
+        def renames = renamedFiles
+        if (renames.empty) renames = ""
+        def views = notFoundViews()
+        if (views.empty) views = ""
+        def filesFromViewAnalysis = filesFromViewAnalysis()
+        def viewFileFromITest = itestViewFiles().size()
+        String[] line = [doneTask.id, doneTask.days, developers, doneTask.commitsQuantity, doneTask.hashes,
+                         itest.foundAcceptanceTests.size(), itestSize, irealSize, itestFiles, irealFiles, precision(),
+                         recall(), rails, itest.visitCallCounter, viewFileFromITest, filesFromViewAnalysis.size(),
+                         filesFromViewAnalysis, methods, renames, removedFiles, views, views.size(), itest.timestamp]
+        line
+    }
+
+    def parseCoverageGemsToString(){
+        def coverage = ""
+        if(!coverageGems.empty) coverage = coverageGems.join(",")
+        coverage
+    }
+
 }

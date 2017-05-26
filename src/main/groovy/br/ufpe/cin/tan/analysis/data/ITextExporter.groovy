@@ -16,6 +16,10 @@ class ITextExporter {
         configureTextFilePrefix()
     }
 
+    def save(){
+        tasks?.each{ writeITextFile(it) }
+    }
+
     private configureTextFilePrefix(){
         def folder = new File(folderName + File.separator+ ConstantData.DEFAULT_TEXT_FOLDER)
         if(!folder.exists()) folder.mkdir()
@@ -23,6 +27,7 @@ class ITextExporter {
     }
 
     private writeITextFile(AnalysedTask analysedTask) {
+        if(!analysedTask) return
         def name = "${textFilePrefix}${analysedTask.doneTask.id}${ConstantData.TEXT_EXTENSION}"
         if (analysedTask.itext && !analysedTask.itext.empty) {
             File file = new File(name)
@@ -31,12 +36,6 @@ class ITextExporter {
                 out.write("\n-----------------------------------------------------------\n")
                 analysedTask.trace.each{ out.write(it + "\n") }
             }
-        }
-    }
-
-    def save(){
-        tasks.each{
-            writeITextFile(it)
         }
     }
 

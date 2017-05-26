@@ -36,6 +36,16 @@ class ExporterUtil {
         content
     }
 
+    static computeTaskPairs(set) {
+        def result = [] as Set
+        if (!set || set.empty || set.size() == 1) return set
+        set.eachWithIndex { v, k ->
+            def next = set.drop(k + 1)
+            result.add([task: v, pairs: next])
+        }
+        result
+    }
+
     static String[] configureLine(String[] value){
         def originalItest = configureITask(value, ITEST_INDEX_SHORT_HEADER)
         def itest = findControllers(originalItest)
@@ -67,5 +77,4 @@ class ExporterUtil {
                 .collect{ it.trim() } as Set
         originalItest
     }
-
 }

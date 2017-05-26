@@ -29,7 +29,7 @@ class SimilarityExporter {
 
         def allTasks = entries.subList(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER, entries.size())
         if (allTasks.size() <= 1) return
-        def taskPairs = computePairs(allTasks)
+        def taskPairs = ExporterUtil.computeTaskPairs(allTasks)
         taskPairs?.each { item ->
             def task = item.task
             def taskText = extractTaskText(task[0])
@@ -53,16 +53,6 @@ class SimilarityExporter {
         }
 
         CsvUtil.write(similarityFile, content)
-    }
-
-    private static computePairs(set) {
-        def result = [] as Set
-        if (!set || set.empty || set.size() == 1) return set
-        set.eachWithIndex { v, k ->
-            def next = set.drop(k + 1)
-            result.add([task: v, pairs: next])
-        }
-        result
     }
 
     private extractTaskText(taskId) {

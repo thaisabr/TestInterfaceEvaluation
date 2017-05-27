@@ -1,6 +1,6 @@
 package br.ufpe.cin.tan.analysis
 
-import br.ufpe.cin.tan.analysis.task.DoneTask
+import br.ufpe.cin.tan.analysis.data.TaskImporter
 import groovy.util.logging.Slf4j
 import br.ufpe.cin.tan.analysis.data.ControllerFilterExporter
 import br.ufpe.cin.tan.analysis.data.EvaluationExporter
@@ -8,30 +8,22 @@ import br.ufpe.cin.tan.analysis.data.RelevantTaskExporter
 import br.ufpe.cin.tan.analysis.data.SimilarityExporter
 import br.ufpe.cin.tan.analysis.data.TestExecutionExporter
 import br.ufpe.cin.tan.util.ConstantData
-import br.ufpe.cin.tan.util.CsvUtil
 
 @Slf4j
 class TaskAnalyser {
 
-    /* before task analysis */
-    List<String[]> importedTasks
-    List<String[]> ptImportedTasks
-    List<String[]> notPtImportedTasks
-    //tasks extracted from the input CSV file that do not have production and test code
-    List<DoneTask> falsePtTasks //tasks that have production and test code, but not gherkin scenarios
-    List<DoneTask> candidateTasks //tasks extracted from the input CSV file that changed production code and gherkin scenarios
+    File file
+    TaskImporter taskImporter
 
     /* after task analysis */
     List<AnalysedTask> analysedTasks
     List<AnalysedTask> invalidTasks
-    RelevantTaskExporter relevantTaskExporter
 
     /* analysis strategy */
     int taskLimit
     boolean incrementalAnalysis
 
     /* Output files*/
-    File file
     String evaluationFile
     String organizedFile
     String filteredFile
@@ -41,13 +33,8 @@ class TaskAnalyser {
     String relevantTasksFile
     String relevantTasksDetailsFile
     String invalidTasksFile
-    String url
 
-    int URL_INDEX = 0
-    int TASK_INDEX = 1
-    int HASHES_INDEX = 3
-    int PROD_FILES_INDEX = 4
-    int TEST_FILES_INDEX = 5
+    RelevantTaskExporter relevantTaskExporter
 
     TaskAnalyser(String tasksFile){
         this(tasksFile, 0)
@@ -56,13 +43,12 @@ class TaskAnalyser {
     TaskAnalyser(String tasksFile, int taskLimit) {
         this.taskLimit = taskLimit
         file = new File(tasksFile)
-
         log.info "<  Analysing tasks from '${file.path}'  >"
-        importTasksFromCsv()
-        log.info "All tasks extracted from '${file.path}': ${importedTasks.size()}"
-
+        taskImporter = new TaskImporter(file)
         decideAnalysisStrategy()
         configureOutputFiles()
+        analysedTasks = []
+        invalidTasks = []
     }
 
     def analyseAll() {
@@ -71,7 +57,7 @@ class TaskAnalyser {
     }
 
     def analysePrecisionAndRecall() {
-        if(incrementalAnalysis) generateIncrementalResult()
+        if(incrementalAnalysis) extractPtTasksPartially()
         else generateResult()
         exportTasks()
         exportAllDetailedInfo()
@@ -107,126 +93,76 @@ class TaskAnalyser {
     }
 
     private decideAnalysisStrategy(){
-        if(importedTasks.size()>200) {
+        if(taskImporter.importedTasks.size()>200) {
             incrementalAnalysis = true
             configureDefaultTaskLimit()
         }
         else incrementalAnalysis = false
     }
 
-    private resetTasks(){
-        ptImportedTasks = []
-        notPtImportedTasks = []
-        falsePtTasks = []
-        candidateTasks = []
-        analysedTasks = []
-        invalidTasks = []
-        url = ""
-    }
+    private extractPtTasksPartially() {
+        def allTasksToAnalyse = taskImporter.ptImportedTasks.size()
+        def groups = allTasksToAnalyse.intdiv(100)
+        def remainder = allTasksToAnalyse%100
 
-    private extractAllPtTasks(List<String[]> ptEntries){
-        try {
-            ptEntries.each { entry ->
-                def hashes = entry[HASHES_INDEX].tokenize(',[]')*.trim()
-                def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX], hashes)
-                if(task.hasTest()) candidateTasks += task
-                else falsePtTasks += task
-            }
-        } catch (Exception ex) {
-            log.error "Error while extracting tasks from CSV file."
-            ex.stackTrace.each{ log.error it.toString() }
-            candidateTasks = []
-        }
-        candidateTasks = candidateTasks.sort { it.id }
-    }
+        log.info "Tasks to analyse: ${allTasksToAnalyse}"
+        log.info "Groups of 100 units: ${groups} + Remainder: ${remainder}"
 
-    private extractPtTasksPartially(List<String[]> ptEntries) {
-        def value = ptEntries.size()
-        def groups = value.intdiv(100)
-        def r = value%100
-        log.info "Tasks to analyse: ${value}"
-        log.info "Groups of 100 units: ${groups} + Remainder: ${r}"
-
-        def i = 0, j = 100, analysedGroups = 0
+        def i = 0, j = 100, analysedGroups = 0, counter = 0
         while(analysedGroups<groups && analysedTasks.size()<taskLimit) {
-            candidateTasks = []
-            List<String[]> entries = ptEntries.subList(i, j)
-            extractAllPtTasks(entries)
+            counter++
+            taskImporter.extractPtTasks(i, j)
             i=j
             j+=100
             analysedGroups++
-            printPartialDataAnalysis()
+            printPartialDataAnalysis(counter)
             analyseLimitedTasks()
         }
 
-        if(r>0 && analysedTasks.size()<taskLimit){
+        if(remainder>0 && analysedTasks.size()<taskLimit){
             log.info "Last try to find valid tasks!"
-            candidateTasks = []
-            List<String[]> entries = ptEntries.subList(i, i+r)
-            extractAllPtTasks(entries)
+            taskImporter.extractPtTasks(i, i+remainder)
             printPartialDataAnalysis()
             analyseLimitedTasks()
         }
-
     }
 
-    private printPartialDataAnalysis(){
-        log.info "Candidate tasks (have production code and candidate gherkin scenarios) until now: ${candidateTasks.size()}"
-        log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${falsePtTasks.size()}"
-    }
-
-    private importTasksFromCsv(){
-        List<String[]> entries = CsvUtil.read(file.path)?.unique { it[TASK_INDEX] } //bug: input csv can contain duplicated values
-        entries.remove(0)
-        importedTasks = entries
-        if(importedTasks.size()>0) url = entries.first()[URL_INDEX]
+    private printPartialDataAnalysis(round){
+        def candidatesSize = taskImporter.candidateTasks.size()
+        def falsePtTasksSize = taskImporter.falsePtTasks.size()
+        log.info "Extracted tasks at round $round: ${candidatesSize + falsePtTasksSize}"
+        log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${candidatesSize}"
+        log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${falsePtTasksSize}"
     }
 
     private analyseLimitedTasks(){
         def counter = 0
-        if(candidateTasks && !candidateTasks.empty) {
-            for(int j=0; j<candidateTasks.size() && analysedTasks.size()<taskLimit; j++){
-                counter++
-                def candidate = candidateTasks.get(j)
-                def analysedTask = candidate.computeInterfaces()
-                if(analysedTask.isValid()) analysedTasks += analysedTask
-                else invalidTasks += analysedTask
-            }
+        for(int j=0; j<taskImporter.candidateTasks.size() && analysedTasks.size()<taskLimit; j++){
+            counter++
+            def candidate = taskImporter.candidateTasks.get(j)
+            def analysedTask = candidate.computeInterfaces()
+            if(analysedTask.isValid()) analysedTasks += analysedTask
+            else invalidTasks += analysedTask
         }
         log.info "Task interfaces were computed for ${counter} tasks!"
     }
 
     private analyseAllTasks() {
-        if(candidateTasks && !candidateTasks.empty) {
-            candidateTasks.each {
-                def analysedTask = it.computeInterfaces()
-                if(analysedTask.isValid()) analysedTasks += analysedTask
-                else invalidTasks += analysedTask
-            }
+        taskImporter.candidateTasks.each {
+            def analysedTask = it.computeInterfaces()
+            if(analysedTask.isValid()) analysedTasks += analysedTask
+            else invalidTasks += analysedTask
         }
-        log.info "Task interfaces were computed for ${candidateTasks.size()} tasks!"
+        log.info "Task interfaces were computed for ${taskImporter.candidateTasks.size()} tasks!"
     }
 
     private generateResult() {
-        filterPtTasks()
-        extractAllPtTasks(ptImportedTasks)
-        log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${candidateTasks.size()}"
-        log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${falsePtTasks.size()}"
+        taskImporter.extractPtTasks()
+        log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${taskImporter.candidateTasks.size()}"
+        log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${taskImporter.falsePtTasks.size()}"
 
         if(taskLimit>0) analyseLimitedTasks()
         else analyseAllTasks()
-    }
-
-    private filterPtTasks(){
-        resetTasks()
-        ptImportedTasks = importedTasks.findAll { ((it[PROD_FILES_INDEX] as int)>0 && (it[TEST_FILES_INDEX] as int)>0) }
-        notPtImportedTasks = importedTasks - ptImportedTasks
-        log.info "Invalid tasks (do not have production and test code): ${notPtImportedTasks.size()}"
-    }
-
-    private generateIncrementalResult() {
-        filterPtTasks()
-        extractPtTasksPartially(ptImportedTasks)
     }
 
     private exportInvalidTasks(){

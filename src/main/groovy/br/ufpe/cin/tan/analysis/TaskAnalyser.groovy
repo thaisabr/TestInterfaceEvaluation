@@ -16,7 +16,7 @@ class TaskAnalyser {
     TaskImporter taskImporter
 
     /* after task analysis */
-    List<AnalysedTask> analysedTasks
+    List<AnalysedTask> selectedTasks
     List<AnalysedTask> invalidTasks
 
     /* analysis strategy */
@@ -47,7 +47,7 @@ class TaskAnalyser {
         taskImporter = new TaskImporter(file)
         decideAnalysisStrategy()
         configureOutputFiles()
-        analysedTasks = []
+        selectedTasks = []
         invalidTasks = []
     }
 
@@ -109,7 +109,7 @@ class TaskAnalyser {
         log.info "Groups of 100 units: ${groups} + Remainder: ${remainder}"
 
         def i = 0, j = 100, analysedGroups = 0, counter = 0
-        while(analysedGroups<groups && analysedTasks.size()<taskLimit) {
+        while(analysedGroups<groups && selectedTasks.size()<taskLimit) {
             counter++
             taskImporter.extractPtTasks(i, j)
             i=j
@@ -119,7 +119,7 @@ class TaskAnalyser {
             analyseLimitedTasks()
         }
 
-        if(remainder>0 && analysedTasks.size()<taskLimit){
+        if(remainder>0 && selectedTasks.size()<taskLimit){
             log.info "Last try to find valid tasks!"
             taskImporter.extractPtTasks(i, i+remainder)
             printPartialDataAnalysis()
@@ -133,15 +133,16 @@ class TaskAnalyser {
         log.info "Extracted tasks at round $round: ${candidatesSize + falsePtTasksSize}"
         log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${candidatesSize}"
         log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${falsePtTasksSize}"
+        log.info "Selected tasks so far: ${selectedTasks.size()}"
     }
 
     private analyseLimitedTasks(){
         def counter = 0
-        for(int j=0; j<taskImporter.candidateTasks.size() && analysedTasks.size()<taskLimit; j++){
+        for(int j=0; j<taskImporter.candidateTasks.size() && selectedTasks.size()<taskLimit; j++){
             counter++
             def candidate = taskImporter.candidateTasks.get(j)
             def analysedTask = candidate.computeInterfaces()
-            if(analysedTask.isValid()) analysedTasks += analysedTask
+            if(analysedTask.isValid()) selectedTasks += analysedTask
             else invalidTasks += analysedTask
         }
         log.info "Task interfaces were computed for ${counter} tasks!"
@@ -150,7 +151,7 @@ class TaskAnalyser {
     private analyseAllTasks() {
         taskImporter.candidateTasks.each {
             def analysedTask = it.computeInterfaces()
-            if(analysedTask.isValid()) analysedTasks += analysedTask
+            if(analysedTask.isValid()) selectedTasks += analysedTask
             else invalidTasks += analysedTask
         }
         log.info "Task interfaces were computed for ${taskImporter.candidateTasks.size()} tasks!"
@@ -175,9 +176,9 @@ class TaskAnalyser {
     }
 
     private exportRelevantTasks(){
-        if(analysedTasks.empty) log.info "There is no valid tasks to save!"
+        if(selectedTasks.empty) log.info "There is no valid tasks to save!"
         else {
-            relevantTaskExporter = new RelevantTaskExporter(relevantTasksFile, analysedTasks)
+            relevantTaskExporter = new RelevantTaskExporter(relevantTasksFile, selectedTasks)
             relevantTaskExporter.save()
             def tasks = relevantTaskExporter.relevantTasks + relevantTaskExporter.emptyITestTasks
             EvaluationExporter evaluationExporter = new EvaluationExporter(relevantTasksDetailsFile, tasks)
@@ -193,8 +194,8 @@ class TaskAnalyser {
     }
 
     private exportAllDetailedInfo(){
-        if(!analysedTasks.empty){
-            EvaluationExporter evaluationExporter = new EvaluationExporter(evaluationFile, analysedTasks)
+        if(!selectedTasks.empty){
+            EvaluationExporter evaluationExporter = new EvaluationExporter(evaluationFile, selectedTasks)
             evaluationExporter.save()
         }
     }

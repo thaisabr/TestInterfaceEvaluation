@@ -273,7 +273,8 @@ class DoneTask extends Task {
 
         stepDefinitions?.each { stepFile ->
             def content = gitRepository.extractFileContent(lastCommit, stepFile.path)
-            List<StepDefinition> stepDefs = StepdefManager.parseStepDefinitionFile(stepFile.path, content, lastCommit.name, testCodeParser)
+            StepdefManager stepdefManager = new StepdefManager(testCodeParser)
+            List<StepDefinition> stepDefs = stepdefManager.parseStepDefinitionFile(stepFile.path, content, lastCommit.name)
             if(stepDefs){
                 def regexes = stepDefs*.regex
                 if (!regexes.empty){

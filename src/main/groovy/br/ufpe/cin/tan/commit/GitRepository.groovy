@@ -7,10 +7,8 @@ import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
 import br.ufpe.cin.tan.commit.change.stepdef.StepdefManager
 import br.ufpe.cin.tan.commit.change.unit.UnitTestManager
 import gherkin.ast.Background
-import gherkin.ast.Feature
 import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
-import org.apache.commons.io.IOUtils
 import org.eclipse.jgit.api.BlameCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.blame.BlameResult
@@ -137,11 +135,12 @@ class GitRepository {
 
     private ChangedStepdefFile extractStepDefinitionChanges(RevCommit commit, RevCommit parent, DiffEntry entry,
                                                             TestCodeAbstractParser parser) {
+        StepdefManager stepdefManager = new StepdefManager(parser)
         ChangedStepdefFile changedStepFile = null
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newDefs = StepdefManager.parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
+        def newDefs = stepdefManager.parseStepDefinitionFile(entry.newPath, newVersion, commit.name)
         def oldVersion = extractFileContent(parent, entry.oldPath)
-        def oldDefs = StepdefManager.parseStepDefinitionFile(entry.oldPath, oldVersion, parent.name, parser)
+        def oldDefs = stepdefManager.parseStepDefinitionFile(entry.oldPath, oldVersion, parent.name)
 
         //searches for changed or removed step definitions
         List<StepDefinition> changedStepDefinitions = []
@@ -177,9 +176,10 @@ class GitRepository {
      * It is used only when dealing with done tasks.
      */
     private ChangedStepdefFile extractStepDefinitionAdds(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser) {
+        StepdefManager stepdefManager = new StepdefManager(parser)
         ChangedStepdefFile changedStepFile = null
         def newVersion = extractFileContent(commit, entry.newPath)
-        def newStepDefinitions = StepdefManager.parseStepDefinitionFile(entry.newPath, newVersion, commit.name, parser)
+        def newStepDefinitions = stepdefManager.parseStepDefinitionFile(entry.newPath, newVersion, commit.name)
 
         if (newStepDefinitions && !newStepDefinitions.isEmpty()) {
             changedStepFile = new ChangedStepdefFile(path: entry.newPath, changedStepDefinitions: newStepDefinitions)
@@ -512,7 +512,8 @@ class GitRepository {
                 def change = gherkinManager.extractGherkinAdds(commit, result, tw.pathString)
                 if (change != null) codeChanges += change
             } else if (Util.isStepDefinitionFile(tw.pathString)) {
-                def change = StepdefManager.extractStepDefinitionAdds(commit, result, tw.pathString, parser)
+                StepdefManager stepdefManager = new StepdefManager(parser)
+                def change = stepdefManager.extractStepDefinitionAdds(commit, result, tw.pathString)
                 if (change != null) codeChanges += change
             } else {
                 def lines = 0..<result.readLines().size()

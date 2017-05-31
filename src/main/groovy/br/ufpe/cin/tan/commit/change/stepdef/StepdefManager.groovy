@@ -9,8 +9,13 @@ import br.ufpe.cin.tan.test.TestCodeAbstractParser
 @Slf4j
 class StepdefManager {
 
-    static List<StepDefinition> parseStepDefinitionFile(String filename, String content, String sha,
-                                                        TestCodeAbstractParser parser) {
+    TestCodeAbstractParser parser
+
+    StepdefManager(TestCodeAbstractParser parser){
+        this.parser = parser
+    }
+
+    List<StepDefinition> parseStepDefinitionFile(String filename, String content, String sha) {
         List<StepDefinition> stepDefinitions = null
         if (!content || content == "") {
             log.warn "Problem to parse step definition file '$filename'. Reason: The commit deleted it."
@@ -29,10 +34,9 @@ class StepdefManager {
      * Identifies step definitions at added step definition files by the first commit of the repository.
      * It is used only when dealing with done tasks.
      */
-    static ChangedStepdefFile extractStepDefinitionAdds(RevCommit commit, String content, String path,
-                                                        TestCodeAbstractParser parser) {
+    ChangedStepdefFile extractStepDefinitionAdds(RevCommit commit, String content, String path) {
         ChangedStepdefFile changedStepDefFile = null
-        def newStepDefinitions = parseStepDefinitionFile(path, content, commit.name, parser)
+        def newStepDefinitions = parseStepDefinitionFile(path, content, commit.name)
 
         if (newStepDefinitions && !newStepDefinitions.isEmpty()) {
             changedStepDefFile = new ChangedStepdefFile(path: path, changedStepDefinitions: newStepDefinitions)

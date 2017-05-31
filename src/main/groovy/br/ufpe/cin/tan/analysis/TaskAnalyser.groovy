@@ -122,7 +122,7 @@ class TaskAnalyser {
         if(remainder>0 && selectedTasks.size()<taskLimit){
             log.info "Last try to find valid tasks!"
             taskImporter.extractPtTasks(i, i+remainder)
-            printPartialDataAnalysis()
+            printPartialDataAnalysis(++counter)
             analyseLimitedTasks()
         }
     }

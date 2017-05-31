@@ -1,6 +1,7 @@
 package br.ufpe.cin.tan.analysis
 
 import br.ufpe.cin.tan.analysis.data.TaskImporter
+import br.ufpe.cin.tan.analysis.task.DoneTask
 import groovy.util.logging.Slf4j
 import br.ufpe.cin.tan.analysis.data.ControllerFilterExporter
 import br.ufpe.cin.tan.analysis.data.EvaluationExporter
@@ -141,19 +142,19 @@ class TaskAnalyser {
         for(int j=0; j<taskImporter.candidateTasks.size() && selectedTasks.size()<taskLimit; j++){
             counter++
             def candidate = taskImporter.candidateTasks.get(j)
-            def analysedTask = candidate.computeInterfaces()
-            if(analysedTask.isValid()) selectedTasks += analysedTask
-            else invalidTasks += analysedTask
+            analyse(candidate)
         }
         log.info "Task interfaces were computed for ${counter} tasks!"
     }
 
+    private analyse(DoneTask task){
+        def analysedTask = task.computeInterfaces()
+        if(analysedTask.isValid()) selectedTasks += analysedTask
+        else invalidTasks += analysedTask
+    }
+
     private analyseAllTasks() {
-        taskImporter.candidateTasks.each {
-            def analysedTask = it.computeInterfaces()
-            if(analysedTask.isValid()) selectedTasks += analysedTask
-            else invalidTasks += analysedTask
-        }
+        taskImporter.candidateTasks.each { analyse(it) }
         log.info "Task interfaces were computed for ${taskImporter.candidateTasks.size()} tasks!"
     }
 

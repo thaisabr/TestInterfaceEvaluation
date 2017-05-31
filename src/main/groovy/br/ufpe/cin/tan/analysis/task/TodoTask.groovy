@@ -2,9 +2,11 @@ package br.ufpe.cin.tan.analysis.task
 
 import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
+import gherkin.AstBuilder
 import gherkin.Parser
 import gherkin.ast.Background
 import gherkin.ast.Feature
+import gherkin.ast.GherkinDocument
 import groovy.time.TimeCategory
 import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
@@ -30,34 +32,9 @@ class TodoTask extends Task {
      */
     TodoTask(String rootDirectory, boolean isRemote, String id, scenarios) throws CloningRepositoryException {
         super(rootDirectory, id)
-
         testCodeParser.configureProperties()
-
-        if (isRemote) testDescription = findAllRelatedGherkinFile(gitRepository.localPath, scenarios)
-        else testDescription = findAllRelatedGherkinFile(rootDirectory, scenarios)
-    }
-
-    private static List<ChangedGherkinFile> findAllRelatedGherkinFile(String rootDirectory, scenarios) {
-        Parser<Feature> featureParser = new Parser<>()
-        List<ChangedGherkinFile> gherkinFiles = []
-
-        scenarios.each { scenario ->
-            try {
-                def path = rootDirectory + File.separator + Util.GHERKIN_FILES_RELATIVE_PATH + File.separator + scenario.path
-                def reader = new FileReader(path)
-                Feature feature = featureParser.parse(reader)
-                reader.close()
-                def scenarioDefinitions = feature?.children?.findAll { it.location.line in scenario.lines && !(it instanceof Background)}
-                if (scenarioDefinitions) {
-                    gherkinFiles += new ChangedGherkinFile(path: scenario.path, feature: feature, changedScenarioDefinitions: scenarioDefinitions)
-                }
-
-            } catch (FileNotFoundException ex) {
-                log.warn "Problem to parse Gherkin file: ${ex.message}"
-            }
-        }
-
-        return gherkinFiles
+        if (isRemote) findAllRelatedGherkinFile(gitRepository.localPath, scenarios)
+        else findAllRelatedGherkinFile(rootDirectory, scenarios)
     }
 
     @Override
@@ -82,6 +59,28 @@ class TodoTask extends Task {
     @Override
     List<ChangedGherkinFile> getAcceptanceTests() {
         testDescription
+    }
+
+    private findAllRelatedGherkinFile(String rootDirectory, scenarios) {
+        List<ChangedGherkinFile> gherkinFiles = []
+        Parser<GherkinDocument> parser = new Parser<>(new AstBuilder())
+        scenarios?.each { scenario ->
+            try {
+                def path = rootDirectory + File.separator + Util.GHERKIN_FILES_RELATIVE_PATH + File.separator + scenario.path
+                def reader = new FileReader(path)
+                Feature feature = parser.parse(reader)?.feature
+                reader.close()
+                def scenarioDefinitions = feature?.children?.findAll { it.location.line in scenario.lines && !(it instanceof Background)}
+                if (scenarioDefinitions) {
+                    gherkinFiles += new ChangedGherkinFile(path: scenario.path, feature: feature, changedScenarioDefinitions: scenarioDefinitions)
+                }
+
+            } catch (FileNotFoundException ex) {
+                log.warn "Problem to parse Gherkin file: ${ex.message}"
+            }
+        }
+
+        testDescription = gherkinFiles
     }
 
 }

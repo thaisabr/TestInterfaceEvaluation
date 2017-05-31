@@ -3,6 +3,7 @@ package br.ufpe.cin.tan.analysis.task
 import br.ufpe.cin.tan.analysis.AnalysedTask
 import br.ufpe.cin.tan.analysis.itask.IReal
 import br.ufpe.cin.tan.analysis.itask.ITest
+import br.ufpe.cin.tan.analysis.itask.TaskInterface
 import br.ufpe.cin.tan.commit.Commit
 import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
 import br.ufpe.cin.tan.commit.change.stepdef.StepdefManager
@@ -27,7 +28,10 @@ import br.ufpe.cin.tan.exception.CloningRepositoryException
 @Slf4j
 class DoneTask extends Task {
 
+    RevCommit lastCommit
     List<Commit> commits
+    List<Commit> commitsChangedGherkinFile
+    List<Commit> commitsStepsChange
     List<ChangedGherkinFile> changedGherkinFiles
     List<ChangedStepdefFile> changedStepDefinitions
     List<ChangedUnitTestFile> changedUnitFiles
@@ -38,6 +42,7 @@ class DoneTask extends Task {
     int days
     String commitMessage
     def hashes
+    String pathSufix
 
     DoneTask(String repositoryUrl, String id, List<String> shas) throws CloningRepositoryException {
         super(repositoryUrl, id)
@@ -61,37 +66,27 @@ class DoneTask extends Task {
      */
     @Override
     ITest computeTestBasedInterface() {
-        TimeDuration timestamp = null
         def taskInterface = new ITest()
-        if (!commits || commits.empty) {
-            log.warn "TASK ID: $id; NO COMMITS!"
-            return taskInterface
-        }
+        if(hasNoCommits() || !hasTest()) return taskInterface
         showTaskInfo()
 
         try {
-            if (!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
-                // resets repository to the state of the last commit to extract changes
-                gitRepository.reset(commits?.last()?.hash)
+            // resets repository to the state of the last commit to extract changes
+            gitRepository.reset(commits?.last()?.hash)
 
-                def initTime = new Date()
-                // computes task interface based on the production code exercised by tests
-                taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions, gitRepository.removedSteps)
-                def endTime = new Date()
-                use(TimeCategory) {
-                    timestamp = endTime - initTime
-                }
-                taskInterface.timestamp = timestamp
+            // computes task interface based on the production code exercised by tests
+            def initTime = new Date()
+            taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions, gitRepository.removedSteps)
+            configureTimestamp(initTime, taskInterface)
 
-                registryCompilationErrors(taskInterface)
+            registryCompilationErrors(taskInterface)
 
-                // resets repository to last version
-                gitRepository.reset()
-            }
+            // resets repository to last version
+            gitRepository.reset()
+
         } catch (Exception ex) {
             log.error "Error while computing test-based task interface."
-            log.error ex.message
-            ex.stackTrace.each{ log.error it.toString() }
+            registryErrorMessage(ex)
         }
 
         taskInterface
@@ -100,59 +95,42 @@ class DoneTask extends Task {
     @Override
     String computeTextBasedInterface() {
         def text = ""
-
-        if (!commits || commits.empty) {
-            log.warn "TASK ID: $id; NO COMMITS!"
-            return text
-        }
-
-        try {
-            if (!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
-                // resets repository to the state of the last commit to extract changes
-                gitRepository.reset(commits?.last()?.hash)
-
-                //computes task text based in gherkin scenarios
-                text = super.computeTextBasedInterface()
-
-                // resets repository to last version
-                gitRepository.reset()
-            }
-        } catch (Exception ex) {
-            log.error "Error while computing text-based task interface."
-            log.error ex.message
-            ex.stackTrace.each{ log.error it.toString() }
-        }
-        text
-    }
-
-    IReal computeRealInterface() {
-        TimeDuration timestamp = null
-        def taskInterface = new IReal()
-
-        if (!commits || commits.empty) {
-            log.warn "TASK ID: $id; NO COMMITS!"
-            return taskInterface
-        }
+        if(hasNoCommits() || !hasTest()) return text
 
         try {
             // resets repository to the state of the last commit to extract changes
             gitRepository.reset(commits?.last()?.hash)
 
-            def initTime = new Date()
+            //computes task text based in gherkin scenarios
+            text = super.computeTextBasedInterface()
+
+            // resets repository to last version
+            gitRepository.reset()
+        } catch (Exception ex) {
+            log.error "Error while computing text-based task interface."
+            registryErrorMessage(ex)
+        }
+        text
+    }
+
+    IReal computeRealInterface() {
+        def taskInterface = new IReal()
+        if(hasNoCommits()) return taskInterface
+
+        try {
+            // resets repository to the state of the last commit to extract changes
+            gitRepository.reset(commits?.last()?.hash)
+
             //computes real interface
+            def initTime = new Date()
             taskInterface = identifyProductionChangedFiles()
-            def endTime = new Date()
-            use(TimeCategory) {
-                timestamp = endTime - initTime
-            }
-            taskInterface.timestamp = timestamp
+            configureTimestamp(initTime, taskInterface)
 
             // resets repository to last version
             gitRepository.reset()
         } catch (Exception ex) {
             log.error "Error while computing real task interface."
-            log.error ex.message
-            ex.stackTrace.each{ log.error it.toString() }
+            registryErrorMessage(ex)
         }
 
         taskInterface
@@ -160,51 +138,36 @@ class DoneTask extends Task {
 
     AnalysedTask computeInterfaces() {
         def analysedTask = new AnalysedTask(this)
-        TimeDuration timestamp = null
-
-        if (!commits || commits.empty) {
-            log.warn "TASK ID: $id; NO COMMITS!"
-            analysedTask
-        }
+        if(hasNoCommits() || !hasTest()) return analysedTask
         showTaskInfo()
 
-        if (!changedGherkinFiles.empty || !changedStepDefinitions.empty) {
-            try {
-                // resets repository to the state of the last commit to extract changes
-                gitRepository.reset(commits?.last()?.hash)
+        try {
+            // resets repository to the state of the last commit to extract changes
+            gitRepository.reset(commits?.last()?.hash)
 
-                def initTime = new Date()
-                // computes task interface based on the production code exercised by tests
-                analysedTask.itest = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions, gitRepository.removedSteps)
-                def endTime = new Date()
-                use(TimeCategory) {
-                    timestamp = endTime - initTime
-                }
-                analysedTask.itest.timestamp = timestamp
-                registryCompilationErrors(analysedTask)
+            // computes task interface based on the production code exercised by tests
+            def initTime = new Date()
+            analysedTask.itest = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles,
+                    changedStepDefinitions, gitRepository.removedSteps)
+            configureTimestamp(initTime, analysedTask.itest)
+            registryCompilationErrors(analysedTask)
 
-                //computes task text based in gherkin scenarios
-                analysedTask.itext = super.computeTextBasedInterface()
+            //computes task text based in gherkin scenarios
+            analysedTask.itext = super.computeTextBasedInterface()
 
-                initTime = new Date()
-                //computes real interface
-                analysedTask.ireal = identifyProductionChangedFiles()
-                endTime = new Date()
-                use(TimeCategory) {
-                    timestamp = endTime - initTime
-                }
-                analysedTask.ireal.timestamp = timestamp
+            //computes real interface
+            initTime = new Date()
+            analysedTask.ireal = identifyProductionChangedFiles()
+            configureTimestamp(initTime, analysedTask.ireal)
 
-                //it is only necessary in the evaluation study
-                analysedTask.configureGems(gitRepository.localPath)
+            //it is only necessary in the evaluation study
+            analysedTask.configureGems(gitRepository.localPath)
 
-                // resets repository to last version
-                gitRepository.reset()
-            } catch(Exception ex){
-                log.error "Error while computing task interfaces."
-                log.error ex.message
-                ex.stackTrace.each{ log.error it.toString() }
-            }
+            // resets repository to last version
+            gitRepository.reset()
+        } catch(Exception ex){
+            log.error "Error while computing task interfaces."
+            registryErrorMessage(ex)
         }
 
         analysedTask
@@ -216,14 +179,12 @@ class DoneTask extends Task {
 
     def getGherkinTestQuantity() {
         def values = changedGherkinFiles*.changedScenarioDefinitions*.size().flatten()
-        if (values.empty) 0
-        else values.sum()
+        if (values.empty) 0 else values.sum()
     }
 
     def getStepDefQuantity() {
         def values = changedStepDefinitions*.changedStepDefinitions*.size().flatten()
-        if (values.empty) 0
-        else values.sum()
+        if (values.empty) 0 else values.sum()
     }
 
     /* When this method is called, there is no information about test code.
@@ -235,11 +196,42 @@ class DoneTask extends Task {
         else true
     }
 
+    private boolean hasNoCommits(){
+        def isEmpty = false
+        if (!commits || commits.empty) {
+            log.warn "TASK ID: $id; NO COMMITS!"
+            isEmpty = true
+        }
+        isEmpty
+    }
+
+    private void configureTimestamp(Date initTime, TaskInterface taskInterface) {
+        TimeDuration timestamp = null
+        def endTime = new Date()
+        use(TimeCategory) {
+            timestamp = endTime - initTime
+        }
+        taskInterface.timestamp = timestamp
+    }
+
+    private static registryErrorMessage(Exception ex) {
+        log.error ex.message
+        ex.stackTrace.each{ log.error it.toString() }
+    }
+
+    private configureLastCommit(){
+        if(!commits.empty) lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
+    }
+
     private basicInit(List<String> shas) {
+        pathSufix = gitRepository.name + File.separator
         changedGherkinFiles = []
         changedStepDefinitions = []
         changedUnitFiles = []
         commits = gitRepository.searchCommitsBySha(testCodeParser, *shas)
+        commitsChangedGherkinFile  = []
+        commitsStepsChange = []
+        configureLastCommit()
         hashes = commits*.hash
         developers = commits*.author?.flatten()?.unique()?.size()
         extractCommitMessages()
@@ -260,25 +252,21 @@ class DoneTask extends Task {
         basicInit(shas)
 
         if(!commits.empty) {
-            RevCommit lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
-
             // identifies changed gherkin files and scenario definitions
-            List<Commit> commitsChangedGherkinFile = commits?.findAll {
-                it.gherkinChanges && !it.gherkinChanges.isEmpty()
-            }
-            registryChangedGherkinContent(commitsChangedGherkinFile, lastCommit)
+            commitsChangedGherkinFile = commits?.findAll { it.gherkinChanges && !it.gherkinChanges.isEmpty() }
+            registryChangedGherkinContent()
 
             // identifies changed step definitions
-            List<Commit> commitsStepsChange = this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }
-            registryChangedStepContent(commitsStepsChange, lastCommit)
+            commitsStepsChange = this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }
+            registryChangedStepContent()
         } else {
             log.error "The task has no commits! Searched commits: "
             shas.each{ log.error it.toString() }
         }
     }
 
-    private registryChangedStepContent(List<Commit> commitsChangedStepFile, RevCommit lastCommit){
-        def stepDefinitions = identifyChangedStepContent(commitsChangedStepFile)
+    private registryChangedStepContent(){
+        def stepDefinitions = identifyChangedStepContent()
         def notFoundSteps = []
         def notFoundFiles = []
         List<ChangedStepdefFile> finalStepDefinitionsFilesSet = []
@@ -322,8 +310,8 @@ class DoneTask extends Task {
         changedStepDefinitions = finalStepDefinitionsFilesSet
     }
 
-    private registryChangedGherkinContent(List<Commit> commitsChangedGherkinFile, RevCommit lastCommit){
-        def gherkinFiles = identifyChangedGherkinContent(commitsChangedGherkinFile)
+    private registryChangedGherkinContent(){
+        def gherkinFiles = identifyChangedGherkinContent()
         def notFoundScenarios = []
         def notFoundFiles = []
         List<ChangedGherkinFile> finalGherkinFilesSet = []
@@ -369,7 +357,7 @@ class DoneTask extends Task {
         changedGherkinFiles = finalGherkinFilesSet
     }
 
-    private static List<ChangedGherkinFile> identifyChangedGherkinContent(List<Commit> commitsChangedGherkinFile) {
+    private List<ChangedGherkinFile> identifyChangedGherkinContent() {
         List<ChangedGherkinFile> gherkinFiles = []
         commitsChangedGherkinFile?.each { commit -> //commits sorted by date
             commit.gherkinChanges?.each { file ->
@@ -399,9 +387,9 @@ class DoneTask extends Task {
         gherkinFiles
     }
 
-    private static List<ChangedStepdefFile> identifyChangedStepContent(List<Commit> commitsChangedStepFile) {
+    private List<ChangedStepdefFile> identifyChangedStepContent() {
         List<ChangedStepdefFile> stepFiles = []
-        commitsChangedStepFile?.each { commit -> //commits sorted by date
+        commitsStepsChange?.each { commit -> //commits sorted by date
             commit.stepChanges?.each { file ->
                 if (!file.changedStepDefinitions.isEmpty()) {
                     def index = stepFiles.findIndexOf { it.path == file.path }
@@ -453,7 +441,7 @@ class DoneTask extends Task {
         productionFiles = Util.filterFiles(productionFiles)
 
         productionFiles?.each { file ->
-            def path = gitRepository.name + File.separator + file
+            def path = pathSufix + file
             if (path.contains(Util.VIEWS_FILES_RELATIVE_PATH)) {
                 def index = path.lastIndexOf(File.separator)
                 taskInterface.classes += [name: path.substring(index + 1), file: path]
@@ -485,19 +473,23 @@ class DoneTask extends Task {
 
     private extractRemovedFiles() {
         def changes = commits*.coreChanges?.flatten()?.findAll { it.type == DiffEntry.ChangeType.DELETE }
-        removedFiles = changes?.collect { gitRepository.name + File.separator + it.path }?.unique()?.sort()
+        removedFiles = changes?.collect { pathSufix + it.path }?.unique()?.sort()
     }
 
     private showTaskInfo(){
         log.info "TASK ID: $id"
-        log.info "COMMITS: ${this.commits*.hash}"
-        log.info "COMMITS CHANGED GHERKIN FILE: ${this.commits?.findAll { it.gherkinChanges && !it.gherkinChanges.isEmpty() }*.hash}"
-        log.info "COMMITS CHANGED STEP DEFINITION FILE: ${this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }*.hash}"
+        log.info "COMMITS: ${commits*.hash}"
+        log.info "COMMITS CHANGED GHERKIN FILE: ${commitsChangedGherkinFile*.hash}"
+        log.info "COMMITS CHANGED STEP DEFINITION FILE: ${commitsStepsChange*.hash}"
     }
 
     private registryCompilationErrors(AnalysedTask task){
+        registryCompilationErrors(task.itest)
+    }
+
+    private registryCompilationErrors(ITest itest){
         def finalErrorSet = []
-        def errors = task.itest.compilationErrors
+        def errors = itest.compilationErrors
 
         def gherkinErrors = errors.findAll{ Util.isGherkinFile(it.path) }
         gherkinErrors?.each{ error ->
@@ -519,19 +511,9 @@ class DoneTask extends Task {
             formatedResult += [path: name, msgs:error.msgs]
         }
 
-        def itest = new ITest()
-        itest.collapseInterfaces(task.itest)
-        itest.compilationErrors = formatedResult
-        task.itest = itest
-    }
-
-    private registryCompilationErrors(ITest iTest){
-        def finalErrorSet = []
-        def errors = iTest.compilationErrors
-        errors?.each{ error ->
-            def result = gitRepository.parseGherkinFile(error.path, commits?.last()?.hash)
-            if(!result.feature) finalErrorSet += error
-        }
-        iTest.compilationErrors = finalErrorSet
+        def newItest = new ITest()
+        newItest.collapseInterfaces(itest)
+        newItest.compilationErrors = formatedResult
+        itest = newItest
     }
 }

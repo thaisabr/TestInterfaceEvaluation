@@ -49,6 +49,74 @@ class GitRepository {
     String lastCommit //used only to reset the repository for the original state after checkout command
     Set removedSteps
 
+    List<RevCommit> identifyCommitsInFile(String filename) {
+        def git = Git.open(new File(localPath))
+        List<RevCommit> logs = git?.log()?.all()?.addPath(filename)?.call()?.sort { it.commitTime }
+        git.close()
+        return logs
+    }
+
+    Iterable<RevCommit> searchAllRevCommits() {
+        def git = Git.open(new File(localPath))
+        Iterable<RevCommit> logs = git?.log()?.all()?.call()?.sort { it.commitTime }
+        git.close()
+        logs
+    }
+
+    Iterable<RevCommit> searchAllRevCommitsBySha(String... hash) {
+        def git = Git.open(new File(localPath))
+        def logs = git?.log()?.all()?.call()?.findAll { it.name in hash }?.sort { it.commitTime }
+        git.close()
+        logs
+    }
+
+    /***
+     * Searches commits from a Git repository by hash value.
+     *
+     * @param hash a set of hash value
+     * @return a list of commits that satisfy the search criteria.
+     */
+    List<Commit> searchCommitsBySha(TestCodeAbstractParser parser, String... hash) {
+        def logs = searchAllRevCommitsBySha(hash)
+        extractCommitsFromLogs(logs, parser)
+    }
+
+    /***
+     * Checkouts a specific version of git repository.
+     * @param sha the commit's identification.
+     */
+    def reset(String sha) {
+        def git = Git.open(new File(localPath))
+        git.checkout().setName(sha).setStartPoint(sha).call()
+        git.close()
+    }
+
+    /***
+     * Checkouts the last version of git repository.
+     */
+    def reset() {
+        def git = Git.open(new File(localPath))
+        git.checkout().setName(lastCommit).setStartPoint(lastCommit).call()
+        git.close()
+    }
+
+    def parseGherkinFile(String filename, String sha){
+        RevCommit revCommit = searchAllRevCommitsBySha(sha)?.first()
+        def content = extractFileContent(revCommit, filename)
+        def feature = gherkinManager.parseGherkinFile(content, filename, revCommit.name)
+        [feature:feature, content:content]
+    }
+
+    static GitRepository getRepository(String url) throws CloningRepositoryException {
+        def repository = repositories.find { ((it.url - ConstantData.GIT_EXTENSION) == url) }
+        if(repository) repository.gherkinManager = new GherkinManager()
+        else {
+            repository = new GitRepository(url)
+            repositories += repository
+        }
+        return repository
+    }
+
     private GitRepository(String path) throws CloningRepositoryException {
         this.gherkinManager = new GherkinManager()
         this.removedSteps = [] as Set
@@ -69,16 +137,6 @@ class GitRepository {
             git.close()
             this.name = Util.configureGitRepositoryName(url)
         }
-    }
-
-    static GitRepository getRepository(String url) throws CloningRepositoryException {
-        def repository = repositories.find { ((it.url - ConstantData.GIT_EXTENSION) == url) }
-        if(repository) repository.gherkinManager = new GherkinManager()
-        else {
-            repository = new GitRepository(url)
-            repositories += repository
-        }
-        return repository
     }
 
     /***
@@ -104,6 +162,43 @@ class GitRepository {
             Util.deleteFolder(localPath)
             throw new CloningRepositoryException(ex.message)
         }
+    }
+
+    private List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent, TestCodeAbstractParser parser) {
+        def diffs = extractDiff(null, commit, parent)
+        extractAllCodeChangeFromDiffs(commit, parent, diffs, parser)
+    }
+
+    private List<CodeChange> extractCodeChangesByFirstCommit(RevCommit commit, TestCodeAbstractParser parser) {
+        List<CodeChange> codeChanges = []
+        def git = Git.open(new File(localPath))
+        TreeWalk tw = new TreeWalk(git.repository)
+        tw.reset()
+        tw.setRecursive(true)
+        tw.addTree(commit.tree)
+        while (tw.next()) {
+            if (!Util.isValidFile(tw.pathString)) continue
+
+            def result = extractFileContent(commit, tw.pathString)
+
+            if (Util.isGherkinFile(tw.pathString)) {
+                def change = gherkinManager.extractGherkinAdds(commit, result, tw.pathString)
+                if (change != null) codeChanges += change
+            } else if (Util.isStepDefinitionFile(tw.pathString)) {
+                StepdefManager stepdefManager = new StepdefManager(parser)
+                def change = stepdefManager.extractStepDefinitionAdds(commit, result, tw.pathString)
+                if (change != null) codeChanges += change
+            } else {
+                def lines = 0..<result.readLines().size()
+                if (Util.isUnitTestFile(tw.pathString)) {
+                    //codeChanges += extractUnitChanges(commit, tw.pathString, lines, parser)
+                } else {
+                    codeChanges += new ChangedProdFile(path: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: lines)
+                }
+            }
+        }
+        git.close()
+        codeChanges
     }
 
     /***
@@ -212,18 +307,18 @@ class GitRepository {
 
         //searches for changed or removed scenario definitions
         List<ScenarioDefinition> changedScenarioDefinitions = []
-        oldScenarioDefinitions?.each { oldScenDef ->
-            def foundScenDef = newScenarioDefinitions?.find { it.name == oldScenDef.name }
-            if (foundScenDef) {
-                if (oldScenDef.steps.size() == foundScenDef.steps.size()) { //scenario definition might be changed
-                    def scenDefEquals = GherkinManager.equals(foundScenDef, oldScenDef)
-                    if (!scenDefEquals) changedScenarioDefinitions += foundScenDef
+        oldScenarioDefinitions?.each { definition ->
+            def foundDefinition = newScenarioDefinitions?.find { it.name == definition.name }
+            if (foundDefinition) {
+                if (definition.steps.size() == foundDefinition.steps.size()) { //scenario definition might be changed
+                    def equalsDefinitions = GherkinManager.equals(foundDefinition, definition)
+                    if (!equalsDefinitions) changedScenarioDefinitions += foundDefinition
                 } else {//scenario definition was changed
-                    changedScenarioDefinitions += foundScenDef
+                    changedScenarioDefinitions += foundDefinition
                 }
             } else { //if a scenario definition was removed, it was not relevant for the task
-                log.info "commit ${commit.name} removed scenario from ${entry.newPath}:\n ${oldScenDef.name}"
-                oldScenDef.steps.each{
+                log.info "commit ${commit.name} removed scenario from ${entry.newPath}:\n ${definition.name}"
+                definition.steps.each{
                     log.info "${it.text}; ${entry.newPath} (${it.location.line})"
                     removedSteps += [path: entry.newPath, text: it.text]
                 }
@@ -231,10 +326,10 @@ class GitRepository {
         }
 
         //searches for added scenario definitions
-        newScenarioDefinitions?.each { newScenDef ->
-            def foundScenDef = oldScenarioDefinitions?.find { it.name == newScenDef.name }
-            if (!foundScenDef) {//it was not found because it is new
-                changedScenarioDefinitions += newScenDef
+        newScenarioDefinitions?.each { newDefinition ->
+            def foundDefinition = oldScenarioDefinitions?.find { it.name == newDefinition.name }
+            if (!foundDefinition) {//it was not found because it is new
+                changedScenarioDefinitions += newDefinition
             }
         }
 
@@ -340,13 +435,6 @@ class GitRepository {
         return treeWalk
     }
 
-    def parseGherkinFile(String filename, String sha){
-        RevCommit revCommit = searchAllRevCommitsBySha(sha)?.first()
-        def content = extractFileContent(revCommit, filename)
-        def feature = gherkinManager.parseGherkinFile(content, filename, revCommit.name)
-        [feature:feature, content:content]
-    }
-
     String extractFileContent(RevCommit commit, String filename) {
         def result = ""
         if(!filename || filename.empty) return result
@@ -356,7 +444,7 @@ class GitRepository {
         TreeWalk treeWalk = generateTreeWalk(commit?.tree, searchedFile)
         if(treeWalk){
             ObjectId objectId = treeWalk.getObjectId(0)
-            if (objectId.equals(ObjectId.zeroId())) return result
+            if (objectId == ObjectId.zeroId()) return result
             try {
                 ObjectLoader loader = git.repository.open(objectId)
                 ByteArrayOutputStream stream = new ByteArrayOutputStream()
@@ -449,7 +537,6 @@ class GitRepository {
     }
 
     /* PROBLEM: Deal with removed lines. */
-
     private List<Integer> computeChanges(RevCommit commit, String filename) {
         def changedLines = []
         def git = Git.open(new File(localPath))
@@ -469,7 +556,7 @@ class GitRepository {
             fileContent = text.readLines()
             for(int i=0; i<fileContent.size(); i++){
                 RevCommit c = blameResult?.getSourceCommit(i)
-                if (c?.name?.equals(commit.name)) changedLines += i
+                if (c?.name == commit.name) changedLines += i
             }
         } catch (Exception ignored){
             log.error "Error: git blame '${filename}' (size ${fileContent.size()}) (commit ${commit.name})"
@@ -482,94 +569,6 @@ class GitRepository {
         /* if the result is empty, it means changes were removed lines only; the blame command can not deal with
         * this type of change; a new strategy should be defined!!!! */
         return changedLines
-    }
-
-    List<RevCommit> identifyCommitsInFile(String filename) {
-        def git = Git.open(new File(localPath))
-        List<RevCommit> logs = git?.log()?.all()?.addPath(filename)?.call()?.sort { it.commitTime }
-        git.close()
-        return logs
-    }
-
-    List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent, TestCodeAbstractParser parser) {
-        def diffs = extractDiff(null, commit, parent)
-        extractAllCodeChangeFromDiffs(commit, parent, diffs, parser)
-    }
-
-    List<CodeChange> extractCodeChangesByFirstCommit(RevCommit commit, TestCodeAbstractParser parser) {
-        List<CodeChange> codeChanges = []
-        def git = Git.open(new File(localPath))
-        TreeWalk tw = new TreeWalk(git.repository)
-        tw.reset()
-        tw.setRecursive(true)
-        tw.addTree(commit.tree)
-        while (tw.next()) {
-            if (!Util.isValidFile(tw.pathString)) continue
-
-            def result = extractFileContent(commit, tw.pathString)
-
-            if (Util.isGherkinFile(tw.pathString)) {
-                def change = gherkinManager.extractGherkinAdds(commit, result, tw.pathString)
-                if (change != null) codeChanges += change
-            } else if (Util.isStepDefinitionFile(tw.pathString)) {
-                StepdefManager stepdefManager = new StepdefManager(parser)
-                def change = stepdefManager.extractStepDefinitionAdds(commit, result, tw.pathString)
-                if (change != null) codeChanges += change
-            } else {
-                def lines = 0..<result.readLines().size()
-                if (Util.isUnitTestFile(tw.pathString)) {
-                    //codeChanges += extractUnitChanges(commit, tw.pathString, lines, parser)
-                } else {
-                    codeChanges += new ChangedProdFile(path: tw.pathString, type: DiffEntry.ChangeType.ADD, lines: lines)
-                }
-            }
-        }
-        git.close()
-        codeChanges
-    }
-
-    Iterable<RevCommit> searchAllRevCommits() {
-        def git = Git.open(new File(localPath))
-        Iterable<RevCommit> logs = git?.log()?.all()?.call()?.sort { it.commitTime }
-        git.close()
-        logs
-    }
-
-    Iterable<RevCommit> searchAllRevCommitsBySha(String... hash) {
-        def git = Git.open(new File(localPath))
-        def logs = git?.log()?.all()?.call()?.findAll { it.name in hash }?.sort { it.commitTime }
-        git.close()
-        logs
-    }
-
-    /***
-     * Searches commits from a Git repository by hash value.
-     *
-     * @param hash a set of hash value
-     * @return a list of commits that satisfy the search criteria.
-     */
-    List<Commit> searchCommitsBySha(TestCodeAbstractParser parser, String... hash) {
-        def logs = searchAllRevCommitsBySha(hash)
-        extractCommitsFromLogs(logs, parser)
-    }
-
-    /***
-     * Checkouts a specific version of git repository.
-     * @param sha the commit's identification.
-     */
-    def reset(String sha) {
-        def git = Git.open(new File(localPath))
-        git.checkout().setName(sha).setStartPoint(sha).call()
-        git.close()
-    }
-
-    /***
-     * Checkouts the last version of git repository.
-     */
-    def reset() {
-        def git = Git.open(new File(localPath))
-        git.checkout().setName(lastCommit).setStartPoint(lastCommit).call()
-        git.close()
     }
 
 }

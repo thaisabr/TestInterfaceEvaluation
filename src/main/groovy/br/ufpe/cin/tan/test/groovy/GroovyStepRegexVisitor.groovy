@@ -12,7 +12,7 @@ class GroovyStepRegexVisitor extends ClassCodeVisitorSupport {
     String path
     SourceUnit source
 
-    public GroovyStepRegexVisitor(String path) {
+    GroovyStepRegexVisitor(String path) {
         regexs = []
         this.path = path
     }
@@ -23,7 +23,7 @@ class GroovyStepRegexVisitor extends ClassCodeVisitorSupport {
     }
 
     @Override
-    public void visitStaticMethodCallExpression(StaticMethodCallExpression call) {
+    void visitStaticMethodCallExpression(StaticMethodCallExpression call) {
         super.visitStaticMethodCallExpression(call)
         if (call.methodAsString in ConstantData.STEP_KEYWORDS) {
             regexs += new StepRegex(path: path, value: call.arguments[0].text, line: call.lineNumber)

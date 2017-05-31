@@ -21,7 +21,7 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     List<StepCall> calledSteps
     //it is used when a step definition calls another one. until the moment, it is not used in groovy code yet.
 
-    public GroovyTestCodeVisitor(String repositoryPath, String currentFile) {
+    GroovyTestCodeVisitor(String repositoryPath, String currentFile) {
         this.source = null
         this.projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         this.taskInterface = new ITest()
@@ -93,7 +93,7 @@ class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeV
     }
 
     @Override
-    public void visitConstructorCallExpression(ConstructorCallExpression call) {
+    void visitConstructorCallExpression(ConstructorCallExpression call) {
         super.visitConstructorCallExpression(call)
         def path = GroovyUtil.getClassPathForGroovy(call?.type?.name, projectFiles)
         if (GroovyUtil.isValidClass(call?.type?.name, path)) {

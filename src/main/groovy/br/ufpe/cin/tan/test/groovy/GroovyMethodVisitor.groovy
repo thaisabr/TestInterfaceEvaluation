@@ -13,7 +13,7 @@ class GroovyMethodVisitor extends ClassCodeVisitorSupport {
     def methods
     GroovyTestCodeVisitor methodBodyVisitor
 
-    public GroovyMethodVisitor(List methods, GroovyTestCodeVisitor methodBodyVisitor) {
+    GroovyMethodVisitor(List methods, GroovyTestCodeVisitor methodBodyVisitor) {
         this.methods = methods
         this.methodBodyVisitor = methodBodyVisitor
     }
@@ -24,7 +24,7 @@ class GroovyMethodVisitor extends ClassCodeVisitorSupport {
     }
 
     @Override
-    public void visitMethod(MethodNode node) {
+    void visitMethod(MethodNode node) {
         super.visitMethod(node)
         if (node.name in methods) {
             node.code.visit(methodBodyVisitor)

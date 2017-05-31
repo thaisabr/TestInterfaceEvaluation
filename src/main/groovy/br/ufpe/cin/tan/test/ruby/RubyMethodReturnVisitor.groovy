@@ -13,7 +13,7 @@ class RubyMethodReturnVisitor extends NoopVisitor {
     List<String> args
     def returnNodes //keys: line, value
 
-    public RubyMethodReturnVisitor(String name, List<String> args) {
+    RubyMethodReturnVisitor(String name, List<String> args) {
         this.values = [] as Set
         this.methodName = name
         this.args = args

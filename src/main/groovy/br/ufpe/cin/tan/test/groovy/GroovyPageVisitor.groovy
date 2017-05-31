@@ -11,7 +11,7 @@ class GroovyPageVisitor extends ClassCodeVisitorSupport {
     List<String> viewFiles
     static final PAGE_FIELD = "url" //name convention
 
-    public GroovyPageVisitor(List<String> viewFiles) {
+    GroovyPageVisitor(List<String> viewFiles) {
         this.source = null
         this.pages = [] as Set
         this.viewFiles = viewFiles
@@ -23,7 +23,7 @@ class GroovyPageVisitor extends ClassCodeVisitorSupport {
     }
 
     @Override
-    public void visitField(FieldNode node) {
+    void visitField(FieldNode node) {
         super.visitField(node)
         if (node.name == PAGE_FIELD && node.initialValueExpression.value != "") {
             def name = GroovyUtil.findViewPathForGrailsProjects(node.initialValueExpression.value, viewFiles)

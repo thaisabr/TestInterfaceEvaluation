@@ -354,13 +354,15 @@ class DataManager {
 
                 def itest2 = other[ITEST_INDEX].split(", ") as List
                 def ireal2 = other[IREAL_INDEX].split(", ") as List
-                def testSimJaccard = TestSimilarityAnalyser.calculateSimilarityByJaccard(itest1, itest2)
-                def testSimCosine = TestSimilarityAnalyser.calculateSimilarityByCosine(itest1, itest2)
+                def similarityAnalyser = new TestSimilarityAnalyser(itest1,itest2)
+                def testSimJaccard = similarityAnalyser.calculateSimilarityByJaccard()
+                def testSimCosine = similarityAnalyser.calculateSimilarityByCosine()
                 log.info "Test similarity (jaccard index): $testSimJaccard"
                 log.info "Test similarity (cosine): $testSimCosine"
 
-                def realSimJaccard = TestSimilarityAnalyser.calculateSimilarityByJaccard(ireal1, ireal2)
-                def realSimCosine = TestSimilarityAnalyser.calculateSimilarityByCosine(ireal1, ireal2)
+                similarityAnalyser = new TestSimilarityAnalyser(ireal1,ireal2)
+                def realSimJaccard = similarityAnalyser.calculateSimilarityByJaccard()
+                def realSimCosine = similarityAnalyser.calculateSimilarityByCosine()
                 log.info "Real similarity (jaccard index): $realSimJaccard"
                 log.info "Real similarity (cosine): $realSimCosine"
 

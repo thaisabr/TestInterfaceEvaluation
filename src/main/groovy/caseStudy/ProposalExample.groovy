@@ -7,7 +7,7 @@ import br.ufpe.cin.tan.analysis.task.TodoTask
 @Slf4j
 class ProposalExample {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         def repositoryUrl = "repositories\\rgms"
 
         def featureAdamPath1 = "Article.feature"
@@ -51,18 +51,26 @@ class ProposalExample {
         }
 
         // TA, TA', TB
-        println "SIMILARITY(TA1_number,TB1): ${TestSimilarityAnalyser.calculateSimilarityByJaccard(iTA1_number, iTB1)}"
-        println "SIMILARITY(TA2,TB1): ${TestSimilarityAnalyser.calculateSimilarityByJaccard(iTA2, iTB1)}"
+        def similarityAnalyser = new TestSimilarityAnalyser(iTA1_number, iTB1)
+        println "SIMILARITY(TA1_number,TB1): ${similarityAnalyser.calculateSimilarityByJaccard()}"
+        similarityAnalyser = new TestSimilarityAnalyser(iTA2, iTB1)
+        println "SIMILARITY(TA2,TB1): ${similarityAnalyser.calculateSimilarityByJaccard()}"
 
         // TA, TA', TB' */
-        println "SIMILARITY(TA1_number,TB2): ${TestSimilarityAnalyser.calculateSimilarityByJaccard(iTA1_number, iTB2)}"
-        println "SIMILARITY(TA2,TB2): ${TestSimilarityAnalyser.calculateSimilarityByJaccard(iTA2, iTB2)}"
+        similarityAnalyser = new TestSimilarityAnalyser(iTA1_number, iTB2)
+        println "SIMILARITY(TA1_number,TB2): ${similarityAnalyser.calculateSimilarityByJaccard()}"
+        similarityAnalyser = new TestSimilarityAnalyser(iTA2, iTB2)
+        println "SIMILARITY(TA2,TB2): ${similarityAnalyser.calculateSimilarityByJaccard()}"
 
         //conflict
-        println "SIMILARITY(TA1_autofill,TB1): ${TestSimilarityAnalyser.calculateSimilarityByJaccard(iTA1_autofill, iTB1)}"
-        println "SIMILARITY(TA1_autofill,TB2): ${TestSimilarityAnalyser.calculateSimilarityByJaccard(iTA1_autofill, iTB2)}"
-        println "SIMILARITY(TA2,TB1): ${TestSimilarityAnalyser.calculateSimilarityByJaccard(iTA2, iTB2)}"
-        println "SIMILARITY(TA2,TB2): ${TestSimilarityAnalyser.calculateSimilarityByJaccard(iTA2, iTB2)}"
+        similarityAnalyser = new TestSimilarityAnalyser(iTA1_autofill, iTB1)
+        println "SIMILARITY(TA1_autofill,TB1): ${similarityAnalyser.calculateSimilarityByJaccard()}"
+        similarityAnalyser = new TestSimilarityAnalyser(iTA1_autofill, iTB2)
+        println "SIMILARITY(TA1_autofill,TB2): ${similarityAnalyser.calculateSimilarityByJaccard()}"
+        similarityAnalyser = new TestSimilarityAnalyser(iTA2, iTB1)
+        println "SIMILARITY(TA2,TB1): ${similarityAnalyser.calculateSimilarityByJaccard()}"
+        similarityAnalyser = new TestSimilarityAnalyser(iTA2, iTB2)
+        println "SIMILARITY(TA2,TB2): ${similarityAnalyser.calculateSimilarityByJaccard()}"
     }
 
 }

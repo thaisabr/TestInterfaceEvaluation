@@ -14,6 +14,19 @@ class TextualSimilarityAnalyser {
     IndexReader reader
     Set terms
 
+    double calculateSimilarity(Task task1, Task task2) {
+        configureIndexManager(task1, task2)
+        reader = DirectoryReader.open(indexManager.indexDirectory)
+        calculateFreqVectorSimilarity()
+    }
+
+    double calculateSimilarity(String task1, String task2) {
+        if (task1 == "" || task2 == "") return 0
+        configureIndexManager(task1, task2)
+        reader = DirectoryReader.open(indexManager.indexDirectory)
+        calculateFreqVectorSimilarity()
+    }
+
     private configureIndexManager(Task task1, Task task2) {
         indexManager = new IndexManager()
         indexManager.index(task1.acceptanceTests)
@@ -65,19 +78,6 @@ class TextualSimilarityAnalyser {
         RealVector v1 = toRealVector(freqVectorTask1)
         RealVector v2 = toRealVector(freqVectorTask2)
         getCosineSimilarity(v1, v2)
-    }
-
-    double calculateSimilarity(Task task1, Task task2) {
-        configureIndexManager(task1, task2)
-        reader = DirectoryReader.open(indexManager.indexDirectory)
-        calculateFreqVectorSimilarity()
-    }
-
-    double calculateSimilarity(String task1, String task2) {
-        if (task1 == "" || task2 == "") return 0
-        configureIndexManager(task1, task2)
-        reader = DirectoryReader.open(indexManager.indexDirectory)
-        calculateFreqVectorSimilarity()
     }
 
 }

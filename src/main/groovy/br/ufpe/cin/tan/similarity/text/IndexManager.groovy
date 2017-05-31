@@ -19,40 +19,16 @@ class IndexManager {
     StandardAnalyzer analyzer
     Directory indexDirectory
     IndexWriter writer
+    CharArraySet stopwords
+    FieldType fieldType
 
-    private static CharArraySet stopwords = new CharArraySet(200, true)
-    private static final FieldType TYPE_STORED = new FieldType()
-
-    static {
+    IndexManager() {
         configureStopWords(new GherkinDialectProvider().defaultDialect)
-        TYPE_STORED.setIndexOptions(IndexOptions.DOCS_AND_FREQS)
-        TYPE_STORED.tokenized = true
-        TYPE_STORED.stored = true
-        TYPE_STORED.storeTermVectors = true
-    }
-
-    private static configureStopWords(def dialect) {
-        def words = []
-        words += dialect.backgroundKeywords.unique()*.trim()
-        words += dialect.examplesKeywords.unique()*.trim()
-        words += dialect.featureKeywords.unique()*.trim()
-        words += dialect.scenarioKeywords.unique()*.trim()
-        words += dialect.scenarioOutlineKeywords.unique()*.trim()
-        words += dialect.stepKeywords.unique()*.trim()
-        stopwords.addAll(words)
-    }
-
-    public IndexManager() {
+        configureFieldType()
         analyzer = new StandardAnalyzer(stopwords)
         indexDirectory = new RAMDirectory()
         //Creates a memory directory; if necessary, it is possible to use an index database
         writer = new IndexWriter(indexDirectory, new IndexWriterConfig(analyzer)) //Create a file
-    }
-
-    private addDoc(String text) {
-        Document doc = new Document()
-        doc.add(new Field("content", text, TYPE_STORED))
-        writer.addDocument(doc)
     }
 
     def index(List<ChangedGherkinFile> gherkinFiles) {
@@ -68,6 +44,32 @@ class IndexManager {
     def index(String text) {
         addDoc(text)
         writer.commit()
+    }
+
+    private configureFieldType() {
+        fieldType = new FieldType()
+        fieldType.setIndexOptions(IndexOptions.DOCS_AND_FREQS)
+        fieldType.tokenized = true
+        fieldType.stored = true
+        fieldType.storeTermVectors = true
+    }
+
+    private configureStopWords(def dialect) {
+        stopwords = new CharArraySet(200, true)
+        def words = []
+        words += dialect.backgroundKeywords.unique()*.trim()
+        words += dialect.examplesKeywords.unique()*.trim()
+        words += dialect.featureKeywords.unique()*.trim()
+        words += dialect.scenarioKeywords.unique()*.trim()
+        words += dialect.scenarioOutlineKeywords.unique()*.trim()
+        words += dialect.stepKeywords.unique()*.trim()
+        stopwords.addAll(words)
+    }
+
+    private addDoc(String text) {
+        Document doc = new Document()
+        doc.add(new Field("content", text, fieldType))
+        writer.addDocument(doc)
     }
 
 }

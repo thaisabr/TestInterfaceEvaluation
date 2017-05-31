@@ -35,7 +35,7 @@ class RGMS_Study {
 
     }
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         String[] header = ["Task", "ITest", "IReal", "Precision", "Recall"]
         writer.writeNext(header)
 

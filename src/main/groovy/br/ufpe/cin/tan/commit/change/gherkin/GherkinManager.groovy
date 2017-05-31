@@ -70,8 +70,8 @@ class GherkinManager {
         if (featureIndex < locations.size() - 1) {
             //excludes tag of next scenario definition
             int max = locations.get(featureIndex + 1) - 1 as int
-            def scenDef = feature.children?.first()
-            if (!(scenDef instanceof Background) && !scenDef?.tags?.empty) max--
+            def definition = feature.children?.first()
+            if (!(definition instanceof Background) && !definition?.tags?.empty) max--
 
             for (int i = featureLocation - 1; i < max; i++) {
                 text += lines.get(i).trim() + "\n"
@@ -91,8 +91,8 @@ class GherkinManager {
 
         gherkinFile.baseText = extractCommonText(locations, feature, lines)
         gherkinFile.changedScenarioDefinitionsText = []
-        List<ScenarioDefinition> scenDefinitions = gherkinFile.changedScenarioDefinitions
-        scenDefinitions.each { change ->
+        List<ScenarioDefinition> definitions = gherkinFile.changedScenarioDefinitions
+        definitions.each { change ->
             def text = ""
             def initialLine = change.location.line
             if( !(change instanceof Background) && !change.tags.empty ) {
@@ -103,8 +103,8 @@ class GherkinManager {
             if (index < locations.size() - 1) {
                 //excludes tag of next scenario definition
                 int max = locations.get(index + 1) - 1 as int
-                def scenDef = scenDefinitions.find { it.location.line == max + 1 }
-                if (!(scenDef instanceof Background) && !scenDef?.tags?.empty) max--
+                def definition = definitions.find { it.location.line == max + 1 }
+                if (!(definition instanceof Background) && !definition?.tags?.empty) max--
 
                 //extracts all text until it reaches the next scenario definition
                 for (int i = initialLine - 1; i < max; i++) {

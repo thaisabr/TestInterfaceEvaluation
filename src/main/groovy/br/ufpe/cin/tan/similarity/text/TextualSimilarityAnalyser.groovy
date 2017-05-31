@@ -15,13 +15,16 @@ class TextualSimilarityAnalyser {
     Set terms
 
     double calculateSimilarity(Task task1, Task task2) {
-        configureIndexManager(task1, task2)
-        reader = DirectoryReader.open(indexManager.indexDirectory)
-        calculateFreqVectorSimilarity()
+        if (!task1 || !task2) return 0
+        calculate(task1, task2)
     }
 
     double calculateSimilarity(String task1, String task2) {
         if (task1 == "" || task2 == "") return 0
+        calculate(task1, task2)
+    }
+
+    private calculate(task1, task2){
         configureIndexManager(task1, task2)
         reader = DirectoryReader.open(indexManager.indexDirectory)
         calculateFreqVectorSimilarity()

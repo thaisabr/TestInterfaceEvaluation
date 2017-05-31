@@ -111,7 +111,9 @@ class AnalysedTask {
     }
 
     def isValid(){
-        compilationErrors==0 && stepMatchErrors==0 && satisfiesGemsFilter() && hasImplementedAcceptanceTests() && !irealFiles().empty
+        int zero = 0
+        compilationErrors==zero && stepMatchErrors==zero && satisfiesGemsFilter() && hasImplementedAcceptanceTests() &&
+                !irealFiles().empty
     }
 
     def configureGems(String path){

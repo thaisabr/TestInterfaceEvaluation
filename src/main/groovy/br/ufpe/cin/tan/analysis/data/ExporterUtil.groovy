@@ -23,7 +23,8 @@ class ExporterUtil {
     public static final int ITEST_VIEWS_SIZE_INDEX_SHORT_HEADER = 15
 
     static generateStatistics(double[] precisionValues, double[] recallValues){
-        if(!precisionValues || precisionValues.size()==0 || !recallValues || recallValues.size()==0) return []
+        int zero = 0
+        if(!precisionValues || precisionValues.size()==zero || !recallValues || recallValues.size()==zero) return []
         List<String[]> content = []
         def precisionStats = new DescriptiveStatistics(precisionValues)
         def recallStats = new DescriptiveStatistics(recallValues)

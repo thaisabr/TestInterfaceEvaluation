@@ -58,22 +58,23 @@ class EvaluationExporter {
     }
 
     private initializeValues() {
+        int zero = 0
         emptyIReal = tasks.findAll{ it.irealFiles().empty }
         if(filterEmptyIReal) tasks -= emptyIReal
         stepCounter = tasks.findAll{ !it.doneTask.changedStepDefinitions.empty }.size()
         gherkinCounter = tasks.findAll{ !it.doneTask.changedGherkinFiles.empty }.size()
         hasGherkinTest = tasks.findAll{ !it.itest.foundAcceptanceTests.empty }
-        stepMatchError = tasks.findAll{ it.stepMatchErrors>0 }
-        compilationErrors = tasks.findAll{ it.compilationErrors>0 }
-        gherkinCompilationErrors = tasks.findAll{ it.gherkinCompilationErrors>0 }
-        stepDefCompilationErrors = tasks.findAll{ it.stepDefCompilationErrors>0 }
+        stepMatchError = tasks.findAll{ it.stepMatchErrors>zero }
+        compilationErrors = tasks.findAll{ it.compilationErrors>zero }
+        gherkinCompilationErrors = tasks.findAll{ it.gherkinCompilationErrors>zero }
+        stepDefCompilationErrors = tasks.findAll{ it.stepDefCompilationErrors>zero }
         def invalid = ((tasks - hasGherkinTest) + stepMatchError + compilationErrors).unique()
         if(filterEmptyIReal) invalidTasks = invalid
         else invalidTasks = (invalid + emptyIReal).unique()
         validTasks = tasks - invalidTasks
         emptyITest = validTasks.findAll{ it.itestFiles().empty }
         def noEmptyITest = validTasks - emptyITest
-        zeroPrecisionAndRecall = noEmptyITest.findAll{ it.precision()==0 && it.recall()==0 }
+        zeroPrecisionAndRecall = noEmptyITest.findAll{ it.precision()==zero && it.recall()==zero }
         others = noEmptyITest - zeroPrecisionAndRecall
     }
 

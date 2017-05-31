@@ -1,4 +1,4 @@
-package br.ufpe.cin.tan.test.ruby.unitTest
+package temporary.unitTest
 
 class Main_UnitTestInterface {
 
@@ -9,7 +9,7 @@ class Main_UnitTestInterface {
         }
     }
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         /********************************************* RUBY ***********************************************************
          List<DoneTask> tasks = DataManager.extractProductionAndTestTasks()
          println "number of tasks: ${tasks.size()}"

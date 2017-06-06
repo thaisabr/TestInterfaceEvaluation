@@ -40,12 +40,17 @@ class SimilarityExporter {
                 def otherText = extractTaskText(other[0])
                 def textualSimilarityAnalyser = new TextualSimilarityAnalyser()
                 def textSimilarity = textualSimilarityAnalyser.calculateSimilarity(taskText, otherText)
+
                 def itest2 = other[ExporterUtil.ITEST_INDEX_SHORT_HEADER].split(", ") as List
                 def ireal2 = other[ExporterUtil.IREAL_INDEX_SHORT_HEADER].split(", ") as List
-                def testSimJaccard = TestSimilarityAnalyser.calculateSimilarityByJaccard(itest1, itest2)
-                def testSimCosine = TestSimilarityAnalyser.calculateSimilarityByCosine(itest1, itest2)
-                def realSimJaccard = TestSimilarityAnalyser.calculateSimilarityByJaccard(ireal1, ireal2)
-                def realSimCosine = TestSimilarityAnalyser.calculateSimilarityByCosine(ireal1, ireal2)
+
+                def similarityAnalyser = new TestSimilarityAnalyser(itest1,itest2)
+                def testSimJaccard = similarityAnalyser.calculateSimilarityByJaccard()
+                def testSimCosine = similarityAnalyser.calculateSimilarityByCosine()
+
+                similarityAnalyser = new TestSimilarityAnalyser(ireal1,ireal2)
+                def realSimJaccard = similarityAnalyser.calculateSimilarityByJaccard()
+                def realSimCosine = similarityAnalyser.calculateSimilarityByCosine()
 
                 String[] line = [task[0], other[0], textSimilarity, testSimJaccard, realSimJaccard, testSimCosine, realSimCosine]
                 content += line

@@ -46,13 +46,13 @@ class DoneTask extends Task {
 
     DoneTask(String repositoryUrl, String id, List<String> shas) throws CloningRepositoryException {
         super(repositoryUrl, id)
-        init(shas)
+        configureInitialTestData(shas)
     }
 
     DoneTask(String repositoryUrl, String id, List<String> shas, boolean basic) throws CloningRepositoryException {
         super(repositoryUrl, id)
-        if (basic) basicInit(shas)
-        else init(shas)
+        if (basic) configureBasicData(shas)
+        else configureInitialTestData(shas)
     }
 
     @Override
@@ -223,7 +223,7 @@ class DoneTask extends Task {
         if(!commits.empty) lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
     }
 
-    private basicInit(List<String> shas) {
+    private configureBasicData(List<String> shas) {
         pathSufix = gitRepository.name + File.separator
         changedGherkinFiles = []
         changedStepDefinitions = []
@@ -248,25 +248,25 @@ class DoneTask extends Task {
         } else commitMessage = msgs
     }
 
-    private init(List<String> shas) {
-        basicInit(shas)
+    private configureInitialTestData(List<String> shas) {
+        configureBasicData(shas)
 
         if(!commits.empty) {
             // identifies changed gherkin files and scenario definitions
             commitsChangedGherkinFile = commits?.findAll { it.gherkinChanges && !it.gherkinChanges.isEmpty() }
-            registryChangedGherkinContent()
+            extractGherkinChanges()
 
             // identifies changed step definitions
             commitsStepsChange = this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }
-            registryChangedStepContent()
+            extractStepDefinitionChanges()
         } else {
             log.error "The task has no commits! Searched commits: "
             shas.each{ log.error it.toString() }
         }
     }
 
-    private registryChangedStepContent(){
-        def stepDefinitions = identifyChangedStepContent()
+    private extractStepDefinitionChanges(){
+        def stepDefinitions = identifyChangedStepDefinitionFiles()
         def notFoundSteps = []
         def notFoundFiles = []
         List<ChangedStepdefFile> finalStepDefinitionsFilesSet = []
@@ -311,8 +311,8 @@ class DoneTask extends Task {
         changedStepDefinitions = finalStepDefinitionsFilesSet
     }
 
-    private registryChangedGherkinContent(){
-        def gherkinFiles = identifyChangedGherkinContent()
+    private extractGherkinChanges(){
+        def gherkinFiles = identifyChangedGherkinFiles()
         def notFoundScenarios = []
         def notFoundFiles = []
         List<ChangedGherkinFile> finalGherkinFilesSet = []
@@ -358,7 +358,7 @@ class DoneTask extends Task {
         changedGherkinFiles = finalGherkinFilesSet
     }
 
-    private List<ChangedGherkinFile> identifyChangedGherkinContent() {
+    private List<ChangedGherkinFile> identifyChangedGherkinFiles() {
         List<ChangedGherkinFile> gherkinFiles = []
         commitsChangedGherkinFile?.each { commit -> //commits sorted by date
             commit.gherkinChanges?.each { file ->
@@ -388,7 +388,7 @@ class DoneTask extends Task {
         gherkinFiles
     }
 
-    private List<ChangedStepdefFile> identifyChangedStepContent() {
+    private List<ChangedStepdefFile> identifyChangedStepDefinitionFiles() {
         List<ChangedStepdefFile> stepFiles = []
         commitsStepsChange?.each { commit -> //commits sorted by date
             commit.stepChanges?.each { file ->
@@ -485,7 +485,9 @@ class DoneTask extends Task {
     }
 
     private registryCompilationErrors(AnalysedTask task){
-        registryCompilationErrors(task.itest)
+        ITest temp = task.itest
+        registryCompilationErrors(temp)
+        task.itest = temp
     }
 
     private registryCompilationErrors(ITest itest){
@@ -512,9 +514,6 @@ class DoneTask extends Task {
             formatedResult += [path: name, msgs:error.msgs]
         }
 
-        def newItest = new ITest()
-        newItest.collapseInterfaces(itest)
-        newItest.compilationErrors = formatedResult
-        itest = newItest
+        itest.compilationErrors = formatedResult
     }
 }

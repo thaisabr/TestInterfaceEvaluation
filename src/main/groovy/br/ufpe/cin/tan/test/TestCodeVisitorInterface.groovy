@@ -3,7 +3,7 @@ package br.ufpe.cin.tan.test
 import br.ufpe.cin.tan.analysis.itask.ITest
 
 
-trait TestCodeVisitor {
+trait TestCodeVisitorInterface {
 
     abstract ITest getTaskInterface()
 

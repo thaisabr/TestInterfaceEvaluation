@@ -11,7 +11,7 @@ import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
 import br.ufpe.cin.tan.test.FileToAnalyse
 import br.ufpe.cin.tan.test.StepRegex
 import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
-import br.ufpe.cin.tan.test.TestCodeVisitor
+import br.ufpe.cin.tan.test.TestCodeVisitorInterface
 import br.ufpe.cin.tan.util.Util
 
 @Slf4j
@@ -103,7 +103,7 @@ class GroovyTestCodeAnalyser extends TestCodeAbstractAnalyser {
      * @param file List of map objects that identifies files by 'path' and 'lines'.
      * @return visitor to visit method bodies
      */
-    TestCodeVisitor parseStepBody(FileToAnalyse file) {
+    TestCodeVisitorInterface parseStepBody(FileToAnalyse file) {
         def ast = generateAst(file.path)
         def visitor = new GroovyTestCodeVisitor(repositoryPath, file.path)
         def testCodeVisitor = new GroovyStepsFileVisitor(file.methods, visitor)
@@ -119,7 +119,7 @@ class GroovyTestCodeAnalyser extends TestCodeAbstractAnalyser {
      * @param file a map object that identifies a file by 'path' and 'methods'. A method is identified by its name.
      * @param visitor visitor to visit method bodies
      */
-    def visitFile(def file, TestCodeVisitor visitor) {
+    def visitFile(def file, TestCodeVisitorInterface visitor) {
         def ast = generateAst(file.path)
         visitor.lastVisitedFile = file.path
         def auxVisitor = new GroovyMethodVisitor(file.methods, (GroovyTestCodeVisitor) visitor)
@@ -127,7 +127,7 @@ class GroovyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     }
 
     @Override
-    void findAllPages(TestCodeVisitor visitor) {
+    void findAllPages(TestCodeVisitorInterface visitor) {
         def pageCodeVisitor = new GroovyPageVisitor(viewFiles)
         def filesToVisit = visitor?.taskInterface?.calledPageMethods*.file as Set
         filesToVisit?.each { f ->
@@ -139,7 +139,7 @@ class GroovyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     }
 
     @Override
-    TestCodeVisitor parseUnitBody(ChangedUnitTestFile file) {
+    TestCodeVisitorInterface parseUnitBody(ChangedUnitTestFile file) {
         return null
     }
 

@@ -13,7 +13,7 @@ import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
 import br.ufpe.cin.tan.test.FileToAnalyse
 import br.ufpe.cin.tan.test.StepRegex
 import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
-import br.ufpe.cin.tan.test.TestCodeVisitor
+import br.ufpe.cin.tan.test.TestCodeVisitorInterface
 import br.ufpe.cin.tan.test.ruby.routes.Route
 import br.ufpe.cin.tan.test.ruby.routes.RouteHelper
 import br.ufpe.cin.tan.test.ruby.routes.RubyConfigRoutesVisitor
@@ -572,7 +572,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     }
 
     @Override
-    void findAllPages(TestCodeVisitor visitor) {
+    void findAllPages(TestCodeVisitorInterface visitor) {
         /* generates all routes according to config/routes.rb file */
         if(this.routes.empty) {
             this.generateProjectRoutes()
@@ -655,7 +655,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
      * @return visitor to visit method bodies
      */
     @Override
-    TestCodeVisitor parseStepBody(FileToAnalyse file) {
+    TestCodeVisitorInterface parseStepBody(FileToAnalyse file) {
         def node = this.generateAst(file.path)
         def visitor = new RubyTestCodeVisitor(projectFiles, file.path, methods)
         def testCodeVisitor = new RubyStepsFileVisitor(file.methods, visitor)
@@ -671,7 +671,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
      * @param visitor visitor to visit method bodies
      */
     @Override
-    visitFile(file, TestCodeVisitor visitor) {
+    visitFile(file, TestCodeVisitorInterface visitor) {
         def node = this.generateAst(file.path)
         visitor.lastVisitedFile = file.path
         def auxVisitor = new RubyMethodVisitor(file.methods, (RubyTestCodeVisitor) visitor)
@@ -679,7 +679,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     }
 
     @Override
-    TestCodeVisitor parseUnitBody(ChangedUnitTestFile file) {
+    TestCodeVisitorInterface parseUnitBody(ChangedUnitTestFile file) {
         def node = generateAst(file.path)
         def visitor = new RubyTestCodeVisitor(projectFiles, file.path, methods)
         visitor.lastVisitedFile = file.path

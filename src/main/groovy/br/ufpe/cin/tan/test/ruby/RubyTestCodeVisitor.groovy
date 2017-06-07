@@ -6,14 +6,14 @@ import org.jrubyparser.util.NoopVisitor
 import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.test.MethodToAnalyse
 import br.ufpe.cin.tan.test.StepCall
-import br.ufpe.cin.tan.test.TestCodeVisitor
+import br.ufpe.cin.tan.test.TestCodeVisitorInterface
 import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.Util
 import br.ufpe.cin.tan.util.ruby.RubyConstantData
 import br.ufpe.cin.tan.util.ruby.RubyUtil
 
 @Slf4j
-class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitor {
+class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterface {
 
     ITest taskInterface
     List<String> projectFiles

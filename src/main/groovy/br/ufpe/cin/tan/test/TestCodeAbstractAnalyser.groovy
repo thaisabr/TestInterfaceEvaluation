@@ -63,7 +63,7 @@ abstract class TestCodeAbstractAnalyser {
      *
      * @param visitor
      */
-    abstract void findAllPages(TestCodeVisitor visitor)
+    abstract void findAllPages(TestCodeVisitorInterface visitor)
 
     /***
      * Finds all regex expression in a source code file.
@@ -94,7 +94,7 @@ abstract class TestCodeAbstractAnalyser {
      * @param file List of map objects that identifies files by 'path' and 'lines'.
      * @return visitor to visit method bodies
      */
-    abstract TestCodeVisitor parseStepBody(FileToAnalyse file) //keys: path, lines
+    abstract TestCodeVisitorInterface parseStepBody(FileToAnalyse file) //keys: path, lines
 
     /***
      * Visits selected method bodies from a source code file searching for other method calls. The result is stored as a
@@ -103,9 +103,9 @@ abstract class TestCodeAbstractAnalyser {
      * @param file a map object that identifies a file by 'path' and 'methods'. A method is identified by its name.
      * @param visitor visitor to visit method bodies
      */
-    abstract visitFile(file, TestCodeVisitor visitor)
+    abstract visitFile(file, TestCodeVisitorInterface visitor)
 
-    abstract TestCodeVisitor parseUnitBody(ChangedUnitTestFile file)
+    abstract TestCodeVisitorInterface parseUnitBody(ChangedUnitTestFile file)
 
     abstract ChangedUnitTestFile doExtractUnitTest(String path, String content, List<Integer> changedLines)
 
@@ -373,7 +373,7 @@ abstract class TestCodeAbstractAnalyser {
             log.info stepDefFile.toString()
 
             /* first level: To identify method calls from step body. */
-            TestCodeVisitor testCodeVisitor = parseStepBody(stepDefFile)
+            TestCodeVisitorInterface testCodeVisitor = parseStepBody(stepDefFile)
 
             /* second level: To visit methods until there is no more method calls of methods defined in test code. */
             def visitedFiles = []

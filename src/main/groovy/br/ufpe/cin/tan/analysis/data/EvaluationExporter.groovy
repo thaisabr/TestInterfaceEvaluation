@@ -17,6 +17,7 @@ class EvaluationExporter {
     List<AnalysedTask> gherkinCompilationErrors
     List<AnalysedTask> compilationErrors
     List<AnalysedTask> stepDefCompilationErrors
+    List<AnalysedTask> unitCompilationErrors
     List<AnalysedTask> invalidTasks
     List<AnalysedTask> validTasks
     List<AnalysedTask> emptyITest
@@ -58,22 +59,26 @@ class EvaluationExporter {
     }
 
     private initializeValues() {
-        int zero = 0
-        emptyIReal = tasks.findAll{ it.irealFiles().empty }
+        validTasks = tasks.findAll{ it.isValid() }
+
+        def invalid = tasks - validTasks
+        emptyIReal = invalid.findAll{ it.irealIsEmpty() }
         if(filterEmptyIReal) tasks -= emptyIReal
-        stepCounter = tasks.findAll{ !it.doneTask.changedStepDefinitions.empty }.size()
-        gherkinCounter = tasks.findAll{ !it.doneTask.changedGherkinFiles.empty }.size()
-        hasGherkinTest = tasks.findAll{ !it.itest.foundAcceptanceTests.empty }
-        stepMatchError = tasks.findAll{ it.stepMatchErrors>zero }
-        compilationErrors = tasks.findAll{ it.compilationErrors>zero }
-        gherkinCompilationErrors = tasks.findAll{ it.gherkinCompilationErrors>zero }
-        stepDefCompilationErrors = tasks.findAll{ it.stepDefCompilationErrors>zero }
-        def invalid = ((tasks - hasGherkinTest) + stepMatchError + compilationErrors).unique()
+
+        stepCounter = tasks.findAll{ it.hasChangedStepDefs() }.size()
+        gherkinCounter = tasks.findAll{ it.hasChangedGherkinDefs()}.size()
+        hasGherkinTest = tasks.findAll{ it.hasImplementedAcceptanceTests() }
+        stepMatchError = tasks.findAll{ it.hasStepMatchError() }
+        compilationErrors = tasks.findAll{ it.hasCompilationError() }
+        gherkinCompilationErrors = tasks.findAll{ it.hasGherkinCompilationError() }
+        stepDefCompilationErrors = tasks.findAll{ it.hasStepDefCompilationError() }
+        unitCompilationErrors = tasks.findAll { it.hasUnitCompilationError() }
+
         if(filterEmptyIReal) invalidTasks = invalid
         else invalidTasks = (invalid + emptyIReal).unique()
-        validTasks = tasks - invalidTasks
-        emptyITest = validTasks.findAll{ it.itestFiles().empty }
+        emptyITest = validTasks.findAll{ it.itestIsEmpty() }
         def noEmptyITest = validTasks - emptyITest
+        int zero = 0
         zeroPrecisionAndRecall = noEmptyITest.findAll{ it.precision()==zero && it.recall()==zero }
         others = noEmptyITest - zeroPrecisionAndRecall
     }
@@ -81,21 +86,24 @@ class EvaluationExporter {
     private generateSummaryData() {
         initialData = []
         initialData += ["Repository", url] as String[]
-        initialData += ["Empty IReal", emptyIReal.size()] as String[]
-        if(filterEmptyIReal) initialData += ["No-empty IReal", tasks.size()] as String[]
-        else initialData += ["No-empty IReal", (tasks-emptyIReal).size()] as String[]
-        initialData += ["Compilation errors", compilationErrors.size()] as String[]
-        initialData += ["Compilation errors of Gherkin files", gherkinCompilationErrors.size()] as String[]
-        initialData += ["Compilation errors of StepDef files", stepDefCompilationErrors.size()] as String[]
-        initialData += ["Step match error", stepMatchError.size()] as String[]
-        initialData += ["Changed stepdef", stepCounter] as String[]
-        initialData += ["Changed Gherkin", gherkinCounter] as String[]
-        initialData += ["Implemented Gherkin scenarios", hasGherkinTest.size()] as String[]
+        initialData += ["Tasks with empty IReal", emptyIReal.size()] as String[]
+        if(filterEmptyIReal) initialData += ["Tasks with no-empty IReal", tasks.size()] as String[]
+        else initialData += ["Tasks with no-empty IReal", (tasks-emptyIReal).size()] as String[]
+        initialData += ["Tasks with relevant AST error", compilationErrors.size()] as String[]
+        initialData += ["Tasks with AST error of Gherkin files", gherkinCompilationErrors.size()] as String[]
+        initialData += ["Tasks with AST error of StepDef files", stepDefCompilationErrors.size()] as String[]
+        def productionErrors = compilationErrors.size() - (gherkinCompilationErrors.size() + stepDefCompilationErrors.size())
+        initialData += ["Tasks with AST error of production files", productionErrors] as String[]
+        initialData += ["Tasks with AST error of unit test files", unitCompilationErrors.size()] as String[]
+        initialData += ["Tasks with step match error", stepMatchError.size()] as String[]
+        initialData += ["Tasks with changed stepdef", stepCounter] as String[]
+        initialData += ["Tasks with changed Gherkin", gherkinCounter] as String[]
+        initialData += ["Tasks with implemented Gherkin scenarios", hasGherkinTest.size()] as String[]
         initialData += ["All invalid tasks", invalidTasks.size()] as String[]
-        initialData += ["All valid (Gherkin scenario, no empty IReal, no error)", validTasks.size()] as String[]
-        initialData += ["Valid, but empty ITest", emptyITest.size()] as String[]
-        initialData += ["Valid, no empty ITest, but zero precision-recall", zeroPrecisionAndRecall.size()] as String[]
-        initialData += ["Valid, no empty ITest, no zero precision-recall", others.size()] as String[]
+        initialData += ["All valid tasks (Gherkin scenario, no empty IReal, no error)", validTasks.size()] as String[]
+        initialData += ["Valid tasks, but empty ITest", emptyITest.size()] as String[]
+        initialData += ["Valid tasks, no empty ITest, but zero precision-recall", zeroPrecisionAndRecall.size()] as String[]
+        initialData += ["Valid tasks, no empty ITest, no zero precision-recall", others.size()] as String[]
         initialData += MAIN_HEADER
     }
 

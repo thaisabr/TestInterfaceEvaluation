@@ -24,6 +24,8 @@ class AnalysedTask {
     int gherkinCompilationErrors
     String stepDefCompilationErrorsText
     int stepDefCompilationErrors
+    String unitCompilationErrorsText
+    int unitCompilationErrors
     List<String> gems
     List<String> coverageGems
     String rails
@@ -45,8 +47,8 @@ class AnalysedTask {
         this.stepCalls = itest?.methods?.findAll { it.type == "StepCall" }?.unique()?.size()
         this.methods = itest?.methods?.findAll { it.type == "Object" }?.unique()*.name
         this.trace = itest?.findAllFiles()
-        this.extractStepMatchErrors()
-        this.extractCompilationErrors()
+        this.extractStepMatchErrorText()
+        this.extractCompilationErrorText()
     }
 
     int getDevelopers(){
@@ -57,12 +59,53 @@ class AnalysedTask {
         doneTask.renamedFiles
     }
 
+    def hasChangedStepDefs(){
+        !doneTask.changedStepDefinitions.empty
+    }
+
+    def hasStepMatchError(){
+        if (stepMatchErrors>0) true
+        else false
+    }
+
+    def hasCompilationError(){
+        if (compilationErrors>0) true
+        else false
+    }
+
+    def hasGherkinCompilationError(){
+        if (gherkinCompilationErrors>0) true
+        else false
+    }
+
+    def hasStepDefCompilationError(){
+        if (stepDefCompilationErrors>0) true
+        else false
+    }
+
+    def hasUnitCompilationError(){
+        if (unitCompilationErrors>0) true
+        else false
+    }
+
+    def hasChangedGherkinDefs(){
+        !doneTask.changedGherkinFiles.empty
+    }
+
     def irealFiles(){
         ireal.findFilteredFiles()
     }
 
+    def irealIsEmpty(){
+        ireal.findFilteredFiles().empty
+    }
+
     def itestFiles(){
         itest.findFilteredFiles()
+    }
+
+    def itestIsEmpty(){
+        itestFiles().empty
     }
 
     def itestViewFiles() {
@@ -190,7 +233,7 @@ class AnalysedTask {
         coverage
     }
 
-    private void extractStepMatchErrors() {
+    private void extractStepMatchErrorText() {
         def stepErrors = itest.matchStepErrors
         def stepErrorsQuantity = 0
         def text = ""
@@ -206,22 +249,28 @@ class AnalysedTask {
         this.stepMatchErrors = stepErrorsQuantity
     }
 
-    private void extractCompilationErrors() {
+    private void extractCompilationErrorText() {
         def compilationErrors = itest.compilationErrors
         def compErrorsQuantity = 0
         def gherkinQuantity = 0
         def stepsQuantity = 0
+        def unitQuantity = 0
         def gherkin = ""
         def steps = ""
+        def unit = ""
         if (compilationErrors.empty) compilationErrors = ""
         else {
-            compErrorsQuantity = compilationErrors*.msgs.flatten().size()
             gherkin = compilationErrors.findAll{ Util.isGherkinFile(it.path) }
             gherkinQuantity = gherkin.size()
             if(gherkin.empty) gherkin = ""
             steps = compilationErrors.findAll{ Util.isStepDefinitionFile(it.path) }
             stepsQuantity = steps.size()
             if(steps.empty) steps = ""
+            unit = compilationErrors.findAll{ Util.isUnitTestFile(it.path) }
+            unitQuantity = unit.size()
+            if(unit.empty) unit = ""
+            compilationErrors -= unit
+            compErrorsQuantity = compilationErrors*.msgs.flatten().size()
             compilationErrors = compilationErrors.toString()
         }
 
@@ -231,6 +280,8 @@ class AnalysedTask {
         this.gherkinCompilationErrors = gherkinQuantity
         this.stepDefCompilationErrorsText = steps
         this.stepDefCompilationErrors = stepsQuantity
+        this.unitCompilationErrorsText = unit
+        this.unitCompilationErrors = unitQuantity
     }
 
 }

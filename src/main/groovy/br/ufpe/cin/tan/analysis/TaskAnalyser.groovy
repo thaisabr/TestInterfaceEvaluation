@@ -202,7 +202,8 @@ class TaskAnalyser {
     }
 
     private analyseSimilarity() {
-        log.info "<  Analysing similarity among tasks from '$relevantTasksFile'  >"
+        if(selectedTasks.empty) return
+            log.info "<  Analysing similarity among tasks from '$relevantTasksFile'  >"
         SimilarityExporter similarityExporter = new SimilarityExporter(relevantTasksFile, similarityFile)
         similarityExporter.save()
         log.info "The results were saved!"

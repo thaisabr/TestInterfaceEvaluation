@@ -10,12 +10,12 @@ import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
 import br.ufpe.cin.tan.test.FileToAnalyse
 import br.ufpe.cin.tan.test.StepRegex
-import br.ufpe.cin.tan.test.TestCodeAbstractParser
+import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
 import br.ufpe.cin.tan.test.TestCodeVisitor
 import br.ufpe.cin.tan.util.Util
 
 @Slf4j
-class GroovyTestCodeParser extends TestCodeAbstractParser {
+class GroovyTestCodeAnalyser extends TestCodeAbstractAnalyser {
 
     static GroovyClassLoader classLoader
 
@@ -29,7 +29,7 @@ class GroovyTestCodeParser extends TestCodeAbstractParser {
         /** ************************************************************************************************************/
     }
 
-    GroovyTestCodeParser(String repositoryPath, GherkinManager gherkinManager) {
+    GroovyTestCodeAnalyser(String repositoryPath, GherkinManager gherkinManager) {
         super(repositoryPath, gherkinManager)
     }
 

@@ -19,7 +19,7 @@ import br.ufpe.cin.tan.util.Util
  * Template Method pattern.
  */
 @Slf4j
-abstract class TestCodeAbstractParser {
+abstract class TestCodeAbstractAnalyser {
 
     String repositoryPath
     String stepsFilePath
@@ -43,7 +43,7 @@ abstract class TestCodeAbstractParser {
      *
      * @param repositoryPath It could be a URL or a local path.
      */
-    TestCodeAbstractParser(String repositoryPath, GherkinManager gherkinManager) {
+    TestCodeAbstractAnalyser(String repositoryPath, GherkinManager gherkinManager) {
         this.repositoryPath = repositoryPath
         this.gherkinManager = gherkinManager
         stepsFilePath = repositoryPath + File.separator + Util.STEPS_FILES_RELATIVE_PATH

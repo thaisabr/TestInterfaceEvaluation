@@ -4,14 +4,14 @@ import gherkin.ParserException
 import groovy.util.logging.Slf4j
 import org.eclipse.jgit.revwalk.RevCommit
 import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
-import br.ufpe.cin.tan.test.TestCodeAbstractParser
+import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
 
 @Slf4j
 class StepdefManager {
 
-    TestCodeAbstractParser parser
+    TestCodeAbstractAnalyser parser
 
-    StepdefManager(TestCodeAbstractParser parser){
+    StepdefManager(TestCodeAbstractAnalyser parser){
         this.parser = parser
     }
 

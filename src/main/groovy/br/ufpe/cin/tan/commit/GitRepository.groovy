@@ -27,7 +27,7 @@ import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
 import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
 import br.ufpe.cin.tan.commit.change.stepdef.ChangedStepdefFile
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
-import br.ufpe.cin.tan.test.TestCodeAbstractParser
+import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
 import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.RegexUtil
 import br.ufpe.cin.tan.util.Util
@@ -76,7 +76,7 @@ class GitRepository {
      * @param hash a set of hash value
      * @return a list of commits that satisfy the search criteria.
      */
-    List<Commit> searchCommitsBySha(TestCodeAbstractParser parser, String... hash) {
+    List<Commit> searchCommitsBySha(TestCodeAbstractAnalyser parser, String... hash) {
         def logs = searchAllRevCommitsBySha(hash)
         extractCommitsFromLogs(logs, parser)
     }
@@ -164,12 +164,12 @@ class GitRepository {
         }
     }
 
-    private List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent, TestCodeAbstractParser parser) {
+    private List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent, TestCodeAbstractAnalyser parser) {
         def diffs = extractDiff(null, commit, parent)
         extractAllCodeChangeFromDiffs(commit, parent, diffs, parser)
     }
 
-    private List<CodeChange> extractCodeChangesByFirstCommit(RevCommit commit, TestCodeAbstractParser parser) {
+    private List<CodeChange> extractCodeChangesByFirstCommit(RevCommit commit, TestCodeAbstractAnalyser parser) {
         List<CodeChange> codeChanges = []
         def git = Git.open(new File(localPath))
         TreeWalk tw = new TreeWalk(git.repository)
@@ -229,7 +229,7 @@ class GitRepository {
     }
 
     private ChangedStepdefFile extractStepDefinitionChanges(RevCommit commit, RevCommit parent, DiffEntry entry,
-                                                            TestCodeAbstractParser parser) {
+                                                            TestCodeAbstractAnalyser parser) {
         StepdefManager stepdefManager = new StepdefManager(parser)
         ChangedStepdefFile changedStepFile = null
         def newVersion = extractFileContent(commit, entry.newPath)
@@ -270,7 +270,7 @@ class GitRepository {
      * Identifies step definitions at added step definition files.
      * It is used only when dealing with done tasks.
      */
-    private ChangedStepdefFile extractStepDefinitionAdds(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser) {
+    private ChangedStepdefFile extractStepDefinitionAdds(RevCommit commit, DiffEntry entry, TestCodeAbstractAnalyser parser) {
         StepdefManager stepdefManager = new StepdefManager(parser)
         ChangedStepdefFile changedStepFile = null
         def newVersion = extractFileContent(commit, entry.newPath)
@@ -283,7 +283,7 @@ class GitRepository {
         changedStepFile
     }
 
-    private ChangedUnitTestFile extractUnitChanges(RevCommit commit, String path, List<Integer> lines, TestCodeAbstractParser parser) {
+    private ChangedUnitTestFile extractUnitChanges(RevCommit commit, String path, List<Integer> lines, TestCodeAbstractAnalyser parser) {
         def newVersion = extractFileContent(commit, path)
         UnitTestManager.parseUnitFile(path, newVersion, lines, parser)
     }
@@ -349,7 +349,7 @@ class GitRepository {
         gherkinManager.extractGherkinAdds(commit, newVersion, entry.newPath)
     }
 
-    private CodeChange configureAddChange(RevCommit commit, DiffEntry entry, TestCodeAbstractParser parser) {
+    private CodeChange configureAddChange(RevCommit commit, DiffEntry entry, TestCodeAbstractAnalyser parser) {
         CodeChange change = null
         if (Util.isGherkinFile(entry.newPath)) {
             change = extractGherkinAdds(commit, entry)
@@ -367,7 +367,7 @@ class GitRepository {
         change
     }
 
-    private CodeChange configureModifyChange(RevCommit commit, RevCommit parent, DiffEntry entry, TestCodeAbstractParser parser) {
+    private CodeChange configureModifyChange(RevCommit commit, RevCommit parent, DiffEntry entry, TestCodeAbstractAnalyser parser) {
         CodeChange change = null
         if (Util.isGherkinFile(entry.newPath))
             change = extractGherkinChanges(commit, parent, entry)
@@ -390,7 +390,7 @@ class GitRepository {
      * file also has code changes, such changes are also ignored.
      */
     private List<CodeChange> extractAllCodeChangeFromDiffs(RevCommit commit, RevCommit parent, List<DiffEntry> diffs,
-                                                           TestCodeAbstractParser parser) {
+                                                           TestCodeAbstractAnalyser parser) {
         List<CodeChange> codeChanges = []
         diffs?.each { entry ->
             switch (entry.changeType) {
@@ -488,7 +488,7 @@ class GitRepository {
         return oldTreeParser
     }
 
-    private List<CodeChange> extractAllCodeChangesFromCommit(RevCommit commit, TestCodeAbstractParser parser) {
+    private List<CodeChange> extractAllCodeChangesFromCommit(RevCommit commit, TestCodeAbstractAnalyser parser) {
         List<CodeChange> codeChanges = []
 
         switch (commit.parentCount) {
@@ -507,7 +507,7 @@ class GitRepository {
         return codeChanges
     }
 
-    private List<Commit> extractCommitsFromLogs(Iterable<RevCommit> logs, TestCodeAbstractParser parser) {
+    private List<Commit> extractCommitsFromLogs(Iterable<RevCommit> logs, TestCodeAbstractAnalyser parser) {
         def commits = []
         logs?.each { c ->
             List<CodeChange> codeChanges = extractAllCodeChangesFromCommit(c, parser)

@@ -12,7 +12,7 @@ import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
 import br.ufpe.cin.tan.test.FileToAnalyse
 import br.ufpe.cin.tan.test.StepRegex
-import br.ufpe.cin.tan.test.TestCodeAbstractParser
+import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
 import br.ufpe.cin.tan.test.TestCodeVisitor
 import br.ufpe.cin.tan.test.ruby.routes.Route
 import br.ufpe.cin.tan.test.ruby.routes.RouteHelper
@@ -29,7 +29,7 @@ import br.ufpe.cin.tan.util.ruby.RubyUtil
 import java.util.regex.Matcher
 
 @Slf4j
-class RubyTestCodeParser extends TestCodeAbstractParser {
+class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
 
     String routesFile
     Set<Route> routes
@@ -38,7 +38,7 @@ class RubyTestCodeParser extends TestCodeAbstractParser {
     ViewCodeExtractor viewCodeExtractor
     static counter = 1
 
-    RubyTestCodeParser(String repositoryPath, GherkinManager gherkinManager) {
+    RubyTestCodeAnalyser(String repositoryPath, GherkinManager gherkinManager) {
         super(repositoryPath, gherkinManager)
         this.routesFile = repositoryPath + RubyConstantData.ROUTES_FILE
         this.routes = [] as Set

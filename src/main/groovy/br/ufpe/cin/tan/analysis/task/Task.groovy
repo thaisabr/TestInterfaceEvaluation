@@ -1,12 +1,12 @@
 package br.ufpe.cin.tan.analysis.task
 
 import br.ufpe.cin.tan.analysis.itask.ITest
-import br.ufpe.cin.tan.test.TestCodeAbstractParser
+import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
 import br.ufpe.cin.tan.commit.GitRepository
 import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
-import br.ufpe.cin.tan.test.groovy.GroovyTestCodeParser
-import br.ufpe.cin.tan.test.java.JavaTestCodeParser
-import br.ufpe.cin.tan.test.ruby.RubyTestCodeParser
+import br.ufpe.cin.tan.test.groovy.GroovyTestCodeAnalyser
+import br.ufpe.cin.tan.test.java.JavaTestCodeAnalyser
+import br.ufpe.cin.tan.test.ruby.RubyTestCodeAnalyser
 import br.ufpe.cin.tan.util.LanguageOption
 import br.ufpe.cin.tan.util.Util
 import br.ufpe.cin.tan.exception.CloningRepositoryException
@@ -18,7 +18,7 @@ abstract class Task {
 
     String id
     GitRepository gitRepository
-    TestCodeAbstractParser testCodeParser
+    TestCodeAbstractAnalyser testCodeParser
 
     Task(String rootDirectory, String id) throws CloningRepositoryException {
         log.info "Configuring task '${id}'"
@@ -30,13 +30,13 @@ abstract class Task {
     def configureTestCodeParser() {
         switch (Util.CODE_LANGUAGE) {
             case LanguageOption.JAVA:
-                testCodeParser = new JavaTestCodeParser(gitRepository?.localPath, gitRepository.gherkinManager)
+                testCodeParser = new JavaTestCodeAnalyser(gitRepository?.localPath, gitRepository.gherkinManager)
                 break
             case LanguageOption.GROOVY:
-                testCodeParser = new GroovyTestCodeParser(gitRepository?.localPath, gitRepository.gherkinManager)
+                testCodeParser = new GroovyTestCodeAnalyser(gitRepository?.localPath, gitRepository.gherkinManager)
                 break
             case LanguageOption.RUBY:
-                testCodeParser = new RubyTestCodeParser(gitRepository?.localPath, gitRepository.gherkinManager)
+                testCodeParser = new RubyTestCodeAnalyser(gitRepository?.localPath, gitRepository.gherkinManager)
                 break
             default: throw new InvalidLanguageException()
         }

@@ -17,6 +17,6 @@ abstract class RubyConstantData {
     public static OPERATORS = ["[]", "*", "/", "+", "-", "==", "!=", ">", "<", ">=", "<=", "<=>", "===", ".eql?",
                                "equal?", "defined?", "%", "<<", ">>", "=~", "&", "|", "^", "~", "!", "**"]
     public static IGNORED_METHODS = ["puts", "print", "assert", "should", "should_not"] + EXCLUDED_PATH_METHODS +
-                                      ConstantData.STEP_KEYWORDS + ConstantData.STEP_KEYWORDS_PT + OPERATORS
+                                      ConstantData.ALL_STEP_KEYWORDS + OPERATORS
 
 }

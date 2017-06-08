@@ -34,12 +34,12 @@ class RubyUtil extends Util {
 
     static List<String> getClassPathForRubyClass(String original, Collection<String> projectFiles) {
         def underscore = camelCaseToUnderscore(original)
-        getClassPathForRubyInstanceVariable(underscore, projectFiles)
+        getClassPathForVariable(underscore, projectFiles)
     }
 
-    static List<String> getClassPathForRubyInstanceVariable(String original, Collection<String> projectFiles) {
+    static List<String> getClassPathForVariable(String original, Collection<String> projectFiles) {
         if(original.empty || original.contains(" ")) return [] //invalid class reference
-        def name = original + ConstantData.RUBY_EXTENSION
+        def name = camelCaseToUnderscore(original) + ConstantData.RUBY_EXTENSION
         def exp = ".*$File.separator$name".replace(File.separator, Matcher.quoteReplacement(File.separator))
         projectFiles?.findAll { it ==~ /$exp/ }
     }

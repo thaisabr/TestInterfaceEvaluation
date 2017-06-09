@@ -108,7 +108,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
     }
 
     private registryMethodCallFromInstanceVariable(CallNode iVisited) {
-        def paths = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.receiver.name, projectFiles)
+        def paths = RubyUtil.getClassPathForVariable(iVisited.receiver.name, projectFiles)
         if (paths) {
             /* Checks if the method really exists. There are methods that are generated automatically by Rails.
             * In any case, the call is registered.*/
@@ -462,6 +462,11 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
         }
     }
 
+    private registryClassUsageByVariable(name){
+        def classNames = RubyUtil.getClassPathForVariable(name, projectFiles)
+        if (classNames && !classNames.empty) registryClassUsageUsingFilename(classNames)
+    }
+
     def registryClassUsage(String name) {
         def paths = RubyUtil.getClassPathForRubyClass(name, projectFiles)
         if(paths.empty && Util.FRAMEWORK_FILES.findAll { it.contains(name) }.empty){
@@ -474,7 +479,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
 
     def registryCallFromInstanceVariable(String method, int argsCounter, String receiver) {
         def registered = true
-        def paths = RubyUtil.getClassPathForRubyInstanceVariable(receiver, projectFiles)
+        def paths = RubyUtil.getClassPathForVariable(receiver, projectFiles)
         def matches = searchForMethodMatch(method, argsCounter)
 
         /* Receiver is valid and the called method is auto-generated.
@@ -568,25 +573,94 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
     }
 
     /**
-     * Represents an instance variable assignment.
+     * Represents an instance variable assignment. Example: @user = User.make!
      */
     @Override
     Object visitInstAsgnNode(InstAsgnNode iVisited) {
         super.visitInstAsgnNode(iVisited)
-        def classNames = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.name, projectFiles)
-        if (classNames && !classNames.empty) registryClassUsageUsingFilename(classNames)
+        log.info "Visit ${iVisited.toString()} (${lastVisitedFile}: ${iVisited.position.startLine})"
+        registryClassUsageByVariable(iVisited.name)
         iVisited
     }
 
     /**
-     * Represents an instance variable accessor.
+     * Represents an instance variable accessor. Example: edit_user_path(@user)
      */
     @Override
     Object visitInstVarNode(InstVarNode iVisited) {
         super.visitInstVarNode(iVisited)
-        def classNames = RubyUtil.getClassPathForRubyInstanceVariable(iVisited.name, projectFiles)
-        if (classNames && !classNames.empty) registryClassUsageUsingFilename(classNames)
+        log.info "Visit ${iVisited.toString()} (${lastVisitedFile}: ${iVisited.position.startLine})"
+        registryClassUsageByVariable(iVisited.name)
         iVisited
     }
 
+    /**
+     * The access to a constant. Example: 'Organization.make! city: arg1'. Constant = Organization
+     * This case seems to be redundant. In fact, the constant access is made by method call.
+     * */
+    Object visitConstNode(ConstNode iVisited) {
+        super.visitConstNode(iVisited)
+        log.info "Visit ${iVisited.toString()} (${lastVisitedFile}: ${iVisited.position.startLine+1})"
+        registryClassUsage(iVisited.name)
+        iVisited
+    }
+
+    /**
+     * Class variable assignment node (e.g. @@foo = 1).
+     */
+    Object visitClassVarAsgnNode(ClassVarAsgnNode iVisited) {
+        super.visitClassVarAsgnNode(iVisited)
+        log.info "Visit ${iVisited.toString()} (${lastVisitedFile}: ${iVisited.position.startLine+1})"
+        registryClassUsageByVariable(iVisited.name)
+        iVisited
+    }
+
+    /**
+     * Access to a class variable.
+     */
+    Object visitClassVarNode(ClassVarNode iVisited) {
+        super.visitClassVarNode(iVisited)
+        log.info "Visit ${iVisited.toString()} (${lastVisitedFile}: ${iVisited.position.startLine+1})"
+        registryClassUsageByVariable(iVisited.name)
+        iVisited
+    }
+
+    /**
+     * Access a local variable
+     */
+    Object visitLocalVarNode(LocalVarNode iVisited) {
+        super.visitLocalVarNode(iVisited)
+        log.info "Visit ${iVisited.toString()} (${lastVisitedFile}: ${iVisited.position.startLine+1})"
+        registryClassUsageByVariable(iVisited.name)
+        iVisited
+    }
+
+    /**
+     * Represents an assignment to a global variable.
+     */
+    Object visitGlobalAsgnNode(GlobalAsgnNode iVisited) {
+        super.visitGlobalAsgnNode(iVisited)
+        log.info "Visit ${iVisited.toString()} (${lastVisitedFile}: ${iVisited.position.startLine+1})"
+        registryClassUsageByVariable(iVisited.name)
+        iVisited
+    }
+
+    /**
+     *	Access to a global variable.
+     */
+    Object visitGlobalVarNode(GlobalVarNode iVisited) {
+        super.visitGlobalVarNode(iVisited)
+        log.info "Visit ${iVisited.toString()} (${lastVisitedFile}: ${iVisited.position.startLine+1})"
+        registryClassUsageByVariable(iVisited.name)
+        iVisited
+    }
+
+    /**
+     * Node that represents an assignment of either an array element or attribute.
+     */
+    Object visitAttrAssignNode(AttrAssignNode iVisited) {
+        super.visitAttrAssignNode(iVisited)
+        log.info "Visit ${iVisited.toString()} (${lastVisitedFile}: ${iVisited.position.startLine+1}) - not registered!"
+        iVisited
+    }
 }

@@ -48,7 +48,7 @@ class TaskImporter {
                 else falsePtTasks += task
             }
         } catch (Exception ex) {
-            log.error "Error while extracting tasks from CSV file."
+            log.error "Error while extracting tasks from CSV file.\nError message: ${ex.message}"
             ex.stackTrace.each{ log.error it.toString() }
             doneTasks = []
         }

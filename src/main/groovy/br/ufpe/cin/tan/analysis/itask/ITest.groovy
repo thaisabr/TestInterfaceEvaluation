@@ -75,18 +75,6 @@ class ITest extends TaskInterface {
         Util.filterFiles(this.findAllProdFiles())
     }
 
-    Set<String> getAllProdFiles(){
-        //production classes
-        def classes = (classes?.findAll { Util.isProductionFile(it.file) })*.file
-
-        //production methods
-        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" &&
-                it.file && Util.isProductionFile(it.file) }*.file
-
-        //production files
-        ((classes + methodFiles + referencedPages) as Set)?.sort()
-    }
-
     Set<String> getViewFilesForFurtherAnalysis(){
         def files = getAllProdFiles()
         files?.findAll{ String f -> Util.isViewFile(f) }
@@ -127,6 +115,18 @@ class ITest extends TaskInterface {
         def files = ((classes + methodFiles + referencedPages) as Set)?.sort()
         def canonicalPath = Util.getRepositoriesCanonicalPath()
         files?.findResults { i -> i ? i - canonicalPath : null } as Set
+    }
+
+    private Set<String> getAllProdFiles(){
+        //production classes
+        def classes = (classes?.findAll { Util.isProductionFile(it.file) })*.file
+
+        //production methods
+        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" &&
+                it.file && Util.isProductionFile(it.file) }*.file
+
+        //production files
+        ((classes + methodFiles + referencedPages) as Set)?.sort()
     }
 
 }

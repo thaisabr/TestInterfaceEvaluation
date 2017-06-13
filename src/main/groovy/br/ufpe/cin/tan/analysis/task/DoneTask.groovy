@@ -474,7 +474,7 @@ class DoneTask extends Task {
 
     private extractRemovedFiles() {
         def changes = commits*.coreChanges?.flatten()?.findAll { it.type == DiffEntry.ChangeType.DELETE }
-        removedFiles = changes?.collect { pathSufix + it.path }?.unique()?.sort()
+        removedFiles = changes?.collect { it.path }?.unique()?.sort()
     }
 
     private showTaskInfo(){

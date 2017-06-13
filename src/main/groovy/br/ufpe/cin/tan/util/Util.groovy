@@ -303,6 +303,7 @@ abstract class Util {
     static organizePathsForInterfaces(Collection<String> files){
         files?.findResults { i ->
             if(i){
+                if(!i.contains(REPOSITORY_FOLDER_PATH)) i = REPOSITORY_FOLDER_PATH + i
                 def root = extractRootFolder(i)
                 i - root
             } else null
@@ -362,6 +363,18 @@ abstract class Util {
             if (it.isFile()) files += it.absolutePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         }
         files.sort()
+    }
+
+    static List<String> findFoldersFromDirectory(String directory) {
+        def f = new File(directory)
+        def folders = []
+
+        if (!f.exists()) return folders
+
+        f?.eachDirRecurse { dir ->
+            folders += dir.absolutePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        }
+        folders.sort()
     }
 
     static String underscoreToCamelCase(String underscore) {

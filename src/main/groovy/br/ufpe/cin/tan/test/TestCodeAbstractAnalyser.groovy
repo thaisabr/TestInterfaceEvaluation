@@ -330,8 +330,8 @@ abstract class TestCodeAbstractAnalyser {
      * @return a list of methods grouped by path.
      */
     def listFilesToVisit(lastCalledMethods, allVisitedFiles) {
-        def validCalledMethods = lastCalledMethods.findAll { it.file != null }
-        def methods = listTestMethodsToVisit(validCalledMethods)
+        def validCalledMethods = lastCalledMethods.findAll { it.file!=null && it.type!="StepCall"}
+        def methods = groupMethodsToVisitByFile(validCalledMethods)
         def filesToVisit = []
         methods.each { file ->
             def match = allVisitedFiles?.find { it.path == file.path }
@@ -348,12 +348,12 @@ abstract class TestCodeAbstractAnalyser {
     /***
      * Identifies methods to visit from a list of method calls. The methods of interest are defined by test code.
      *
-     * @param lastCalledMethods list of map objects identifying called methods by 'name', 'type' and 'file'.
+     * @param methodsList list of map objects identifying called methods by 'name', 'type' and 'file'.
      * @return a list of methods grouped by path.
      */
-    static listTestMethodsToVisit(lastCalledMethods) {
+    static groupMethodsToVisitByFile(methodsList) {
         def testFiles = []
-        def calledTestMethods = lastCalledMethods?.findAll { it.file != null && Util.isTestFile(it.file) }?.unique()
+        def calledTestMethods = methodsList?.findAll { it.file != null && Util.isTestFile(it.file) }?.unique()
         calledTestMethods*.file.unique().each { path ->
             def methods = calledTestMethods.findAll { it.file == path }*.name
             testFiles += [path: path, methods: methods]

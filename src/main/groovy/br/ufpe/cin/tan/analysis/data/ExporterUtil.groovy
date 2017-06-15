@@ -11,7 +11,7 @@ class ExporterUtil {
     public static String[] SHORT_HEADER = ["TASK", "#DAYS", "#DEVS", "#COMMITS", "HASHES", "#GHERKIN_TESTS", "#ITest", "#IReal",
                                     "ITest", "IReal", "PRECISION", "RECALL", "RAILS", "#visit_call", "lost_visit_call","#ITest_views",
                                     "#view_analysis_code", "view_analysis_code", "methods_no_origin", "renamed_files",
-                                    "deleted_files", "noFound_views", "#noFound_views", "TIMESTAMP"]
+                                    "deleted_files", "noFound_views", "#noFound_views", "TIMESTAMP", "has_merge"]
 
     public static final int RECALL_INDEX_SHORT_HEADER = SHORT_HEADER.size() - 13
     public static final int PRECISION_INDEX_SHORT_HEADER = RECALL_INDEX_SHORT_HEADER - 1

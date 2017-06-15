@@ -196,6 +196,12 @@ class DoneTask extends Task {
         else true
     }
 
+    boolean hasMergeCommit(){
+        def r = commits.findAll{ it.merge }
+        if(r.empty) false
+        else true
+    }
+
     private boolean hasNoCommits(){
         def isEmpty = false
         if (!commits || commits.empty) {

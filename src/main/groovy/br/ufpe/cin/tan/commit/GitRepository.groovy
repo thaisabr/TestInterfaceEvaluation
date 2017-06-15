@@ -534,7 +534,7 @@ class GitRepository {
 
             commits += new Commit(hash: c.name, message: c.fullMessage.replaceAll(RegexUtil.NEW_LINE_REGEX, " "),
                     author: c.authorIdent.name, date: c.commitTime, coreChanges: prodFiles, gherkinChanges: gherkinChanges,
-                    unitChanges: unitChanges, stepChanges: stepChanges, renameChanges: renameChanges)
+                    unitChanges: unitChanges, stepChanges: stepChanges, renameChanges: renameChanges, merge:c.parentCount>1)
         }
         commits
     }

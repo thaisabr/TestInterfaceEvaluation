@@ -95,6 +95,10 @@ class AnalysedTask {
         !doneTask.changedGherkinFiles.empty
     }
 
+    def hasMergeCommit(){
+        doneTask.hasMergeCommit()
+    }
+
     def irealFiles(){
         ireal.findFilteredFiles()
     }
@@ -204,7 +208,7 @@ class AnalysedTask {
                           stepDefCompilationErrorsText, stepDefCompilationErrors, renames, removedFiles, views,
                           views.size(), itestSize, irealSize, itestFiles, irealFiles, precision(), recall(),
                           doneTask.hashes, itest.timestamp, rails, gems, itest.visitCallCounter, itest.lostVisitCall,
-                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis]
+                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, hasMergeCommit()]
         array
     }
 
@@ -231,7 +235,7 @@ class AnalysedTask {
                          itest.foundAcceptanceTests.size(), itestSize, irealSize, itestFiles, irealFiles, precision(),
                          recall(), rails, itest.visitCallCounter, itest.lostVisitCall, viewFileFromITest,
                          filesFromViewAnalysis.size(), filesFromViewAnalysis, methods, renames, removedFiles, views,
-                         views.size(), itest.timestamp]
+                         views.size(), itest.timestamp, hasMergeCommit()]
         line
     }
 

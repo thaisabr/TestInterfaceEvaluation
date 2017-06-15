@@ -15,6 +15,7 @@ class Commit {
     String message
     String author
     long date
+    boolean merge
 
     List<ChangedProdFile> coreChanges //code changes in production code only
     List<ChangedGherkinFile> gherkinChanges //code changes in feature files only

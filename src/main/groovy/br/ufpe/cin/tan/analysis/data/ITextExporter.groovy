@@ -33,8 +33,18 @@ class ITextExporter {
             File file = new File(name)
             file.withWriter("utf-8") { out ->
                 out.write(analysedTask.itext)
-                out.write("\n-----------------------------------------------------------\n")
-                analysedTask.trace.each{ out.write(it + "\n") }
+                writeTraceFile(analysedTask)
+            }
+        }
+    }
+
+    private writeTraceFile(AnalysedTask analysedTask){
+        if(!analysedTask) return
+        def name = "${textFilePrefix}${analysedTask.doneTask.id}_trace${ConstantData.TEXT_EXTENSION}"
+        if (analysedTask.itext && !analysedTask.itext.empty) {
+            File file = new File(name)
+            file.withWriter("utf-8") { out ->
+                analysedTask.trace.each{ out.write(it.toString() + "\n") }
             }
         }
     }

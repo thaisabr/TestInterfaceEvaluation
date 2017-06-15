@@ -35,7 +35,7 @@ class EvaluationExporter {
                             "#Step_Match_Error", "AST_Errors", "#AST_Errors", "Gherkin_AST_Errors", "#Gherkin_AST_Errors",
                             "Steps_AST_Errors", "#Steps_AST_Errors", "Renamed_Files", "Deleted_Files", "NotFound_Views",
                             "#Views", "#ITest", "#IReal", "ITest", "IReal", "Precision", "Recall", "Hashes", "Timestamp",
-                            "Rails", "Gems", "#Visit_Call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis"]
+                            "Rails", "Gems", "#Visit_Call", "Lost_visit_call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis"]
 
     EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks){
         this(evaluationFile, tasks, true)

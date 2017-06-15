@@ -30,7 +30,7 @@ class RelevantTaskExporter {
     def save(){
         def tasksToSave = relevantTasks + emptyITestTasks
         if(!tasksToSave || tasksToSave.empty) return
-        if (tasksToSave.size() > 1) saveText(tasksToSave)
+        /*if (tasksToSave.size() > 1)*/ saveText(tasksToSave)
         List<String[]> content = []
         content += ["Repository", url] as String[]
         content += generateNumeralData()

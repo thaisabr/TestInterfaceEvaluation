@@ -304,7 +304,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
         //concatenação de String, com possível chamada de método.
         //ex: visit "/children/" + input_child_hash["_id"], :put, {:child => input_child_hash, :format => 'json'}
         if(node.name in RubyConstantData.OPERATORS){ //visit call uses a String argument...
-            log.info "Visit call uses a transformed String as argument. Transforming operator: ${node.name}"
+            log.warn "Visit call uses a transformed String as argument. Transforming operator: ${node.name}"
             lostVisitCall += [path: lastVisitedFile, line: node.position.startLine+1]
         } else registryMethodCallVisitArg(node.name)
     }

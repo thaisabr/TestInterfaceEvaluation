@@ -98,7 +98,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
         } else {
             def matches = searchForMethodMatch(iVisited)
             if (matches.empty) {
-                taskInterface.methods += [name: iVisited.name, type: RubyUtil.getClassName(lastVisitedFile), file: lastVisitedFile]
+                taskInterface.methods += [name: iVisited.name, type: "Object", file: null]
             } else {
                 matches.each {
                     taskInterface.methods += [name: iVisited.name, type: RubyUtil.getClassName(it.path), file: it.path]
@@ -511,7 +511,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
         if (iVisited.name in RubyConstantData.IGNORED_METHODS) return iVisited
-        //log.info "Method call: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine+1});   Receptor: ${iVisited.receiver.class}"
+        log.info "Method call: ${iVisited.name} $lastVisitedFile (${iVisited.position.startLine+1});   Receptor: ${iVisited.receiver.class}"
 
         // unit test file
         if (productionClass && iVisited.receiver.properties.containsKey("name") && iVisited.receiver.name == "subject") {
@@ -535,7 +535,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
         super.visitFCallNode(iVisited)
 
         if (iVisited.name in RubyConstantData.IGNORED_METHODS) return iVisited
-        //log.info "Method call (fcallnode): ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1})"
+        log.info "Method call (fcallnode): ${iVisited.name}; $lastVisitedFile; (${iVisited.position.startLine+1})"
 
         if ((iVisited.grandParent instanceof FCallNode) && iVisited.grandParent.name == "visit") return iVisited
         else if (RubyUtil.isRouteMethod(iVisited.name)) {

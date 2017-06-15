@@ -4,6 +4,7 @@ import br.ufpe.cin.tan.analysis.itask.IReal
 import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
 import br.ufpe.cin.tan.analysis.task.DoneTask
 import br.ufpe.cin.tan.analysis.itask.ITest
+import br.ufpe.cin.tan.test.AcceptanceTest
 import br.ufpe.cin.tan.util.Util
 import br.ufpe.cin.tan.util.ruby.RubyUtil
 
@@ -15,7 +16,6 @@ class AnalysedTask {
     List<String> methods
     int stepCalls
     String itext
-    Set<String> trace
     String stepMatchErrorsText
     int stepMatchErrors
     String compilationErrorsText
@@ -46,9 +46,12 @@ class AnalysedTask {
         this.itest = itest
         this.stepCalls = itest?.methods?.findAll { it.type == "StepCall" }?.unique()?.size()
         this.methods = itest?.methods?.findAll { it.type == "Object" }?.unique()*.name
-        this.trace = itest?.findAllFiles()
         this.extractStepMatchErrorText()
         this.extractCompilationErrorText()
+    }
+
+    Set getTrace(){
+        itest.trace
     }
 
     int getDevelopers(){
@@ -148,6 +151,10 @@ class AnalysedTask {
         }
     }
 
+    Set<AcceptanceTest> getAcceptanceTests(){
+        itest.foundAcceptanceTests
+    }
+
     def hasImplementedAcceptanceTests(){
         if(itest.foundAcceptanceTests.size()>0) true
         else false
@@ -196,8 +203,8 @@ class AnalysedTask {
                           compilationErrors, gherkinCompilationErrorsText, gherkinCompilationErrors,
                           stepDefCompilationErrorsText, stepDefCompilationErrors, renames, removedFiles, views,
                           views.size(), itestSize, irealSize, itestFiles, irealFiles, precision(), recall(),
-                          doneTask.hashes, itest.timestamp, rails, gems, itest.visitCallCounter, viewFileFromITest,
-                          filesFromViewAnalysis.size(), filesFromViewAnalysis]
+                          doneTask.hashes, itest.timestamp, rails, gems, itest.visitCallCounter, itest.lostVisitCall,
+                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis]
         array
     }
 
@@ -222,8 +229,9 @@ class AnalysedTask {
         def viewFileFromITest = itestViewFiles().size()
         String[] line = [doneTask.id, doneTask.days, developers, doneTask.commitsQuantity, doneTask.hashes,
                          itest.foundAcceptanceTests.size(), itestSize, irealSize, itestFiles, irealFiles, precision(),
-                         recall(), rails, itest.visitCallCounter, viewFileFromITest, filesFromViewAnalysis.size(),
-                         filesFromViewAnalysis, methods, renames, removedFiles, views, views.size(), itest.timestamp]
+                         recall(), rails, itest.visitCallCounter, itest.lostVisitCall, viewFileFromITest,
+                         filesFromViewAnalysis.size(), filesFromViewAnalysis, methods, renames, removedFiles, views,
+                         views.size(), itest.timestamp]
         line
     }
 

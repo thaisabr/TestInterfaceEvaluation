@@ -19,4 +19,8 @@ trait TestCodeVisitorInterface {
         0
     }
 
+    Set getLostVisitCall(){
+        [] as Set
+    }
+
 }

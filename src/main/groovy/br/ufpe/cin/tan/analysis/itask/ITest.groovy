@@ -22,6 +22,8 @@ class ITest extends TaskInterface {
     Set foundAcceptanceTests
     Set codeFromViewAnalysis
     int visitCallCounter
+    Set lostVisitCall
+    Set trace
 
     ITest() {
         super()
@@ -36,6 +38,8 @@ class ITest extends TaskInterface {
         this.notFoundViews = [] as Set
         this.foundAcceptanceTests = [] as Set
         this.codeFromViewAnalysis = [] as Set
+        this.lostVisitCall = [] as Set
+        this.trace = [] as Set
     }
 
     @Override

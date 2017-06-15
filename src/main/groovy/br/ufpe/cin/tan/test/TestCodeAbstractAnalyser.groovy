@@ -35,8 +35,11 @@ abstract class TestCodeAbstractAnalyser {
     Set<AcceptanceTest> foundAcceptanceTests
     Set codeFromViewAnalysis
     int visitCallCounter
+    Set lostVisitCall //keys: path, line
 
     GherkinManager gherkinManager
+
+    Set trace //keys: path, lines
 
     /***
      * Initializes fields used to link step declaration and code.
@@ -56,6 +59,8 @@ abstract class TestCodeAbstractAnalyser {
         matchStepErrors = [] as Set
         foundAcceptanceTests = []
         codeFromViewAnalysis = [] as Set
+        lostVisitCall = [] as Set
+        trace = [] as Set
     }
 
     /***
@@ -114,6 +119,7 @@ abstract class TestCodeAbstractAnalyser {
     abstract boolean hasCompilationError(String path)
 
     def configureProperties() {
+        trace = []
         projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         configureRegexList() // Updates regex list used to match step definition and step code
         configureMethodsList()
@@ -323,7 +329,7 @@ abstract class TestCodeAbstractAnalyser {
      * @param allVisitedFiles A collection all visited files identified by 'path' and visited 'methods'.
      * @return a list of methods grouped by path.
      */
-    static listFilesToVisit(lastCalledMethods, allVisitedFiles) {
+    def listFilesToVisit(lastCalledMethods, allVisitedFiles) {
         def validCalledMethods = lastCalledMethods.findAll { it.file != null }
         def methods = listTestMethodsToVisit(validCalledMethods)
         def filesToVisit = []
@@ -335,6 +341,7 @@ abstract class TestCodeAbstractAnalyser {
                 filesToVisit += [path: file.path, methods: file.methods]
             }
         }
+        updateTraceMethod(filesToVisit)
         return filesToVisit
     }
 
@@ -365,10 +372,36 @@ abstract class TestCodeAbstractAnalyser {
         return result
     }
 
+    def updateTrace(FileToAnalyse file){
+        trace += [path: file.path, methods: file.methods*.line]
+    }
+
+    def updateTrace(List<FileToAnalyse> files){
+        files.each{ updateTrace(it) }
+    }
+
+    private updateTraceMethod(List files){
+        files.each{ file -> trace += [path: file.path, methods: file.methods] }
+    }
+
+    private consolidateTrace(){
+        def aux = []
+        def files = trace*.path
+        def groupsByFile = trace.groupBy({ t -> t.path})
+        files.each{ file ->
+            def methods = groupsByFile[file].collect{ it.methods }.flatten().unique()
+            def path = file-repositoryPath
+            def index = path.indexOf(File.separator+File.separator)+1
+            aux += [path: path.substring(index), methods:methods]
+        }
+        trace = aux.sort{ it.path }
+    }
+
     private ITest computeInterface(List<FileToAnalyse> filesToAnalyse, Set removedSteps) {
         def interfaces = []
         List<StepCall> calledSteps = [] //keys:text, path, line
 
+        updateTrace(filesToAnalyse)
         filesToAnalyse?.eachWithIndex { stepDefFile, index ->
             log.info stepDefFile.toString()
 
@@ -408,6 +441,7 @@ abstract class TestCodeAbstractAnalyser {
             interfaces += testCodeVisitor.taskInterface
 
             visitCallCounter += testCodeVisitor.visitCallCounter
+            lostVisitCall += testCodeVisitor.lostVisitCall
         }
 
         /* identifies more step definitions to analyse */
@@ -426,6 +460,8 @@ abstract class TestCodeAbstractAnalyser {
         itest.foundAcceptanceTests = foundAcceptanceTests
         itest.codeFromViewAnalysis = this.getCodeFromViewAnalysis()
         itest.visitCallCounter = visitCallCounter
+        itest.lostVisitCall = lostVisitCall
+        itest.trace = consolidateTrace()
         itest
     }
 

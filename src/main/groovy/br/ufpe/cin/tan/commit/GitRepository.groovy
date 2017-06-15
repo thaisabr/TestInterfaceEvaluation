@@ -307,20 +307,23 @@ class GitRepository {
 
         //searches for changed or removed scenario definitions
         List<ScenarioDefinition> changedScenarioDefinitions = []
-        oldScenarioDefinitions?.each { definition ->
-            def foundDefinition = newScenarioDefinitions?.find { it.name == definition.name }
-            if (foundDefinition) {
-                if (definition.steps.size() == foundDefinition.steps.size()) { //scenario definition might be changed
-                    def equalsDefinitions = GherkinManager.equals(foundDefinition, definition)
-                    if (!equalsDefinitions) changedScenarioDefinitions += foundDefinition
-                } else {//scenario definition was changed
-                    changedScenarioDefinitions += foundDefinition
-                }
-            } else { //if a scenario definition was removed, it was not relevant for the task
-                log.info "commit ${commit.name} removed scenario from ${entry.newPath}:\n ${definition.name}"
-                definition.steps.each{
-                    log.info "${it.text}; ${entry.newPath} (${it.location.line})"
-                    removedSteps += [path: entry.newPath, text: it.text]
+        if(!Util.RESTRICT_GHERKIN_CHANGES) {
+            oldScenarioDefinitions?.each { definition ->
+                def foundDefinition = newScenarioDefinitions?.find { it.name == definition.name }
+                if (foundDefinition) {
+                    if (definition.steps.size() == foundDefinition.steps.size()) {
+                        //scenario definition might be changed
+                        def equalsDefinitions = GherkinManager.equals(foundDefinition, definition)
+                        if (!equalsDefinitions) changedScenarioDefinitions += foundDefinition
+                    } else {//scenario definition was changed
+                        changedScenarioDefinitions += foundDefinition
+                    }
+                } else { //if a scenario definition was removed, it was not relevant for the task
+                    log.info "commit ${commit.name} removed scenario from ${entry.newPath}:\n ${definition.name}"
+                    definition.steps.each {
+                        log.info "${it.text}; ${entry.newPath} (${it.location.line})"
+                        removedSteps += [path: entry.newPath, text: it.text]
+                    }
                 }
             }
         }

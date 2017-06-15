@@ -35,6 +35,7 @@ abstract class Util {
     public static final boolean VIEW_FILTER
     public static final boolean MULTIPLE_TASK_FILES
     public static final List<String> COVERAGE_GEMS
+    public static final boolean RESTRICT_GHERKIN_CHANGES
 
     static {
         properties = new Properties()
@@ -85,6 +86,8 @@ abstract class Util {
         VIEW_FILTER = configureViewFilter()
         createFolders()
         COVERAGE_GEMS = configureCoverageGems()
+
+        RESTRICT_GHERKIN_CHANGES = configureGherkinAdds()
     }
 
     private static loadProperties() {
@@ -169,6 +172,10 @@ abstract class Util {
 
     private static boolean configureViewFilter(){
         configureBooleanProperties(properties.(ConstantData.PROP_VIEW_FILTER), ConstantData.DEFAULT_VIEW_FILTER)
+    }
+
+    private static boolean configureGherkinAdds(){
+        configureBooleanProperties(properties.(ConstantData.PROP_RESTRICT_GHERKIN_CHANGES), ConstantData.DEFAULT_RESTRICT_GHERKIN_CHANGES)
     }
 
     private static createFolder(String folder) {

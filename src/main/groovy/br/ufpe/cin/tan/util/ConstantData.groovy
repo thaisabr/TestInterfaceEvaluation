@@ -81,4 +81,7 @@ abstract class ConstantData {
 
     public static final String PROP_COVERAGE_GEMS = "spgroup.gems.coverage"
 
+    public static final String PROP_RESTRICT_GHERKIN_CHANGES = "spgroup.gherkin.adds"
+    public static final boolean DEFAULT_RESTRICT_GHERKIN_CHANGES = false
+
 }

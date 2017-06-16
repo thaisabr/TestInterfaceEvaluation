@@ -63,10 +63,14 @@ class GitRepository {
         logs
     }
 
+    /* Commits are sorted by the sequence they are search. For security reason, entry hashes considering the*/
     Iterable<RevCommit> searchAllRevCommitsBySha(String... hash) {
-        def git = Git.open(new File(localPath))
-        def logs = git?.log()?.all()?.call()?.findAll { it.name in hash }?.sort { it.commitTime }
-        git.close()
+        def commits = searchAllRevCommits()
+        def logs = []
+        hash.each{ h ->
+            def c = commits?.find{ it.name == h }
+            if(c) logs += c
+        }
         logs
     }
 

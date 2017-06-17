@@ -13,7 +13,7 @@ class ExporterUtil {
                                     "#view_analysis_code", "view_analysis_code", "methods_no_origin", "renamed_files",
                                     "deleted_files", "noFound_views", "#noFound_views", "TIMESTAMP", "has_merge"]
 
-    public static final int RECALL_INDEX_SHORT_HEADER = SHORT_HEADER.size() - 13
+    public static final int RECALL_INDEX_SHORT_HEADER = SHORT_HEADER.size() - 14
     public static final int PRECISION_INDEX_SHORT_HEADER = RECALL_INDEX_SHORT_HEADER - 1
     public static final int IREAL_INDEX_SHORT_HEADER = PRECISION_INDEX_SHORT_HEADER - 1
     public static final int ITEST_INDEX_SHORT_HEADER = IREAL_INDEX_SHORT_HEADER - 1

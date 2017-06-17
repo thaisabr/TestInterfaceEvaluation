@@ -29,6 +29,7 @@ import br.ufpe.cin.tan.exception.CloningRepositoryException
 class DoneTask extends Task {
 
     RevCommit lastCommit
+    String lastHash
     List<Commit> commits
     List<Commit> commitsChangedGherkinFile
     List<Commit> commitsStepsChange
@@ -43,9 +44,16 @@ class DoneTask extends Task {
     String commitMessage
     def hashes
     String pathSufix
+    int msgLimit
 
     DoneTask(String repositoryUrl, String id, List<String> shas) throws CloningRepositoryException {
         super(repositoryUrl, id)
+        configureInitialTestData(shas)
+    }
+
+    DoneTask(String repositoryUrl, String id, List<String> shas, String last) throws CloningRepositoryException {
+        super(repositoryUrl, id)
+        lastHash = last
         configureInitialTestData(shas)
     }
 
@@ -225,11 +233,18 @@ class DoneTask extends Task {
         ex.stackTrace.each{ log.error it.toString() }
     }
 
-    private configureLastCommit(){
-        if(!commits.empty) lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
+    private configureLastCommit() throws Exception {
+        if(lastHash) {
+            def revcommits = gitRepository.searchAllRevCommitsBySha(lastHash)
+            if(revcommits) lastCommit = revcommits.first()
+            else throw new Exception("Error while configuring last commit '$lastHash'")
+        }
+        else if(!commits.empty) lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
+        else throw new Exception("Error while configuring last commit. Does the task contain commits?")
     }
 
     private configureBasicData(List<String> shas) {
+        msgLimit = 1000
         pathSufix = gitRepository.name + File.separator
         changedGherkinFiles = []
         changedStepDefinitions = []
@@ -249,8 +264,8 @@ class DoneTask extends Task {
 
     private String extractCommitMessages() {
         String msgs = commits*.message?.flatten()?.toString()
-        if (msgs.length() > 1000) {
-            commitMessage = msgs.toString().substring(0, 999) + " [TOO_LONG]"
+        if (msgs.length() > msgLimit) {
+            commitMessage = msgs.toString().substring(0, msgLimit-1) + " [TOO_LONG]"
         } else commitMessage = msgs
     }
 
@@ -471,9 +486,13 @@ class DoneTask extends Task {
         if (size < 2) days = size
         else {
             use(TimeCategory) {
-                def last = new Date(commits.last().date * 1000).clearTime()
-                def first = new Date(commits.first().date * 1000).clearTime()
-                days = (last - first).days + 1
+                def devDates = commits*.date?.flatten()?.sort()
+                if (devDates) {
+                    devDates = devDates.collect { new Date(it * 1000).clearTime()}.unique()
+                    def last = devDates.last()
+                    def first = devDates.first()
+                    days = (last - first).days + 1
+                } else days = 0
             }
         }
     }
@@ -486,6 +505,7 @@ class DoneTask extends Task {
     private showTaskInfo(){
         log.info "TASK ID: $id"
         log.info "COMMITS: ${commits*.hash}"
+        log.info "NEWEST COMMIT: ${lastCommit.name}"
         log.info "COMMITS CHANGED GHERKIN FILE: ${commitsChangedGherkinFile*.hash}"
         log.info "COMMITS CHANGED STEP DEFINITION FILE: ${commitsStepsChange*.hash}"
     }

@@ -27,7 +27,7 @@ class TestExecutionExporter {
         tasks.each { task ->
             def scenarios = extractTests(task)
             def coverage = task.parseCoverageGemsToString()
-            String[] line = [task.doneTask.id, task.doneTask.commits.last().hash, task.ruby, task.rails, coverage, scenarios]
+            String[] line = [task.doneTask.id, task.doneTask.lastCommit.name, task.ruby, task.rails, coverage, scenarios]
             content += line
         }
         CsvUtil.write(testFile, content)

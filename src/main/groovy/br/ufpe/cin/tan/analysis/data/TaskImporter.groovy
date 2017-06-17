@@ -14,6 +14,7 @@ class TaskImporter {
     int HASHES_INDEX = 3
     int PROD_FILES_INDEX = 4
     int TEST_FILES_INDEX = 5
+    int LAST_COMMIT = 6
     int MAX_TASK_SIZE = 80
 
     File file
@@ -43,7 +44,7 @@ class TaskImporter {
         try {
             ptImportedTasks.each { entry ->
                 def hashes = entry[HASHES_INDEX].tokenize(',[]')*.trim()
-                def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX], hashes)
+                def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX], hashes, entry[LAST_COMMIT])
                 if(task.hasTest()) doneTasks += task
                 else falsePtTasks += task
             }
@@ -62,7 +63,7 @@ class TaskImporter {
         try {
             entries.each { entry ->
                 def hashes = entry[HASHES_INDEX].tokenize(',[]')*.trim()
-                def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX], hashes)
+                def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX], hashes, entry[LAST_COMMIT])
                 if(task.hasTest()) doneTasks += task
                 else falsePtTasks += task
             }

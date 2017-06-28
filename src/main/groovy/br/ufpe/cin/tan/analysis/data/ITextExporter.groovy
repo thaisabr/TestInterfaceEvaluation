@@ -34,6 +34,7 @@ class ITextExporter {
             file.withWriter("utf-8") { out ->
                 out.write(analysedTask.itext)
                 writeTraceFile(analysedTask)
+                writeITestDetailed(analysedTask)
             }
         }
     }
@@ -45,6 +46,17 @@ class ITextExporter {
             File file = new File(name)
             file.withWriter("utf-8") { out ->
                 analysedTask.trace.each{ out.write(it.toString() + "\n") }
+            }
+        }
+    }
+
+    private writeITestDetailed(AnalysedTask analysedTask){
+        if(!analysedTask) return
+        def name = "${textFilePrefix}${analysedTask.doneTask.id}_detailed_itest${ConstantData.TEXT_EXTENSION}"
+        if (analysedTask.itext && !analysedTask.itext.empty) {
+            File file = new File(name)
+            file.withWriter("utf-8") { out ->
+                analysedTask.itest.each{ out.write(it.toStringDetailed() + "\n") }
             }
         }
     }

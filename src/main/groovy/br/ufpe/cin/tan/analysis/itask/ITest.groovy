@@ -133,4 +133,20 @@ class ITest extends TaskInterface {
         ((classes + methodFiles + referencedPages) as Set)?.sort()
     }
 
+    String toStringDetailed(){
+        def text = ""
+
+        text += "Classes: ${classes.size()}\n"
+        classes?.each{ text += it.toString() + "\n" }
+
+        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" }
+        text += "\nMethods: ${methodFiles.size()}\n"
+        methodFiles?.each{ text += it.toString() + "\n" }
+
+        text += "\nReferenced pages: ${referencedPages.size()}\n"
+        referencedPages?.each{ text += it.toString() + "\n" }
+
+        text
+    }
+
 }

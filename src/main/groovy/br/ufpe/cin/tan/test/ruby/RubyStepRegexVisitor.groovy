@@ -47,6 +47,7 @@ class RubyStepRegexVisitor extends NoopVisitor {
         return iVisited
     }
 
+    @Override
     Object visitDRegxNode(DRegexpNode iVisited) {
         super.visitDRegxNode(iVisited)
         if (isStepDefinitionNode(iVisited)) {

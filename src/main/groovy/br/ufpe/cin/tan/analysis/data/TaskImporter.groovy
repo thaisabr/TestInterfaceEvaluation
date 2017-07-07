@@ -39,27 +39,17 @@ class TaskImporter {
     }
 
     def extractPtTasks(){
-        falsePtTasks = []
-        List<DoneTask> doneTasks = []
-        try {
-            ptImportedTasks.each { entry ->
-                def hashes = entry[HASHES_INDEX].tokenize(',[]')*.trim()
-                def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX], hashes, entry[LAST_COMMIT])
-                if(task.hasTest()) doneTasks += task
-                else falsePtTasks += task
-            }
-        } catch (Exception ex) {
-            log.error "Error while extracting tasks from CSV file.\nError message: ${ex.message}"
-            ex.stackTrace.each{ log.error it.toString() }
-            doneTasks = []
-        }
-        candidateTasks = doneTasks.sort{ it.id }
+        extractTasks(ptImportedTasks)
     }
 
     def extractPtTasks(int begin, int end){
+        List<String[]> entries = ptImportedTasks.subList(begin, end)
+        extractTasks(entries)
+    }
+
+    private extractTasks(List<String[]> entries){
         falsePtTasks = []
         List<DoneTask> doneTasks = []
-        List<String[]> entries = ptImportedTasks.subList(begin, end)
         try {
             entries.each { entry ->
                 def hashes = entry[HASHES_INDEX].tokenize(',[]')*.trim()
@@ -68,7 +58,7 @@ class TaskImporter {
                 else falsePtTasks += task
             }
         } catch (Exception ex) {
-            log.error "Error while extracting tasks from CSV file."
+            log.error "Error while extracting tasks from CSV file.\nError message: ${ex.message}"
             ex.stackTrace.each{ log.error it.toString() }
             doneTasks = []
         }

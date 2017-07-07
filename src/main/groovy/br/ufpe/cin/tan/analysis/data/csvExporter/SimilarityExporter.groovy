@@ -1,10 +1,11 @@
-package br.ufpe.cin.tan.analysis.data
+package br.ufpe.cin.tan.analysis.data.csvExporter
 
-import groovy.util.logging.Slf4j
+import br.ufpe.cin.tan.analysis.data.ExporterUtil
 import br.ufpe.cin.tan.similarity.test.TestSimilarityAnalyser
 import br.ufpe.cin.tan.similarity.text.TextualSimilarityAnalyser
 import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.CsvUtil
+import groovy.util.logging.Slf4j
 
 @Slf4j
 class SimilarityExporter {

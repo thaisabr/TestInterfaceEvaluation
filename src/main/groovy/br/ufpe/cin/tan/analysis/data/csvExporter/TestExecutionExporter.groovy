@@ -1,4 +1,4 @@
-package br.ufpe.cin.tan.analysis.data
+package br.ufpe.cin.tan.analysis.data.csvExporter
 
 import br.ufpe.cin.tan.analysis.AnalysedTask
 import br.ufpe.cin.tan.test.AcceptanceTest

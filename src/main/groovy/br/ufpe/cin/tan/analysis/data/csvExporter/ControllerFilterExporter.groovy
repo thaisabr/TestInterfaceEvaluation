@@ -1,5 +1,6 @@
-package br.ufpe.cin.tan.analysis.data
+package br.ufpe.cin.tan.analysis.data.csvExporter
 
+import br.ufpe.cin.tan.analysis.data.ExporterUtil
 import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.CsvUtil
 
@@ -18,13 +19,17 @@ class ControllerFilterExporter {
     }
 
     private generateMainHeader() {
+        List<String[]> values = extractData()
+        double[] precisionValues = values.collect { it[ExporterUtil.PRECISION_INDEX_SHORT_HEADER] as double }
+        double[] recallValues = values.collect { it[ExporterUtil.RECALL_INDEX_SHORT_HEADER] as double }
         List<String[]> content = []
-        def lines = entries.subList(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER, entries.size())
-        double[] precisionValues = lines.collect { it[ExporterUtil.PRECISION_INDEX_SHORT_HEADER] as double }
-        double[] recallValues = lines.collect { it[ExporterUtil.RECALL_INDEX_SHORT_HEADER] as double }
         content += ExporterUtil.generateStatistics(precisionValues, recallValues)
         content += entries.get(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER-1)
         content
+    }
+
+    private extractData(){
+        entries.subList(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER, entries.size())
     }
 
     def save() {
@@ -32,7 +37,7 @@ class ControllerFilterExporter {
         List<String[]> data = []
         data += entries.get(0)
         List<String[]> content = []
-        List<String[]> values = entries.subList(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER, entries.size())
+        List<String[]> values = extractData()
         values?.each { content += ExporterUtil.configureLine(it) }
         List<String[]> header = generateMainHeader()
         data += header

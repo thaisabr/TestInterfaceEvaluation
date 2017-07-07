@@ -1,8 +1,8 @@
-package br.ufpe.cin.tan.analysis.data
+package br.ufpe.cin.tan.analysis.data.csvExporter
 
-import groovy.util.logging.Slf4j
 import br.ufpe.cin.tan.analysis.AnalysedTask
 import br.ufpe.cin.tan.util.CsvUtil
+import groovy.util.logging.Slf4j
 
 @Slf4j
 class EvaluationExporter {

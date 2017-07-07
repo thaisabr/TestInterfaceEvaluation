@@ -1,6 +1,9 @@
-package br.ufpe.cin.tan.analysis.data
+package br.ufpe.cin.tan.analysis.data.csvExporter
 
 import br.ufpe.cin.tan.analysis.AnalysedTask
+import br.ufpe.cin.tan.analysis.data.ExporterUtil
+import br.ufpe.cin.tan.analysis.data.textExporter.ITextExporter
+import br.ufpe.cin.tan.analysis.data.textExporter.TestCodeExporter
 import br.ufpe.cin.tan.util.CsvUtil
 
 /**
@@ -10,6 +13,7 @@ import br.ufpe.cin.tan.util.CsvUtil
 class RelevantTaskExporter {
 
     String filename
+    String folder
     String url
     List<AnalysedTask> tasks
     List<AnalysedTask> relevantTasks
@@ -17,6 +21,8 @@ class RelevantTaskExporter {
 
     RelevantTaskExporter(String filename, List<AnalysedTask> tasks){
         this.filename = filename
+        def index = filename.lastIndexOf(File.separator)
+        folder = filename.substring(0,index)
         initTasks(tasks)
     }
 
@@ -29,15 +35,11 @@ class RelevantTaskExporter {
     }
 
     private saveIText(List<AnalysedTask> tasks){
-        def index = filename.lastIndexOf(File.separator)
-        def folder = filename.substring(0,index)
         ITextExporter iTextExporter = new ITextExporter(folder, tasks)
         iTextExporter.save()
     }
 
     private saveTestCode(List<AnalysedTask> tasks){
-        def index = filename.lastIndexOf(File.separator)
-        def folder = filename.substring(0,index)
         TestCodeExporter testCodeExporter = new TestCodeExporter(folder, tasks)
         testCodeExporter.save()
     }

@@ -1,16 +1,16 @@
 package br.ufpe.cin.tan.analysis.task
 
 import br.ufpe.cin.tan.analysis.itask.ITest
-import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
 import br.ufpe.cin.tan.commit.GitRepository
 import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
+import br.ufpe.cin.tan.exception.CloningRepositoryException
+import br.ufpe.cin.tan.exception.InvalidLanguageException
+import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
 import br.ufpe.cin.tan.test.groovy.GroovyTestCodeAnalyser
 import br.ufpe.cin.tan.test.java.JavaTestCodeAnalyser
 import br.ufpe.cin.tan.test.ruby.RubyTestCodeAnalyser
 import br.ufpe.cin.tan.util.LanguageOption
 import br.ufpe.cin.tan.util.Util
-import br.ufpe.cin.tan.exception.CloningRepositoryException
-import br.ufpe.cin.tan.exception.InvalidLanguageException
 import groovy.util.logging.Slf4j
 
 @Slf4j

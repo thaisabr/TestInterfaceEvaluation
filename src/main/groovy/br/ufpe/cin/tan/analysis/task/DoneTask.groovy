@@ -5,11 +5,13 @@ import br.ufpe.cin.tan.analysis.itask.IReal
 import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.analysis.itask.TaskInterface
 import br.ufpe.cin.tan.commit.Commit
-import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
-import br.ufpe.cin.tan.commit.change.stepdef.StepdefManager
 import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
+import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
 import br.ufpe.cin.tan.commit.change.stepdef.ChangedStepdefFile
+import br.ufpe.cin.tan.commit.change.stepdef.StepdefManager
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
+import br.ufpe.cin.tan.exception.CloningRepositoryException
+import br.ufpe.cin.tan.util.Util
 import gherkin.ast.Background
 import gherkin.ast.Feature
 import groovy.time.TimeCategory
@@ -17,8 +19,6 @@ import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.revwalk.RevCommit
-import br.ufpe.cin.tan.util.Util
-import br.ufpe.cin.tan.exception.CloningRepositoryException
 
 /***
  * Represents a done task, that is, a task that contains production and test code. The code is published in a public
@@ -75,7 +75,7 @@ class DoneTask extends Task {
     @Override
     ITest computeTestBasedInterface() {
         def taskInterface = new ITest()
-        if(hasNoCommits() || !hasTest()) return taskInterface
+        if (hasNoCommits() || !hasTest()) return taskInterface
         showTaskInfo()
 
         try {
@@ -103,7 +103,7 @@ class DoneTask extends Task {
     @Override
     String computeTextBasedInterface() {
         def text = ""
-        if(hasNoCommits() || !hasTest()) return text
+        if (hasNoCommits() || !hasTest()) return text
 
         try {
             // resets repository to the state of the last commit to extract changes
@@ -123,7 +123,7 @@ class DoneTask extends Task {
 
     IReal computeRealInterface() {
         def taskInterface = new IReal()
-        if(hasNoCommits()) return taskInterface
+        if (hasNoCommits()) return taskInterface
 
         try {
             // resets repository to the state of the last commit to extract changes
@@ -146,7 +146,7 @@ class DoneTask extends Task {
 
     AnalysedTask computeInterfaces() {
         def analysedTask = new AnalysedTask(this)
-        if(hasNoCommits() || !hasTest()) return analysedTask
+        if (hasNoCommits() || !hasTest()) return analysedTask
         showTaskInfo()
 
         try {
@@ -173,7 +173,7 @@ class DoneTask extends Task {
 
             // resets repository to last version
             gitRepository.reset()
-        } catch(Exception ex){
+        } catch (Exception ex) {
             log.error "Error while computing task interfaces."
             registryErrorMessage(ex)
         }
@@ -199,18 +199,19 @@ class DoneTask extends Task {
     That is, it is only checked if the task has some gherkin scenario or step definition changed by any commit.
     The test code is found when the task interface is computed, during another phase. This means this result may include
     scenarios that are not implemented. */
-    def hasTest(){
-        if(getGherkinTestQuantity()==0 /*&& getStepDefQuantity()==0*/) false
+
+    def hasTest() {
+        if (getGherkinTestQuantity() == 0 /*&& getStepDefQuantity()==0*/) false
         else true
     }
 
-    boolean hasMergeCommit(){
-        def r = commits.findAll{ it.merge }
-        if(r.empty) false
+    boolean hasMergeCommit() {
+        def r = commits.findAll { it.merge }
+        if (r.empty) false
         else true
     }
 
-    private boolean hasNoCommits(){
+    private boolean hasNoCommits() {
         def isEmpty = false
         if (!commits || commits.empty) {
             log.warn "TASK ID: $id; NO COMMITS!"
@@ -230,16 +231,15 @@ class DoneTask extends Task {
 
     private static registryErrorMessage(Exception ex) {
         log.error ex.message
-        ex.stackTrace.each{ log.error it.toString() }
+        ex.stackTrace.each { log.error it.toString() }
     }
 
     private configureLastCommit() throws Exception {
-        if(lastHash) {
+        if (lastHash) {
             def revcommits = gitRepository.searchAllRevCommitsBySha(lastHash)
-            if(revcommits) lastCommit = revcommits.first()
+            if (revcommits) lastCommit = revcommits.first()
             else throw new Exception("Error while configuring last commit '$lastHash'")
-        }
-        else if(!commits.empty) lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
+        } else if (!commits.empty) lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
         else throw new Exception("Error while configuring last commit. Does the task contain commits?")
     }
 
@@ -250,7 +250,7 @@ class DoneTask extends Task {
         changedStepDefinitions = []
         changedUnitFiles = []
         commits = gitRepository.searchCommitsBySha(testCodeParser, *shas)
-        commitsChangedGherkinFile  = []
+        commitsChangedGherkinFile = []
         commitsStepsChange = []
         configureLastCommit()
         hashes = commits*.hash
@@ -265,14 +265,14 @@ class DoneTask extends Task {
     private String extractCommitMessages() {
         String msgs = commits*.message?.flatten()?.toString()
         if (msgs.length() > msgLimit) {
-            commitMessage = msgs.toString().substring(0, msgLimit-1) + " [TOO_LONG]"
+            commitMessage = msgs.toString().substring(0, msgLimit - 1) + " [TOO_LONG]"
         } else commitMessage = msgs
     }
 
     private configureInitialTestData(List<String> shas) {
         configureBasicData(shas)
 
-        if(!commits.empty) {
+        if (!commits.empty) {
             // identifies changed gherkin files and scenario definitions
             commitsChangedGherkinFile = commits?.findAll { it.gherkinChanges && !it.gherkinChanges.isEmpty() }
             extractGherkinChanges()
@@ -282,11 +282,11 @@ class DoneTask extends Task {
             extractStepDefinitionChanges()
         } else {
             log.error "The task has no commits! Searched commits: "
-            shas.each{ log.error it.toString() }
+            shas.each { log.error it.toString() }
         }
     }
 
-    private extractStepDefinitionChanges(){
+    private extractStepDefinitionChanges() {
         def stepDefinitions = identifyChangedStepDefinitionFiles()
         def notFoundSteps = []
         def notFoundFiles = []
@@ -296,15 +296,15 @@ class DoneTask extends Task {
             def content = gitRepository.extractFileContent(lastCommit, stepFile.path)
             StepdefManager stepdefManager = new StepdefManager(testCodeParser)
             List<StepDefinition> stepDefs = stepdefManager.parseStepDefinitionFile(stepFile.path, content, lastCommit.name)
-            if(stepDefs){
+            if (stepDefs) {
                 def regexes = stepDefs*.regex
-                if (!regexes.empty){
+                if (!regexes.empty) {
                     def initialSet = stepFile.changedStepDefinitions
                     def valid = initialSet.findAll { it.regex in regexes }
-                    def finalSteps = stepDefs?.findAll{ it.regex in valid*.regex }
+                    def finalSteps = stepDefs?.findAll { it.regex in valid*.regex }
                     def invalid = initialSet - valid
-                    if(!invalid?.empty) notFoundSteps += [file:stepFile.path, steps:invalid*.regex]
-                    if(!valid?.empty) {
+                    if (!invalid?.empty) notFoundSteps += [file: stepFile.path, steps: invalid*.regex]
+                    if (!valid?.empty) {
                         def newStepDefFile = new ChangedStepdefFile(path: stepFile.path, changedStepDefinitions: finalSteps)
                         finalStepDefinitionsFilesSet += newStepDefFile
                     }
@@ -314,17 +314,17 @@ class DoneTask extends Task {
             }
         }
 
-        if(!notFoundFiles.empty){
+        if (!notFoundFiles.empty) {
             def text = "No long valid step definition files (task ${id}):\n"
-            notFoundFiles?.each{ text += it+"\n" }
+            notFoundFiles?.each { text += it + "\n" }
             log.warn text
         }
 
-        if(!notFoundSteps.empty){
+        if (!notFoundSteps.empty) {
             def text = "No long valid step definitions (task ${id}):\n"
-            notFoundSteps?.each{ n ->
+            notFoundSteps?.each { n ->
                 text += "File: ${n.file}\nSteps:\n"
-                n.steps?.each{ text += it+"\n" }
+                n.steps?.each { text += it + "\n" }
             }
             log.warn text
         }
@@ -332,7 +332,7 @@ class DoneTask extends Task {
         changedStepDefinitions = finalStepDefinitionsFilesSet
     }
 
-    private extractGherkinChanges(){
+    private extractGherkinChanges() {
         def gherkinFiles = identifyChangedGherkinFiles()
         def notFoundScenarios = []
         def notFoundFiles = []
@@ -341,16 +341,18 @@ class DoneTask extends Task {
         gherkinFiles?.each { gherkinFile ->
             def result = gitRepository.parseGherkinFile(gherkinFile.path, lastCommit.name)
             Feature feature = result.feature
-            if(feature){
-                def currentScenarios = feature?.children?.findAll{ !(it instanceof Background) }*.name
-                if(currentScenarios && !currentScenarios.empty){
-                    def initialSet = gherkinFile.changedScenarioDefinitions.findAll{ !(it instanceof Background) }
+            if (feature) {
+                def currentScenarios = feature?.children?.findAll { !(it instanceof Background) }*.name
+                if (currentScenarios && !currentScenarios.empty) {
+                    def initialSet = gherkinFile.changedScenarioDefinitions.findAll { !(it instanceof Background) }
                     def valid = initialSet.findAll { it.name in currentScenarios }
                     def validNames = valid*.name
-                    def finalScenarios = feature?.children?.findAll{ !(it instanceof Background) && it.name in validNames && !it.steps.empty }
+                    def finalScenarios = feature?.children?.findAll {
+                        !(it instanceof Background) && it.name in validNames && !it.steps.empty
+                    }
                     def invalid = initialSet - valid
-                    if(!invalid?.empty) notFoundScenarios += [file:gherkinFile.path, scenarios:invalid*.name]
-                    if(!valid?.empty) {
+                    if (!invalid?.empty) notFoundScenarios += [file: gherkinFile.path, scenarios: invalid*.name]
+                    if (!valid?.empty) {
                         def newGherkinFile = new ChangedGherkinFile(path: gherkinFile.path, feature: feature,
                                 changedScenarioDefinitions: finalScenarios, featureFileText: result.content)
                         finalGherkinFilesSet += newGherkinFile
@@ -361,17 +363,17 @@ class DoneTask extends Task {
             }
         }
 
-        if(!notFoundFiles.empty){
+        if (!notFoundFiles.empty) {
             def text = "No long valid gherkin files (task ${id}):\n"
-            notFoundFiles?.each{ text += it+"\n" }
+            notFoundFiles?.each { text += it + "\n" }
             log.warn text
         }
 
-        if(!notFoundScenarios.empty){
+        if (!notFoundScenarios.empty) {
             def text = "No long valid scenarios (task ${id}):\n"
-            notFoundScenarios?.each{ n ->
+            notFoundScenarios?.each { n ->
                 text += "File: ${n.file}\nScenarios:\n"
-                n.scenarios?.each{ text += it+"\n" }
+                n.scenarios?.each { text += it + "\n" }
             }
             log.warn text
         }
@@ -488,7 +490,7 @@ class DoneTask extends Task {
             use(TimeCategory) {
                 def devDates = commits*.date?.flatten()?.sort()
                 if (devDates) {
-                    devDates = devDates.collect { new Date(it * 1000).clearTime()}.unique()
+                    devDates = devDates.collect { new Date(it * 1000).clearTime() }.unique()
                     def last = devDates.last()
                     def first = devDates.first()
                     days = (last - first).days + 1
@@ -502,7 +504,7 @@ class DoneTask extends Task {
         removedFiles = changes?.collect { it.path }?.unique()?.sort()
     }
 
-    private showTaskInfo(){
+    private showTaskInfo() {
         log.info "TASK ID: $id"
         log.info "COMMITS: ${commits*.hash}"
         log.info "NEWEST COMMIT: ${lastCommit.name}"
@@ -510,34 +512,34 @@ class DoneTask extends Task {
         log.info "COMMITS CHANGED STEP DEFINITION FILE: ${commitsStepsChange*.hash}"
     }
 
-    private registryCompilationErrors(AnalysedTask task){
+    private registryCompilationErrors(AnalysedTask task) {
         ITest temp = task.itest
         registryCompilationErrors(temp)
         task.itest = temp
     }
 
-    private registryCompilationErrors(ITest itest){
+    private registryCompilationErrors(ITest itest) {
         def finalErrorSet = []
         def errors = itest.compilationErrors
 
-        def gherkinErrors = errors.findAll{ Util.isGherkinFile(it.path) }
-        gherkinErrors?.each{ error ->
+        def gherkinErrors = errors.findAll { Util.isGherkinFile(it.path) }
+        gherkinErrors?.each { error ->
             def result = gitRepository.parseGherkinFile(error.path, commits?.last()?.hash)
-            if(!result.feature) finalErrorSet += error
+            if (!result.feature) finalErrorSet += error
         }
 
         def rubyErrors = errors - gherkinErrors
-        rubyErrors?.each{ error ->
+        rubyErrors?.each { error ->
             def hasError = testCodeParser.hasCompilationError(error.path)
-            if(hasError) finalErrorSet += error
+            if (hasError) finalErrorSet += error
         }
 
         def formatedResult = []
-        finalErrorSet.each{ error ->
+        finalErrorSet.each { error ->
             def file = error.path
             def index = error.path.indexOf(gitRepository.localPath)
             def name = index >= 0 ? file.substring(index) - (gitRepository.localPath + File.separator) : file
-            formatedResult += [path: name, msgs:error.msgs]
+            formatedResult += [path: name, msgs: error.msgs]
         }
 
         itest.compilationErrors = formatedResult

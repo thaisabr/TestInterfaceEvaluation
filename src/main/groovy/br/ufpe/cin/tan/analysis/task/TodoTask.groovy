@@ -2,6 +2,8 @@ package br.ufpe.cin.tan.analysis.task
 
 import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
+import br.ufpe.cin.tan.exception.CloningRepositoryException
+import br.ufpe.cin.tan.util.Util
 import gherkin.AstBuilder
 import gherkin.Parser
 import gherkin.ast.Background
@@ -10,8 +12,6 @@ import gherkin.ast.GherkinDocument
 import groovy.time.TimeCategory
 import groovy.time.TimeDuration
 import groovy.util.logging.Slf4j
-import br.ufpe.cin.tan.util.Util
-import br.ufpe.cin.tan.exception.CloningRepositoryException
 
 /***
  * Represents a new task, that is, a task that contains test code but the production code is not done yet. The task is
@@ -70,9 +70,12 @@ class TodoTask extends Task {
                 def reader = new FileReader(path)
                 Feature feature = parser.parse(reader)?.feature
                 reader.close()
-                def scenarioDefinitions = feature?.children?.findAll { it.location.line in scenario.lines && !(it instanceof Background)}
+                def scenarioDefinitions = feature?.children?.findAll {
+                    it.location.line in scenario.lines && !(it instanceof Background)
+                }
                 if (scenarioDefinitions) {
-                    gherkinFiles += new ChangedGherkinFile(path: scenario.path, feature: feature, changedScenarioDefinitions: scenarioDefinitions)
+                    gherkinFiles += new ChangedGherkinFile(path: scenario.path, feature: feature,
+                            changedScenarioDefinitions: scenarioDefinitions)
                 }
 
             } catch (FileNotFoundException ex) {

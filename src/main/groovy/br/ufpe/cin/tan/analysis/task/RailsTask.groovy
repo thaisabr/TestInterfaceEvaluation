@@ -1,9 +1,9 @@
 package br.ufpe.cin.tan.analysis.task
 
-import groovy.util.logging.Slf4j
-import br.ufpe.cin.tan.util.RegexUtil
 import br.ufpe.cin.tan.exception.CloningRepositoryException
+import br.ufpe.cin.tan.util.RegexUtil
 import br.ufpe.cin.tan.util.ruby.RubyConstantData
+import groovy.util.logging.Slf4j
 
 import java.util.regex.Matcher
 

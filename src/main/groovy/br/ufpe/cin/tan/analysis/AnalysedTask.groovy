@@ -1,9 +1,9 @@
 package br.ufpe.cin.tan.analysis
 
 import br.ufpe.cin.tan.analysis.itask.IReal
-import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
-import br.ufpe.cin.tan.analysis.task.DoneTask
 import br.ufpe.cin.tan.analysis.itask.ITest
+import br.ufpe.cin.tan.analysis.task.DoneTask
+import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
 import br.ufpe.cin.tan.test.AcceptanceTest
 import br.ufpe.cin.tan.util.Util
 import br.ufpe.cin.tan.util.ruby.RubyUtil
@@ -31,7 +31,7 @@ class AnalysedTask {
     String rails
     String ruby
 
-    AnalysedTask(DoneTask doneTask){
+    AnalysedTask(DoneTask doneTask) {
         this.doneTask = doneTask
         this.itest = new ITest()
         this.ireal = new IReal()
@@ -42,7 +42,7 @@ class AnalysedTask {
         this.ruby = ""
     }
 
-    void setItest(ITest itest){
+    void setItest(ITest itest) {
         this.itest = itest
         this.stepCalls = itest?.methods?.findAll { it.type == "StepCall" }?.unique()?.size()
         this.methods = itest?.methods?.findAll { it.type == "Object" }?.unique()*.name
@@ -50,88 +50,88 @@ class AnalysedTask {
         this.extractCompilationErrorText()
     }
 
-    Set getTrace(){
+    Set getTrace() {
         itest.trace
     }
 
-    int getDevelopers(){
+    int getDevelopers() {
         doneTask?.developers
     }
 
-    def getRenamedFiles(){
+    def getRenamedFiles() {
         doneTask.renamedFiles
     }
 
-    def hasChangedStepDefs(){
+    def hasChangedStepDefs() {
         !doneTask.changedStepDefinitions.empty
     }
 
-    def hasStepMatchError(){
-        if (stepMatchErrors>0) true
+    def hasStepMatchError() {
+        if (stepMatchErrors > 0) true
         else false
     }
 
-    def hasCompilationError(){
-        if (compilationErrors>0) true
+    def hasCompilationError() {
+        if (compilationErrors > 0) true
         else false
     }
 
-    def hasGherkinCompilationError(){
-        if (gherkinCompilationErrors>0) true
+    def hasGherkinCompilationError() {
+        if (gherkinCompilationErrors > 0) true
         else false
     }
 
-    def hasStepDefCompilationError(){
-        if (stepDefCompilationErrors>0) true
+    def hasStepDefCompilationError() {
+        if (stepDefCompilationErrors > 0) true
         else false
     }
 
-    def hasUnitCompilationError(){
-        if (unitCompilationErrors>0) true
+    def hasUnitCompilationError() {
+        if (unitCompilationErrors > 0) true
         else false
     }
 
-    def hasChangedGherkinDefs(){
+    def hasChangedGherkinDefs() {
         !doneTask.changedGherkinFiles.empty
     }
 
-    def hasMergeCommit(){
+    def hasMergeCommit() {
         doneTask.hasMergeCommit()
     }
 
-    def irealFiles(){
+    def irealFiles() {
         ireal.findFilteredFiles()
     }
 
-    def irealIsEmpty(){
+    def irealIsEmpty() {
         ireal.findFilteredFiles().empty
     }
 
-    def itestFiles(){
+    def itestFiles() {
         itest.findFilteredFiles()
     }
 
-    def itestIsEmpty(){
+    def itestIsEmpty() {
         itestFiles().empty
     }
 
     def itestViewFiles() {
-        itestFiles().findAll{ Util.isViewFile(it) }
+        itestFiles().findAll { Util.isViewFile(it) }
     }
 
-    def filesFromViewAnalysis(){
+    def filesFromViewAnalysis() {
         itest.codeFromViewAnalysis
     }
 
-    double precision(){
+    double precision() {
         TaskInterfaceEvaluator.calculateFilesPrecision(itest, ireal)
     }
 
-    double recall(){
+    double recall() {
         TaskInterfaceEvaluator.calculateFilesRecall(itest, ireal)
     }
 
-    def getDates(){
+    def getDates() {
         doneTask.dates
     }
 
@@ -143,40 +143,40 @@ class AnalysedTask {
         doneTask.removedFiles
     }
 
-    def notFoundViews(){
+    def notFoundViews() {
         itest.notFoundViews
     }
 
-    def satisfiesGemsFilter(){
-        if(Util.COVERAGE_GEMS.empty) true
+    def satisfiesGemsFilter() {
+        if (Util.COVERAGE_GEMS.empty) true
         else {
-            if(Util.COVERAGE_GEMS.intersect(gems).size() > 0) true
+            if (Util.COVERAGE_GEMS.intersect(gems).size() > 0) true
             else false
         }
     }
 
-    Set<AcceptanceTest> getAcceptanceTests(){
+    Set<AcceptanceTest> getAcceptanceTests() {
         itest.foundAcceptanceTests
     }
 
-    def hasImplementedAcceptanceTests(){
-        if(itest.foundAcceptanceTests.size()>0) true
+    def hasImplementedAcceptanceTests() {
+        if (itest.foundAcceptanceTests.size() > 0) true
         else false
     }
 
-    def isValid(){
+    def isValid() {
         int zero = 0
-        compilationErrors==zero && stepMatchErrors==zero && satisfiesGemsFilter() && hasImplementedAcceptanceTests() &&
+        compilationErrors == zero && stepMatchErrors == zero && satisfiesGemsFilter() && hasImplementedAcceptanceTests() &&
                 !irealFiles().empty
     }
 
-    def configureGems(String path){
+    def configureGems(String path) {
         def result = RubyUtil.checkRailsVersionAndGems(path) //[rails, ruby, gems]
         gems = result.gems
-        rails = result.rails.replaceAll(/[^\.\d]/,"")
+        rails = result.rails.replaceAll(/[^\.\d]/, "")
         ruby = result.ruby
-        if(gems.size()>0) {
-            coverageGems = gems.findAll{ it == "coveralls" || it == "simplecov" }
+        if (gems.size() > 0) {
+            coverageGems = gems.findAll { it == "coveralls" || it == "simplecov" }
         }
     }
 
@@ -190,7 +190,7 @@ class AnalysedTask {
      * #(files accessed by view analysis), files accessed by view analysis.
      * Complete version with 37 fields.
      * */
-    def parseAllToArray(){
+    def parseAllToArray() {
         def itestFiles = this.itestFiles()
         def itestSize = itestFiles.size()
         def irealFiles = this.irealFiles()
@@ -220,7 +220,7 @@ class AnalysedTask {
      * renamed files, deleted files, views, #views, timestamp.
      * Partial version with 23 fields.
      * */
-    def parseToArray(){
+    def parseToArray() {
         def itestFiles = this.itestFiles()
         def itestSize = itestFiles.size()
         def irealFiles = this.irealFiles()
@@ -239,9 +239,9 @@ class AnalysedTask {
         line
     }
 
-    def parseCoverageGemsToString(){
+    def parseCoverageGemsToString() {
         def coverage = ""
-        if(!coverageGems.empty) coverage = coverageGems.join(",")
+        if (!coverageGems.empty) coverage = coverageGems.join(",")
         coverage
     }
 
@@ -252,10 +252,10 @@ class AnalysedTask {
         if (stepErrors.empty) text = ""
         else {
             stepErrorsQuantity = stepErrors*.size.flatten().sum()
-            stepErrors.each{ error ->
+            stepErrors.each { error ->
                 text += "[path:${error.path}, size:${error.size}], "
             }
-            text = text.substring(0, text.size()-2)
+            text = text.substring(0, text.size() - 2)
         }
         this.stepMatchErrorsText = text
         this.stepMatchErrors = stepErrorsQuantity
@@ -272,15 +272,15 @@ class AnalysedTask {
         def unit = ""
         if (compilationErrors.empty) compilationErrors = ""
         else {
-            gherkin = compilationErrors.findAll{ Util.isGherkinFile(it.path) }
+            gherkin = compilationErrors.findAll { Util.isGherkinFile(it.path) }
             gherkinQuantity = gherkin.size()
-            if(gherkin.empty) gherkin = ""
-            steps = compilationErrors.findAll{ Util.isStepDefinitionFile(it.path) }
+            if (gherkin.empty) gherkin = ""
+            steps = compilationErrors.findAll { Util.isStepDefinitionFile(it.path) }
             stepsQuantity = steps.size()
-            if(steps.empty) steps = ""
-            unit = compilationErrors.findAll{ Util.isUnitTestFile(it.path) }
+            if (steps.empty) steps = ""
+            unit = compilationErrors.findAll { Util.isUnitTestFile(it.path) }
             unitQuantity = unit.size()
-            if(unit.empty) unit = ""
+            if (unit.empty) unit = ""
             compilationErrors -= unit
             compErrorsQuantity = compilationErrors*.msgs.flatten().size()
             compilationErrors = compilationErrors.toString()

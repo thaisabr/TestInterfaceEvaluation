@@ -80,7 +80,7 @@ abstract class Util {
         GEMS_PATH = (properties.(ConstantData.PROP_GEMS)).replace(File.separator, Matcher.quoteReplacement(File.separator))
         GEM_INFLECTOR = configureGemInflector()
         GEM_I18N = configureGemI18n()
-        GEM_PARSER =  configureGemParser()
+        GEM_PARSER = configureGemParser()
         GEM_AST = configureGemAst()
         VIEW_ANALYSIS = configureViewAnalysis()
         CONTROLLER_FILTER = configureControllerFilter()
@@ -118,57 +118,57 @@ abstract class Util {
         value
     }
 
-    private static configureLanguage(){
+    private static configureLanguage() {
         def value = configureMandatoryProperties(properties.(ConstantData.PROP_CODE_LANGUAGE), ConstantData.DEFAULT_LANGUAGE)
         value.trim().toUpperCase() as LanguageOption
     }
 
-    private static configureGherkin(){
+    private static configureGherkin() {
         configureMandatoryProperties(properties.(ConstantData.PROP_GHERKIN), ConstantData.DEFAULT_GHERKIN_FOLDER)
     }
 
-    private static configureSteps(){
+    private static configureSteps() {
         configureMandatoryProperties(properties.(ConstantData.PROP_STEPS), ConstantData.DEFAULT_STEPS_FOLDER)
     }
 
-    private static configureUnitTest(){
+    private static configureUnitTest() {
         configureMandatoryProperties(properties.(ConstantData.PROP_UNIT_TEST), ConstantData.DEFAULT_UNITY_FOLDER)
     }
 
-    private static configureProduction(){
+    private static configureProduction() {
         configureMandatoryProperties(properties.(ConstantData.PROP_PRODUCTION), ConstantData.DEFAULT_PRODUCTION_FOLDER)
     }
 
-    private static configureFramework(){
+    private static configureFramework() {
         configureMandatoryProperties(properties.(ConstantData.PROP_FRAMEWORK), "")
     }
 
-    private static configureGem(String value, String defaultValue){
+    private static configureGem(String value, String defaultValue) {
         def folder = configureMandatoryProperties(value, defaultValue)
         GEMS_PATH + Matcher.quoteReplacement(File.separator) + folder + GEM_SUFFIX
     }
 
-    private static configureGemInflector(){
+    private static configureGemInflector() {
         configureGem(properties.(ConstantData.PROP_GEM_INFLECTOR), ConstantData.DEFAULT_GEM_INFLECTOR)
     }
 
-    private static configureGemI18n(){
+    private static configureGemI18n() {
         configureGem(properties.(ConstantData.PROP_GEM_I18N), ConstantData.DEFAULT_GEM_I18N_FOLDER)
     }
 
-    private static configureGemParser(){
+    private static configureGemParser() {
         configureGem(properties.(ConstantData.PROP_GEM_PARSER), ConstantData.DEFAULT_GEM_PARSER_FOLDER)
     }
 
-    private static configureGemAst(){
+    private static configureGemAst() {
         configureGem(properties.(ConstantData.PROP_GEM_AST), ConstantData.DEFAULT_GEM_AST_FOLDER)
     }
 
-    private static boolean configureViewAnalysis(){
+    private static boolean configureViewAnalysis() {
         configureBooleanProperties(properties.(ConstantData.PROP_VIEW_ANALYSIS), ConstantData.DEFAULT_VIEW_ANALYSIS)
     }
 
-    private static boolean configureControllerFilter(){
+    private static boolean configureControllerFilter() {
         configureBooleanProperties(properties.(ConstantData.PROP_CONTROLLER_FILTER), ConstantData.DEFAULT_CONTROLLER_FILTER)
     }
 
@@ -176,11 +176,11 @@ abstract class Util {
         configureBooleanProperties(properties.(ConstantData.PROP_WHEN_FILTER), ConstantData.DEFAULT_WHEN_FILTER)
     }
 
-    private static boolean configureViewFilter(){
+    private static boolean configureViewFilter() {
         configureBooleanProperties(properties.(ConstantData.PROP_VIEW_FILTER), ConstantData.DEFAULT_VIEW_FILTER)
     }
 
-    private static boolean configureGherkinAdds(){
+    private static boolean configureGherkinAdds() {
         configureBooleanProperties(properties.(ConstantData.PROP_RESTRICT_GHERKIN_CHANGES), ConstantData.DEFAULT_RESTRICT_GHERKIN_CHANGES)
     }
 
@@ -197,10 +197,10 @@ abstract class Util {
         createFolder(ConstantData.DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER)
     }
 
-    private static configureCoverageGems(){
+    private static configureCoverageGems() {
         def result = []
         String gems = properties.(ConstantData.PROP_COVERAGE_GEMS)
-        if(gems && !gems.empty){
+        if (gems && !gems.empty) {
             result = gems.tokenize(',')*.trim()
         }
         result
@@ -220,7 +220,7 @@ abstract class Util {
     }
 
     static boolean isTestFile(String path) {
-        if(!path || path.empty) return false
+        if (!path || path.empty) return false
         def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         def root = extractRootFolder(path)
         p = p - root
@@ -233,19 +233,20 @@ abstract class Util {
     }
 
     static boolean isValidFile(String path) {
-        if(!path || path.empty) return false
+        if (!path || path.empty) return false
         def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         def root = extractRootFolder(path)
         p = p - root
         if (VALID_FOLDERS.any { p.startsWith(it + File.separator) } && VALID_EXTENSIONS.any {
-            p.endsWith(it) }) true
-        else if(VALID_FOLDERS.any { p.startsWith(it + File.separator) } && p.count(".")==1 &&
+            p.endsWith(it)
+        }) true
+        else if (VALID_FOLDERS.any { p.startsWith(it + File.separator) } && p.count(".") == 1 &&
                 (p.endsWith(ConstantData.ERB_EXTENSION) || p.endsWith(ConstantData.HAML_EXTENSION) || p.endsWith(".slim"))) true
         else false
     }
 
     static boolean isStepDefinitionFile(String path) {
-        if(!path || path.empty) return false
+        if (!path || path.empty) return false
         def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         def root = extractRootFolder(path)
         p = p - root
@@ -254,16 +255,16 @@ abstract class Util {
     }
 
     static boolean isGherkinFile(String path) {
-        if(!path || path.empty) return false
+        if (!path || path.empty) return false
         def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         def root = extractRootFolder(path)
         p = p - root
-        if (p.startsWith(ConstantData.DEFAULT_GHERKIN_FOLDER+File.separator) && p.endsWith(ConstantData.FEATURE_EXTENSION)) true
+        if (p.startsWith(ConstantData.DEFAULT_GHERKIN_FOLDER + File.separator) && p.endsWith(ConstantData.FEATURE_EXTENSION)) true
         else false
     }
 
     static boolean isUnitTestFile(String path) {
-        if(!path || path.empty) return false
+        if (!path || path.empty) return false
         def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         def root = extractRootFolder(path)
         p = p - root
@@ -276,19 +277,19 @@ abstract class Util {
         else false
     }
 
-    static boolean isViewFile(String path){
-        if(!path || path.empty) return false
+    static boolean isViewFile(String path) {
+        if (!path || path.empty) return false
         def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         def root = extractRootFolder(path)
         p = p - root
-        if ( p.startsWith("${VIEWS_FILES_RELATIVE_PATH}${File.separator}") &&
-                ( p.endsWith(ConstantData.ERB_EXTENSION) || p.endsWith(ConstantData.HAML_EXTENSION) )
+        if (p.startsWith("${VIEWS_FILES_RELATIVE_PATH}${File.separator}") &&
+                (p.endsWith(ConstantData.ERB_EXTENSION) || p.endsWith(ConstantData.HAML_EXTENSION))
         ) true
         else false
     }
 
-    static boolean isControllerFile(String path){
-        if(!path || path.empty) return false
+    static boolean isControllerFile(String path) {
+        if (!path || path.empty) return false
         def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         def root = extractRootFolder(path)
         p = p - root
@@ -296,27 +297,27 @@ abstract class Util {
         else false
     }
 
-    static extractRootFolder(String path){
+    static extractRootFolder(String path) {
         def root = ""
-        if(!path || path.empty) return root
+        if (!path || path.empty) return root
         def p = path?.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
 
-        if(p?.contains(REPOSITORY_FOLDER_PATH)){
+        if (p?.contains(REPOSITORY_FOLDER_PATH)) {
             def i1 = p.indexOf(REPOSITORY_FOLDER_PATH)
             def begin = p.substring(0, i1)
-            def temp = p.substring(i1+REPOSITORY_FOLDER_PATH.size())
+            def temp = p.substring(i1 + REPOSITORY_FOLDER_PATH.size())
             def i2 = temp.indexOf(File.separator)
-            def projectFolder = temp.substring(0,i2)
+            def projectFolder = temp.substring(0, i2)
             root = begin + REPOSITORY_FOLDER_PATH + projectFolder + File.separator
             root = root.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         }
         root
     }
 
-    static organizePathsForInterfaces(Collection<String> files){
+    static organizePathsForInterfaces(Collection<String> files) {
         files?.findResults { i ->
-            if(i){
-                if(!i.contains(REPOSITORY_FOLDER_PATH)) i = REPOSITORY_FOLDER_PATH + i
+            if (i) {
+                if (!i.contains(REPOSITORY_FOLDER_PATH)) i = REPOSITORY_FOLDER_PATH + i
                 def root = extractRootFolder(i)
                 i - root
             } else null
@@ -357,8 +358,10 @@ abstract class Util {
         return files
     }
 
-    static findTaskFiles(){
-        findFilesFromDirectory(ConstantData.DEFAULT_TASKS_FOLDER).findAll { it.endsWith(ConstantData.CSV_FILE_EXTENSION) }
+    static findTaskFiles() {
+        findFilesFromDirectory(ConstantData.DEFAULT_TASKS_FOLDER).findAll {
+            it.endsWith(ConstantData.CSV_FILE_EXTENSION)
+        }
     }
 
     static List<String> findFilesFromDirectory(String directory) {
@@ -406,14 +409,14 @@ abstract class Util {
         files.findAll { it.contains(ConstantData.JAR_EXTENSION) }
     }
 
-    static filterFiles(files){
+    static filterFiles(files) {
         def filteredFiles = files
 
         //identifying view files
-        if(VIEW_FILTER) filteredFiles = files?.findAll{ isViewFile(it) }
+        if (VIEW_FILTER) filteredFiles = files?.findAll { isViewFile(it) }
 
         //identifying controller files
-        if(CONTROLLER_FILTER) filteredFiles = files?.findAll{ isControllerFile(it) }
+        if (CONTROLLER_FILTER) filteredFiles = files?.findAll { isControllerFile(it) }
 
         filteredFiles
     }

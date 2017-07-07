@@ -34,7 +34,8 @@ abstract class ConstantData {
 
     public static final String DEFAULT_EVALUATION_FOLDER = "output"
     public static final String DEFAULT_TEXT_FOLDER = "text"
-    public static final String DEFAULT_EVALUATION_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result.csv"
+    public static
+    final String DEFAULT_EVALUATION_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result.csv"
     public static final String ORGANIZED_FILE_SUFIX = "-org.csv"
     public static final String FILTERED_FILE_SUFIX = "-filtered.csv"
     public static final String SIMILARITY_FILE_SUFIX = "-similarity.csv"
@@ -62,9 +63,12 @@ abstract class ConstantData {
     public static final String TEXT_EXTENSION = ".txt"
     public static final String GITHUB_URL = "https://github.com/"
 
-    public static final List<String> STEP_KEYWORDS = new GherkinDialectProvider().defaultDialect.stepKeywords.unique()*.trim()
-    public static final List<String> STEP_KEYWORDS_PT = new GherkinDialectProvider().getDialect("pt", null).stepKeywords.unique()*.trim()
-    public static final List<String> STEP_KEYWORDS_DE = new GherkinDialectProvider().getDialect("de", null).stepKeywords.unique()*.trim()
+    public static
+    final List<String> STEP_KEYWORDS = new GherkinDialectProvider().defaultDialect.stepKeywords.unique()*.trim()
+    public static
+    final List<String> STEP_KEYWORDS_PT = new GherkinDialectProvider().getDialect("pt", null).stepKeywords.unique()*.trim()
+    public static
+    final List<String> STEP_KEYWORDS_DE = new GherkinDialectProvider().getDialect("de", null).stepKeywords.unique()*.trim()
     public static final List<String> ALL_STEP_KEYWORDS = STEP_KEYWORDS + STEP_KEYWORDS_PT + STEP_KEYWORDS_DE
     public static final String GIVEN_STEP_EN = new GherkinDialectProvider().defaultDialect.givenKeywords.last()
     public static final String WHEN_STEP_EN = new GherkinDialectProvider().defaultDialect.whenKeywords.last()
@@ -77,7 +81,7 @@ abstract class ConstantData {
 
     public static final String PROP_VIEW_ANALYSIS = "spgroup.itest.views"
     public static final boolean DEFAULT_VIEW_ANALYSIS = false
-    public static final  String DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER = "error"
+    public static final String DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER = "error"
 
     public static final String PROP_CONTROLLER_FILTER = "spgroup.itest.filter.controller"
     public static final boolean DEFAULT_CONTROLLER_FILTER = false

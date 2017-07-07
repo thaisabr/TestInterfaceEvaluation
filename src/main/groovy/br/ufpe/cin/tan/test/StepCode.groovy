@@ -1,8 +1,7 @@
 package br.ufpe.cin.tan.test
 
-import gherkin.ast.Step
 import br.ufpe.cin.tan.util.Util
-
+import gherkin.ast.Step
 
 /***
  * Represents a match result among a Gherkin step and its implementation code.
@@ -29,9 +28,14 @@ class StepCode {
      */
     List<String> args
 
+    /**
+     * Real keyword.
+     * */
+    String type
+
     @Override
     String toString() {
         def location = codePath - Util.getRepositoriesCanonicalPath()
-        "${step.text}; location: $location ($line); args: $args"
+        "${type}: ${step.text}; location: $location ($line); args: $args"
     }
 }

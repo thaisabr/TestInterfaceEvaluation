@@ -20,9 +20,11 @@ class StepCall {
      */
     int line
 
+    String parentType
+
     @Override
     String toString() {
-        "Step call at $path ($line): $text"
+        "Step call in '${parentType}' step definition at $path ($line): $text"
     }
 
 }

@@ -15,9 +15,11 @@ class MethodToAnalyse {
      */
     List<String> args = []
 
+    String type
+
     @Override
     String toString() {
-        "method at line: ${line}; args:$args"
+        "method at line: ${line}; args:$args; type: ${type}"
     }
 
     boolean equals(o) {

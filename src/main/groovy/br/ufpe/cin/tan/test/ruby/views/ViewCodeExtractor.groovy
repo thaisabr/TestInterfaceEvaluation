@@ -1,8 +1,8 @@
 package br.ufpe.cin.tan.test.ruby.views
 
-import org.jruby.embed.ScriptingContainer
 import br.ufpe.cin.tan.util.Util
 import br.ufpe.cin.tan.util.ruby.RubyConstantData
+import org.jruby.embed.ScriptingContainer
 
 class ViewCodeExtractor {
 
@@ -22,7 +22,7 @@ class ViewCodeExtractor {
         receiver = container.runScriptlet(is, RubyConstantData.VIEW_ANALYSER_FILE)
     }
 
-    String extractCode(String path){
+    String extractCode(String path) {
         container.callMethod(receiver, "extract_production_code", path)
     }
 

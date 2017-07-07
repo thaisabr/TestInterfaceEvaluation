@@ -1,9 +1,9 @@
 package br.ufpe.cin.tan.test.ruby
 
+import br.ufpe.cin.tan.util.ruby.RubyConstantData
 import groovy.util.logging.Slf4j
 import org.jrubyparser.ast.*
 import org.jrubyparser.util.NoopVisitor
-import br.ufpe.cin.tan.util.ruby.RubyConstantData
 
 @Slf4j
 class RubyMethodReturnVisitor extends NoopVisitor {

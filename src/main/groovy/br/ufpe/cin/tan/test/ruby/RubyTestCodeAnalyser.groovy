@@ -44,7 +44,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         this.routes = [] as Set
         this.problematicRoutes = [] as Set
         this.interfaceFromViews = new ITest()
-        if(Util.VIEW_ANALYSIS) viewCodeExtractor = new ViewCodeExtractor()
+        if (Util.VIEW_ANALYSIS) viewCodeExtractor = new ViewCodeExtractor()
     }
 
     /***
@@ -52,7 +52,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
      * @param path path of interest file
      * @return the root node of the AST
      */
-    Node generateAst(reader, String path){
+    Node generateAst(reader, String path) {
         Parser rubyParser = new Parser()
         CompatVersion version = CompatVersion.RUBY2_0
         ParserConfiguration config = new ParserConfiguration(0, version)
@@ -63,7 +63,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         } catch (SyntaxException ex) {
             log.error "Problem to visit file $path: ${ex.message}"
             def msg = ""
-            if(ex.message && !ex.message.empty) {
+            if (ex.message && !ex.message.empty) {
                 def index = ex.message.indexOf(",")
                 msg = index >= 0 ? ex.message.substring(index + 1).trim() : ex.message.trim()
             }
@@ -94,17 +94,17 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         def node = this.generateAst(routesFile)
         RubyConfigRoutesVisitor visitor = new RubyConfigRoutesVisitor(node)
         def allRoutes = visitor?.routingMethods
-        problematicRoutes = allRoutes.findAll{
-            !it.arg.contains("#") || (it.name!="root" && it.value==~/[\/\\(?\.*\\)?]+/ && it.value!="/")
+        problematicRoutes = allRoutes.findAll {
+            !it.arg.contains("#") || (it.name != "root" && it.value ==~ /[\/\\(?\.*\\)?]+/ && it.value != "/")
         }
         routes = allRoutes - problematicRoutes
-        routes.collect{
+        routes.collect {
             it.value = it.value.replaceAll("//", "/")
             it
         }
     }
 
-    private extractMethodReturnUsingArgs(pageMethod){ //keywords: file, name, args
+    private extractMethodReturnUsingArgs(pageMethod) { //keywords: file, name, args
         def result = []
         def pageVisitor = new RubyConditionalVisitor(pageMethod.name, pageMethod.args)
         this.generateAst(pageMethod.file)?.accept(pageVisitor)
@@ -113,7 +113,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         result
     }
 
-    private extractAllPossibleReturnFromMethod(pageMethod){ //keywords: file, name, args
+    private extractAllPossibleReturnFromMethod(pageMethod) { //keywords: file, name, args
         def pageVisitor = new RubyMethodReturnVisitor(pageMethod.name, pageMethod.args)
         generateAst(pageMethod.file)?.accept(pageVisitor) //extracts path from method
         pageVisitor.values
@@ -126,21 +126,21 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         if (extractSpecificReturn) {
             log.info "extracting a specific return..."
             result += this.extractMethodReturnUsingArgs(pageMethod)
-            if(result?.empty) specificFailed = true
+            if (result?.empty) specificFailed = true
         }
         if (!extractSpecificReturn || specificFailed) { //tries to extract all possible return values
             log.info "extracting all possible returns..."
             result += this.extractAllPossibleReturnFromMethod(pageMethod)
         }
 
-        [result: result, specificReturn:extractSpecificReturn, specificFailed:specificFailed]
+        [result: result, specificReturn: extractSpecificReturn, specificFailed: specificFailed]
     }
 
-    private registryPathData(RubyTestCodeVisitor visitor, String path){
+    private registryPathData(RubyTestCodeVisitor visitor, String path) {
         def foundView = false
         def data = this.registryControllerAndActionUsage(visitor, path)
         def registryMethodCall = data.registry
-        if(registryMethodCall) {
+        if (registryMethodCall) {
             def viewData = this.registryViewRelatedToAction(visitor, data.controller, data.action)
             foundView = viewData.found
             /*if(!foundView){
@@ -148,15 +148,15 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
                 foundView = viewData.found
             }*/
         }
-        [registryMethodCall:registryMethodCall, foundView:foundView]
+        [registryMethodCall: registryMethodCall, foundView: foundView]
     }
 
-    private extractActionFromView(String view){
+    private extractActionFromView(String view) {
         def index1 = view.lastIndexOf("/")
         def index2 = view.indexOf(".")
-        def action = view.substring(index1+1, index2)
-        def controller = view.substring(0,index1) - this.repositoryPath
-        if(action && controller) return "$controller#$action"
+        def action = view.substring(index1 + 1, index2)
+        def controller = view.substring(0, index1) - this.repositoryPath
+        if (action && controller) return "$controller#$action"
         else return null
     }
 
@@ -165,11 +165,11 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         def foundView = false
         def valid = true
 
-        if(RouteHelper.routeIsFile(path)){
+        if (RouteHelper.routeIsFile(path)) {
             log.info "ROUTE IS FILE: $path"
-            if(RouteHelper.isViewFile(path)){
+            if (RouteHelper.isViewFile(path)) {
                 def views = viewFiles?.findAll { it.contains(path) }
-                if(views && !views.empty){ //no case execute it yet
+                if (views && !views.empty) { //no case execute it yet
                     visitor?.taskInterface?.referencedPages += views
                     interfaceFromViews.referencedPages += views
                     foundView = true
@@ -189,40 +189,39 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
                 log.info "ROUTE FILE IS INVALID: $path"
                 valid = false
             }
-        }
-        else if(RouteHelper.routeIsAction(path)){
+        } else if (RouteHelper.routeIsAction(path)) {
             def r = this.registryPathData(visitor, path)
             registryMethodCall = r.registryMethodCall
             foundView = r.foundView
         } else {
             log.info "PATH: $path"
-            def candidates = this.routes.findAll{ path == it.value } //trying to find an equal path
-            if(!candidates.empty) {
+            def candidates = this.routes.findAll { path == it.value } //trying to find an equal path
+            if (!candidates.empty) {
                 def candidate = candidates.first()
                 log.info "CANDIDATE: $candidate"
-                if(candidate.arg && !candidate.arg.empty) {
+                if (candidate.arg && !candidate.arg.empty) {
                     def r = this.registryPathData(visitor, candidate.arg)
-                    if(r.registryMethodCall) registryMethodCall = r.registryMethodCall
-                    if(r.foundView) foundView = r.foundView
+                    if (r.registryMethodCall) registryMethodCall = r.registryMethodCall
+                    if (r.foundView) foundView = r.foundView
                 }
             } else { //if it was not found, we trie to find a compatible one
-                candidates = this.routes.findAll{ path ==~ /${it.value}/ }
-                if(candidates.empty) {
+                candidates = this.routes.findAll { path ==~ /${it.value}/ }
+                if (candidates.empty) {
                     def viewData = this.registryViewRelatedToPath(visitor, path)
                     foundView = viewData.found
                 } else {
                     def candidate = candidates.first()
                     log.info "CANDIDATE: $candidate"
-                    if(candidate.arg && !candidate.arg.empty) {
+                    if (candidate.arg && !candidate.arg.empty) {
                         def r = this.registryPathData(visitor, candidate.arg)
-                        if(r.registryMethodCall) registryMethodCall = r.registryMethodCall
-                        if(r.foundView) foundView = r.foundView
+                        if (r.registryMethodCall) registryMethodCall = r.registryMethodCall
+                        if (r.foundView) foundView = r.foundView
                     }
                 }
             }
         }
 
-        [path:path, call:registryMethodCall, view:foundView, valid:valid]
+        [path: path, call: registryMethodCall, view: foundView, valid: valid]
     }
 
     private static extractControllerAndActionFromPath(String route) {
@@ -239,15 +238,15 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
 
     private registryUsedPaths(RubyTestCodeVisitor visitor, Set<String> usedPaths) {
         log.info "All used paths (${usedPaths.size()}): $usedPaths"
-        if(!usedPaths || usedPaths.empty) return
+        if (!usedPaths || usedPaths.empty) return
         def result = []
         usedPaths?.each { path ->
             result += this.registryMethodCallAndViewAccessFromRoute(visitor, path)
         }
-        def methodCall = result.findAll{ it.call }*.path
-        def view = result.findAll{ it.view }*.path
-        def problematic = result.findAll{ !it.call && !it.view && it.valid }*.path
-        def invalid = result.findAll{ !it.call && !it.view && !it.valid }*.path
+        def methodCall = result.findAll { it.call }*.path
+        def view = result.findAll { it.view }*.path
+        def problematic = result.findAll { !it.call && !it.view && it.valid }*.path
+        def invalid = result.findAll { !it.call && !it.view && !it.valid }*.path
 
         log.info "Used paths with method call (${methodCall.size()}): $methodCall"
         log.info "Used paths with view (${view.size()}): $view"
@@ -257,7 +256,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         this.notFoundViews += problematic
     }
 
-    private registryControllerAndActionUsage(RubyTestCodeVisitor visitor, String value){
+    private registryControllerAndActionUsage(RubyTestCodeVisitor visitor, String value) {
         def controller = null
         def action = null
         def registryMethodCall = false
@@ -266,19 +265,19 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
             registryMethodCall = true
             def className = RubyUtil.underscoreToCamelCase(data.controller + "_controller")
             def filePaths = RubyUtil.getClassPathForRubyClass(className, this.projectFiles)
-            filePaths.each{ filePath ->
+            filePaths.each { filePath ->
                 visitor?.taskInterface?.methods += [name: data.action, type: className, file: filePath, step: visitor.step]
                 interfaceFromViews.methods += [name: data.action, type: className, file: filePath, step: visitor.step]
             }
             controller = data.controller
             action = data.action
         }
-        [controller:controller, action:action, registry:registryMethodCall]
+        [controller: controller, action: action, registry: registryMethodCall]
     }
 
-    private registryView(RubyTestCodeVisitor visitor, List<String> views){
+    private registryView(RubyTestCodeVisitor visitor, List<String> views) {
         def foundView = false
-        if(views && !views.empty) {
+        if (views && !views.empty) {
             visitor?.taskInterface?.referencedPages += views
             interfaceFromViews.referencedPages += views
             foundView = true
@@ -286,46 +285,46 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         foundView
     }
 
-    private registryViewRelatedToAction(RubyTestCodeVisitor visitor, String controller, String action){
+    private registryViewRelatedToAction(RubyTestCodeVisitor visitor, String controller, String action) {
         def views = RubyUtil.searchViewFor(controller, action, this.viewFiles)
         def foundView = registryView(visitor, views)
-        [views: views, found:foundView]
+        [views: views, found: foundView]
     }
 
-    private registryDirectAccessedViews(RubyTestCodeVisitor visitor, List<String> files){
+    private registryDirectAccessedViews(RubyTestCodeVisitor visitor, List<String> files) {
         log.info "All direct accessed views: ${files.size()}"
         def views = []
         def found = []
         def problematic = []
-        files.each{ file ->
-            def founds = this.viewFiles.findAll{ it.endsWith(file) }
+        files.each { file ->
+            def founds = this.viewFiles.findAll { it.endsWith(file) }
             founds.each {
                 int index1 = it.indexOf(Util.REPOSITORY_FOLDER_PATH)
-                views += it.substring(index1+Util.REPOSITORY_FOLDER_PATH.size())
+                views += it.substring(index1 + Util.REPOSITORY_FOLDER_PATH.size())
                 def index2 = it.indexOf(this.repositoryPath)
-                found += it.substring(index2+this.repositoryPath.size()+1)
+                found += it.substring(index2 + this.repositoryPath.size() + 1)
             }
-            if(founds.empty) problematic += file
+            if (founds.empty) problematic += file
         }
 
         def types = [ConstantData.ERB_EXTENSION, ConstantData.HTML_ERB_EXTENSION, ConstantData.HAML_EXTENSION,
                      ConstantData.HTML_HAML_EXTENSION]
-        problematic.each{ problem ->
+        problematic.each { problem ->
             def extensionIndex = problem.indexOf(".")
             def extension = problem.substring(extensionIndex)
             def mainName = problem.substring(0, extensionIndex)
             def typesToSearch = types - [extension]
-            for(int i=0; i<typesToSearch.size(); i++){
+            for (int i = 0; i < typesToSearch.size(); i++) {
                 def type = typesToSearch.get(i)
                 def newName = mainName + type
-                def founds = this.viewFiles.findAll{ it.endsWith(newName) }
+                def founds = this.viewFiles.findAll { it.endsWith(newName) }
                 founds.each {
                     int index1 = it.indexOf(Util.REPOSITORY_FOLDER_PATH)
-                    views += it.substring(index1+Util.REPOSITORY_FOLDER_PATH.size())
+                    views += it.substring(index1 + Util.REPOSITORY_FOLDER_PATH.size())
                     def index2 = it.indexOf(this.repositoryPath)
-                    found += it.substring(index2+this.repositoryPath.size()+1)
+                    found += it.substring(index2 + this.repositoryPath.size() + 1)
                 }
-                if(!founds.empty) {
+                if (!founds.empty) {
                     problematic -= problem
                     break
                 }
@@ -334,20 +333,20 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
 
         registryView(visitor, views)
         log.info "Found direct accessed views: ${views.size()}"
-        views.each{ log.info it.toString() }
+        views.each { log.info it.toString() }
 
         log.info "Not found direct accessed views: ${problematic.size()}"
-        problematic.each{ log.info it.toString() }
+        problematic.each { log.info it.toString() }
         this.notFoundViews += problematic
     }
 
-    private registryViewRelatedToPath(RubyTestCodeVisitor visitor, String path){
+    private registryViewRelatedToPath(RubyTestCodeVisitor visitor, String path) {
         def views = []
         def index = path.lastIndexOf("/")
-        def controller = path.substring(0,index+1)
-        def action = path.substring(index+1)
+        def controller = path.substring(0, index + 1)
+        def action = path.substring(index + 1)
         def regex = /.*${controller}_?$action.+/
-        if(File.separator == "\\") regex = regex.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,"\\\\\\\\")
+        if (File.separator == "\\") regex = regex.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "\\\\\\\\")
         def matches = viewFiles?.findAll { it ==~ regex }
         if (matches && matches.size() > 0) {
             if (matches.size() == (1 as int)) views = matches
@@ -358,32 +357,32 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
             }
         }
         def foundView = registryView(visitor, views)
-        [views: views, found:foundView]
+        [views: views, found: foundView]
     }
 
-    private registryUsedRailsPaths(RubyTestCodeVisitor visitor, Set<String> railsPathMethods){
+    private registryUsedRailsPaths(RubyTestCodeVisitor visitor, Set<String> railsPathMethods) {
         log.info "All used rails path methods (${railsPathMethods.size()}): $railsPathMethods"
-        if(!railsPathMethods || railsPathMethods.empty) return
+        if (!railsPathMethods || railsPathMethods.empty) return
         def methodCall = []
         def view = []
         def foundViews = []
         def projectMethods = []
 
-        railsPathMethods?.each{ method -> //it was used some *_path method generated by Rails
+        railsPathMethods?.each { method -> //it was used some *_path method generated by Rails
             def registryMethodCall = false
             def foundView = false
             def views = []
             def route = this.routes?.find { it.name ==~ /${method}e?/ }
-            if (route){ //it is really a route method
+            if (route) { //it is really a route method
                 if (route.arg && route.arg != "") { //there is controller#action related to path method
                     def data = this.registryControllerAndActionUsage(visitor, route.arg)
                     registryMethodCall = data.registry
-                    if(registryMethodCall) {
+                    if (registryMethodCall) {
                         methodCall += method
                         //tries to find view file
                         def viewData = registryViewRelatedToAction(visitor, data.controller, data.action)
                         foundView = viewData.found
-                        if(foundView){
+                        if (foundView) {
                             view += method
                             views = viewData.views
                         }
@@ -400,14 +399,14 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
             } else { //maybe it is a method defined by the project
                 def methodName1 = method + RubyConstantData.ROUTE_PATH_SUFIX
                 def methodName2 = method + RubyConstantData.ROUTE_URL_SUFIX
-                def matches = methods.findAll{ it.name == methodName1 || it.name == methodName2 }
+                def matches = methods.findAll { it.name == methodName1 || it.name == methodName2 }
                 matches?.each { m ->
                     def newMethod = [name: m.name, type: RubyUtil.getClassName(m.path), file: m.path, step: visitor.step]
                     visitor?.taskInterface?.methods += newMethod
                     interfaceFromViews.methods += newMethod
                     log.info "False rails path method: ${newMethod.name} (${newMethod.file})"
                 }
-                if(!matches.empty) {
+                if (!matches.empty) {
                     projectMethods += method
                 }
             }
@@ -424,84 +423,88 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         log.info "Rails path methods with no data (${problematic.size()}): ${problematic}"
     }
 
-    private extractCallsFromViewFiles(RubyTestCodeVisitor visitor, Set<String> analysedViewFiles){
+    private extractCallsFromViewFiles(RubyTestCodeVisitor visitor, Set<String> analysedViewFiles) {
         def viewFiles = visitor.taskInterface.getViewFilesForFurtherAnalysis()
-        if(analysedViewFiles && !analysedViewFiles.empty) viewFiles -= analysedViewFiles
+        if (analysedViewFiles && !analysedViewFiles.empty) viewFiles -= analysedViewFiles
         def calls = []
-        viewFiles?.each{ viewFile ->
+        viewFiles?.each { viewFile ->
             def path = viewFile.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
-            try{
+            try {
                 def r = []
                 String code = viewCodeExtractor?.extractCode(path)
                 code?.eachLine { line -> r += Eval.me(line) }
                 log.info "Extracted code from view (${r.size()}): $path"
-                r.each{ log.info it.toString() }
+                r.each { log.info it.toString() }
                 calls += r
-            } catch(Exception ex){
+            } catch (Exception ex) {
                 def src = new File(path)
                 def dst = new File(ConstantData.DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER + File.separator + src.name + counter)
                 dst << src.text
                 log.error "Error to extract code from view file: $path (${ex.message})"
-                counter ++
+                counter++
             }
         }
         calls.unique()
     }
 
-    private organizeRailsPathMethodCalls(calls, RubyTestCodeVisitor visitor){
-        def railsPathMethods = calls?.findAll{ it.receiver.empty &&
-                (it.name.endsWith(RubyConstantData.ROUTE_PATH_SUFIX) || it.name.endsWith(RubyConstantData.ROUTE_URL_SUFIX) ) }
-        def railsMethods = (railsPathMethods*.name).collect{ it - RubyConstantData.ROUTE_PATH_SUFIX - RubyConstantData.ROUTE_URL_SUFIX }
+    private organizeRailsPathMethodCalls(calls, RubyTestCodeVisitor visitor) {
+        def railsPathMethods = calls?.findAll {
+            it.receiver.empty &&
+                    (it.name.endsWith(RubyConstantData.ROUTE_PATH_SUFIX) || it.name.endsWith(RubyConstantData.ROUTE_URL_SUFIX))
+        }
+        def railsMethods = (railsPathMethods*.name).collect {
+            it - RubyConstantData.ROUTE_PATH_SUFIX - RubyConstantData.ROUTE_URL_SUFIX
+        }
         this.registryUsedRailsPaths(visitor, railsMethods as Set)
         railsPathMethods
     }
 
-    private organizePathAccess(calls, RubyTestCodeVisitor visitor){
-        def usedPaths = calls?.findAll{ it.receiver.empty && it.name.contains("/") }
+    private organizePathAccess(calls, RubyTestCodeVisitor visitor) {
+        def usedPaths = calls?.findAll { it.receiver.empty && it.name.contains("/") }
         def paths = usedPaths*.name
         this.registryUsedPaths(visitor, paths as Set)
         usedPaths
     }
 
-    private static organizeClassUsage(calls, RubyTestCodeVisitor visitor){
-        def classesOnly = calls?.findAll{ it.name.empty && !it.receiver.empty }
-        classesOnly?.each{
+    private static organizeClassUsage(calls, RubyTestCodeVisitor visitor) {
+        def classesOnly = calls?.findAll { it.name.empty && !it.receiver.empty }
+        classesOnly?.each {
             String name = it.receiver
-            if(name.startsWith("@")) name = name.substring(1)
+            if (name.startsWith("@")) name = name.substring(1)
             visitor.registryClassUsage(name)
         }
         log.info "Used classes (${classesOnly.size()}): ${classesOnly*.receiver}"
         classesOnly
     }
 
-    private static organizeMethodCallsWithReceiver(calls, RubyTestCodeVisitor visitor){
+    private static organizeMethodCallsWithReceiver(calls, RubyTestCodeVisitor visitor) {
         def found = []
-        def methodsWithReceiver = calls?.findAll{ !it.receiver.empty && !it.name.empty }
+        def methodsWithReceiver = calls?.findAll { !it.receiver.empty && !it.name.empty }
 
-        methodsWithReceiver?.each{
+        methodsWithReceiver?.each {
             String receiverName = it.receiver
-            if(receiverName.startsWith("@")) receiverName = receiverName.substring(1)
+            if (receiverName.startsWith("@")) receiverName = receiverName.substring(1)
             def result = visitor.registryCallFromInstanceVariable(it.name, 0, receiverName)
-            if(result) found += it
+            if (result) found += it
         }
 
         log.info "Method calls in views with receiver: ${methodsWithReceiver.size()}"
-        methodsWithReceiver.each{ log.info it.toString() }
+        methodsWithReceiver.each { log.info it.toString() }
         log.info "Method calls in views with receiver correctly registered: ${found.size()}"
-        found.each{ log.info it.toString() }
+        found.each { log.info it.toString() }
         def notFound = methodsWithReceiver - found
         log.info "Method calls in views with receiver with no data: ${notFound.size()}"
-        notFound.each{ log.info it.toString() }
+        notFound.each { log.info it.toString() }
 
         methodsWithReceiver
     }
 
-    private organizeMethodCallsNoReceiver(calls, RubyTestCodeVisitor visitor){
-        def methodsUnknownReceiver = calls?.findAll{ it.receiver.empty && !it.name.empty }
+    private organizeMethodCallsNoReceiver(calls, RubyTestCodeVisitor visitor) {
+        def methodsUnknownReceiver = calls?.findAll { it.receiver.empty && !it.name.empty }
         def notFoundMethods = []
-        methodsUnknownReceiver.each{ method ->
+        methodsUnknownReceiver.each { method ->
             log.info "method with unknown receiver: ${method}"
-            def matches = methods.findAll{
+            def matches = methods.findAll {
                 def counter = method.arguments as int
                 it.name == method.name && counter <= it.args && counter >= it.args - it.optionalArgs
             }
@@ -510,7 +513,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
                 visitor?.taskInterface?.methods += newMethod
                 interfaceFromViews.methods += newMethod
             }
-            if(matches.empty){
+            if (matches.empty) {
                 log.info "method with unknown receiver: '${method}' has no match"
                 def newMethod = [name: method.name, type: "Object", file: null, step: visitor.step]
                 visitor?.taskInterface?.methods += newMethod
@@ -519,24 +522,24 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
             }
         }
         log.info "Methods calls in views with unknown receiver: ${methodsUnknownReceiver.size()}"
-        methodsUnknownReceiver.each{ log.info it.toString() }
+        methodsUnknownReceiver.each { log.info it.toString() }
         log.info "Methods calls in views with unknown receiver with no data: ${notFoundMethods.size()}"
-        notFoundMethods.each{ log.info it.toString() }
+        notFoundMethods.each { log.info it.toString() }
 
         methodsUnknownReceiver
     }
 
-    private organizeViewFileAccess(calls, RubyTestCodeVisitor visitor){
-        def files = calls?.findAll{
+    private organizeViewFileAccess(calls, RubyTestCodeVisitor visitor) {
+        def files = calls?.findAll {
             it.receiver.empty &&
                     (it.name.endsWith(ConstantData.ERB_EXTENSION) || it.name.endsWith(ConstantData.HAML_EXTENSION))
         }
-        def accessedViewFiles = files*.name?.collect{
+        def accessedViewFiles = files*.name?.collect {
             String n = it.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-            if(!n.contains(Util.VIEWS_FILES_RELATIVE_PATH)) {
+            if (!n.contains(Util.VIEWS_FILES_RELATIVE_PATH)) {
                 def aux = Util.VIEWS_FILES_RELATIVE_PATH.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,
                         Matcher.quoteReplacement(File.separator))
-                if(!n.startsWith(File.separator)) n = File.separator + n
+                if (!n.startsWith(File.separator)) n = File.separator + n
                 n = aux + n
             }
             n
@@ -545,14 +548,14 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         files
     }
 
-    private registryCallsIntoViewFiles(RubyTestCodeVisitor visitor, Set<String> analysedViewFiles){
-        if(!(visitor instanceof RubyTestCodeVisitor)) return
+    private registryCallsIntoViewFiles(RubyTestCodeVisitor visitor, Set<String> analysedViewFiles) {
+        if (!(visitor instanceof RubyTestCodeVisitor)) return
 
         def calls = extractCallsFromViewFiles(visitor, analysedViewFiles)
-        if(calls.empty) return
+        if (calls.empty) return
 
         log.info "All calls from view file(s): ${calls.size()}"
-        calls?.each{ log.info it.toString() }
+        calls?.each { log.info it.toString() }
 
         analysedViewFiles += visitor.taskInterface.getViewFilesForFurtherAnalysis()
         def files = organizeViewFileAccess(calls, visitor)
@@ -560,7 +563,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         def noFiles = calls - files
         def usedPaths = organizePathAccess(noFiles, visitor)
 
-        def railsPathMethods = organizeRailsPathMethodCalls(noFiles-usedPaths, visitor)
+        def railsPathMethods = organizeRailsPathMethodCalls(noFiles - usedPaths, visitor)
         def others = noFiles - (usedPaths + railsPathMethods)
 
         def classesOnly = organizeClassUsage(others, visitor)
@@ -572,7 +575,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         others -= methodsUnknownReceiver
 
         log.info "Calls from view file(s) that we can not deal with: ${others.size()}"
-        others.each{ log.info it.toString() }
+        others.each { log.info it.toString() }
 
         //check if there is new view files to analyse
         registryCallsIntoViewFiles(visitor, analysedViewFiles)
@@ -581,12 +584,12 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     @Override
     void findAllPages(TestCodeVisitorInterface visitor) {
         /* generates all routes according to config/routes.rb file */
-        if(this.routes.empty) {
+        if (this.routes.empty) {
             this.generateProjectRoutes()
             log.info "All project routes:"
             this.routes.each { log.info it.toString() }
             log.info "Problematic routes (${problematicRoutes.size()}):"
-            this.problematicRoutes.each{ log.info it.toString() }
+            this.problematicRoutes.each { log.info it.toString() }
         }
 
         /* identifies used routes */
@@ -594,34 +597,36 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         calledPaths.removeAll([null])  //it is null if test code references a class or file that does not exist
         def usedPaths = [] as Set
 
-        def auxiliaryMethods =  calledPaths.findAll{ it.file != RubyConstantData.ROUTES_ID }
-        def railsPathMethods = (calledPaths - auxiliaryMethods)?.findAll{ !it.name.contains("/") }
+        def auxiliaryMethods = calledPaths.findAll { it.file != RubyConstantData.ROUTES_ID }
+        def railsPathMethods = (calledPaths - auxiliaryMethods)?.findAll { !it.name.contains("/") }
         def explicityPaths = calledPaths - (auxiliaryMethods + railsPathMethods)
         usedPaths += explicityPaths*.name
 
         /* identifies used routes (by auxiliary methods) */
         def usedRoutesByAuxMethods = [] as Set
-        auxiliaryMethods?.each{ auxMethod -> //it was used an auxiliary method; the view path must be extracted
+        auxiliaryMethods?.each { auxMethod -> //it was used an auxiliary method; the view path must be extracted
             log.info "FIND_ALL_PAGES; visiting file '${auxMethod.file}' and method '${auxMethod.name} (${auxMethod.args})'"
             def data = this.extractDataFromAuxiliaryMethod(auxMethod)
             usedRoutesByAuxMethods += data.result
             def allReturn = false
-            if(!data.specificReturn || (data.specificReturn && data.specificFailed) ) allReturn = true
+            if (!data.specificReturn || (data.specificReturn && data.specificFailed)) allReturn = true
             log.info "Found route related to auxiliary path method '${auxMethod.name}': ${!data.result.empty} (all return: $allReturn)"
         }
 
         /* deals with rails *_path methods */
-        def pathMethodsReturnedByAuxMethods = usedRoutesByAuxMethods.findAll{ it.contains(RubyConstantData.ROUTE_PATH_SUFIX) }
+        def pathMethodsReturnedByAuxMethods = usedRoutesByAuxMethods.findAll {
+            it.contains(RubyConstantData.ROUTE_PATH_SUFIX)
+        }
         usedPaths += usedRoutesByAuxMethods - pathMethodsReturnedByAuxMethods
         railsPathMethods = railsPathMethods*.name
-        railsPathMethods += pathMethodsReturnedByAuxMethods?.collect{ it - RubyConstantData.ROUTE_PATH_SUFIX }
+        railsPathMethods += pathMethodsReturnedByAuxMethods?.collect { it - RubyConstantData.ROUTE_PATH_SUFIX }
 
         /* extracts data from used routes */
         this.registryUsedPaths((RubyTestCodeVisitor) visitor, usedPaths)
         this.registryUsedRailsPaths((RubyTestCodeVisitor) visitor, railsPathMethods as Set)
 
         /* extracts data from view (ERB or HAML) files (this code must be moved in the future) */
-        if(viewCodeExtractor) this.registryCallsIntoViewFiles((RubyTestCodeVisitor) visitor, [] as Set)
+        if (viewCodeExtractor) this.registryCallsIntoViewFiles((RubyTestCodeVisitor) visitor, [] as Set)
     }
 
     /***
@@ -734,7 +739,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     }
 
     @Override
-    boolean hasCompilationError(String path){
+    boolean hasCompilationError(String path) {
         def node = generateAst(path)
         if (!node) true else false
     }

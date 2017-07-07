@@ -1,8 +1,8 @@
 package br.ufpe.cin.tan.test.ruby.unitTest
 
+import br.ufpe.cin.tan.test.ruby.RubyTestCodeVisitor
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.util.NoopVisitor
-import br.ufpe.cin.tan.test.ruby.RubyTestCodeVisitor
 
 /***
  * Visits unit test declaration of interest and its body looking for production method calls.

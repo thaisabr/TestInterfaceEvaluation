@@ -1,12 +1,12 @@
 package br.ufpe.cin.tan.test.ruby.unitTest
 
+import br.ufpe.cin.tan.util.ConstantData
+import br.ufpe.cin.tan.util.Util
 import org.jrubyparser.ast.CallNode
 import org.jrubyparser.ast.ConstNode
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.ast.StrNode
 import org.jrubyparser.util.NoopVisitor
-import br.ufpe.cin.tan.util.ConstantData
-import br.ufpe.cin.tan.util.Util
 
 class RSpecTestDefinitionVisitor extends NoopVisitor {
 

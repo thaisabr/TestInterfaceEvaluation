@@ -1,5 +1,6 @@
 package br.ufpe.cin.tan.similarity.text
 
+import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
 import gherkin.GherkinDialectProvider
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.analysis.util.CharArraySet
@@ -11,8 +12,6 @@ import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.RAMDirectory
-import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
-
 
 class IndexManager {
 

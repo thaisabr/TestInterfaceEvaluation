@@ -14,7 +14,7 @@ class TaskInterfaceEvaluator {
      */
     static double calculateFilesPrecision(ITest iTest, IReal iReal) {
         double result = 0
-        if(invalidInput(iTest, iReal)) return result
+        if (invalidInput(iTest, iReal)) return result
         def testFiles = iTest.findFilteredFiles()
         def truePositives = calculateTruePositives(testFiles, iReal.findFilteredFiles())
         if (truePositives > 0) result = (double) truePositives / testFiles.size()
@@ -30,7 +30,7 @@ class TaskInterfaceEvaluator {
      */
     static double calculateFilesRecall(ITest iTest, IReal iReal) {
         double result = 0
-        if(invalidInput(iTest, iReal)) return result
+        if (invalidInput(iTest, iReal)) return result
         def realFiles = iReal.findFilteredFiles()
         def truePositives = calculateTruePositives(iTest.findFilteredFiles(), realFiles)
         if (truePositives > 0) result = (double) truePositives / realFiles.size()
@@ -39,7 +39,7 @@ class TaskInterfaceEvaluator {
 
     static double calculateFilesPrecision(Set iTest, Set iReal) {
         double result = 0
-        if(invalidInput(iTest, iReal)) return result
+        if (invalidInput(iTest, iReal)) return result
         def truePositives = calculateTruePositives(iTest, iReal)
         if (truePositives > 0) result = (double) truePositives / iTest.size()
         result
@@ -47,7 +47,7 @@ class TaskInterfaceEvaluator {
 
     static double calculateFilesRecall(Set iTest, Set iReal) {
         double result = 0
-        if(invalidInput(iTest, iReal)) return result
+        if (invalidInput(iTest, iReal)) return result
         def truePositives = calculateTruePositives(iTest, iReal)
         if (truePositives > 0) result = (double) truePositives / iReal.size()
         result
@@ -57,7 +57,7 @@ class TaskInterfaceEvaluator {
         (set1.intersect(set2)).size()
     }
 
-    private static invalidInput(iTest, iReal){
+    private static invalidInput(iTest, iReal) {
         if (!iTest || iTest.empty || !iReal || iReal.empty) true
         else false
     }

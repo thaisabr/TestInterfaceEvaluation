@@ -1,8 +1,8 @@
 package br.ufpe.cin.tan.similarity.test
 
+import br.ufpe.cin.tan.analysis.itask.ITest
 import org.apache.commons.math3.linear.ArrayRealVector
 import org.apache.commons.math3.linear.RealVector
-import br.ufpe.cin.tan.analysis.itask.ITest
 
 class TestSimilarityAnalyser {
 
@@ -10,13 +10,13 @@ class TestSimilarityAnalyser {
     Collection c2
     Collection terms
 
-    TestSimilarityAnalyser(Collection c1, Collection c2){
+    TestSimilarityAnalyser(Collection c1, Collection c2) {
         this.c1 = c1
         this.c2 = c2
         terms = (c1 + c2).sort()
     }
 
-    TestSimilarityAnalyser(ITest interface1, ITest interface2){
+    TestSimilarityAnalyser(ITest interface1, ITest interface2) {
         this.c1 = interface1.findAllProdFiles()
         this.c2 = interface2.findAllProdFiles()
         terms = (c1 + c2).sort()

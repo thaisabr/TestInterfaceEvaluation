@@ -1,5 +1,6 @@
 package br.ufpe.cin.tan.similarity.text
 
+import br.ufpe.cin.tan.analysis.task.Task
 import org.apache.commons.math3.linear.ArrayRealVector
 import org.apache.commons.math3.linear.RealVector
 import org.apache.lucene.index.DirectoryReader
@@ -7,7 +8,6 @@ import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Terms
 import org.apache.lucene.index.TermsEnum
 import org.apache.lucene.util.BytesRef
-import br.ufpe.cin.tan.analysis.task.Task
 
 class TextualSimilarityAnalyser {
     IndexManager indexManager
@@ -24,7 +24,7 @@ class TextualSimilarityAnalyser {
         calculate(task1, task2)
     }
 
-    private calculate(task1, task2){
+    private calculate(task1, task2) {
         configureIndexManager(task1, task2)
         reader = DirectoryReader.open(indexManager.indexDirectory)
         calculateFreqVectorSimilarity()

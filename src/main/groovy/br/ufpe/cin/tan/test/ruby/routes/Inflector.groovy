@@ -1,8 +1,8 @@
 package br.ufpe.cin.tan.test.ruby.routes
 
-import org.jruby.embed.ScriptingContainer
 import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.Util
+import org.jruby.embed.ScriptingContainer
 
 class Inflector {
 

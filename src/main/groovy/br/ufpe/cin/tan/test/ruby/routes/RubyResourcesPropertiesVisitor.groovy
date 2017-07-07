@@ -122,7 +122,7 @@ class RubyResourcesPropertiesVisitor extends NoopVisitor {
         if (!controllerValue.empty) controllerValue = [line: controllerValue.line, position: controllerValue.position, value: controllerValue.value]
         if (!pathValue.empty) pathValue = [line: pathValue.line, position: pathValue.position, value: pathValue.value]
 
-        [as: asValue, member: membersValues, collection: collectionsValues, only: onlyValues, except: exceptValues,
+        [as        : asValue, member: membersValues, collection: collectionsValues, only: onlyValues, except: exceptValues,
          controller: controllerValue, path: pathValue]
     }
 

@@ -36,14 +36,14 @@ class RubyNonResourcefulPropertiesVisitor extends NoopVisitor {
         if (values.size() < 2) {
             pathValue = values.get(0).value
             def i = pathValue.indexOf("/")
-            if(i<0) return
-            String controller = pathValue.substring(0,i)
-            String action = pathValue.substring(i+1)
+            if (i < 0) return
+            String controller = pathValue.substring(0, i)
+            String action = pathValue.substring(i + 1)
             controllerActionString = "$controller#$action"
             if (!pathValue.startsWith("/")) pathValue = "/" + pathValue
             pathMethodName = pathValue.substring(1).replaceAll("/", "_")
             pathValue += "(/.*)?"
-        } else{
+        } else {
             //relevant nodes: to, as, controller, action, via, defaults, constraints
             //TO REMEMBER: via, defaults e contraints sao conjuntos de valores sem relevancia nesse ponto e por isso nao sao extraidos
             def indexTo = values.findIndexOf { it.value == "to" }

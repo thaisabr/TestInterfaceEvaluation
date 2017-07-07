@@ -1,12 +1,12 @@
 package br.ufpe.cin.tan.test.ruby.routes
 
+import br.ufpe.cin.tan.util.RegexUtil
+import br.ufpe.cin.tan.util.ruby.RubyConstantData
 import org.jrubyparser.ast.CallNode
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.ast.StrNode
 import org.jrubyparser.ast.SymbolNode
 import org.jrubyparser.util.NoopVisitor
-import br.ufpe.cin.tan.util.RegexUtil
-import br.ufpe.cin.tan.util.ruby.RubyConstantData
 
 class RubyGetPropertiesVisitor extends NoopVisitor {
 
@@ -72,7 +72,7 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
     }
 
     private Route generateResourcesCollectionRoute(String actionName, String actionValue, String argValue,
-                                             String pathMethodName) {
+                                                   String pathMethodName) {
         def nameSufix
         def pathValuePrefix
         def argsPrefix
@@ -88,7 +88,7 @@ class RubyGetPropertiesVisitor extends NoopVisitor {
 
         def methodName = "${actionName.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")}$nameSufix"
         if (pathMethodName) {
-            if(indexName && !indexName.empty) methodName = pathMethodName + nameSufix
+            if (indexName && !indexName.empty) methodName = pathMethodName + nameSufix
             else methodName = pathMethodName
         }
 

@@ -1,10 +1,10 @@
 package br.ufpe.cin.tan.test.ruby.routes
 
+import br.ufpe.cin.tan.util.RegexUtil
+import br.ufpe.cin.tan.util.ruby.RequestType
 import org.jrubyparser.ast.StrNode
 import org.jrubyparser.ast.SymbolNode
 import org.jrubyparser.util.NoopVisitor
-import br.ufpe.cin.tan.util.RegexUtil
-import br.ufpe.cin.tan.util.ruby.RequestType
 
 class RubyMatchPropertiesVisitor extends NoopVisitor {
 
@@ -65,7 +65,7 @@ class RubyMatchPropertiesVisitor extends NoopVisitor {
             else if (indexTo > -1) controllerActionString = values.get(indexTo + 1).value
         }
 
-        if(pathMethodName.startsWith("/")) pathMethodName = pathMethodName.substring(1)
+        if (pathMethodName.startsWith("/")) pathMethodName = pathMethodName.substring(1)
 
         //configures result
         result = [name: pathMethodName, value: pathValue, arg: controllerActionString]

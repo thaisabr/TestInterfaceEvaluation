@@ -25,7 +25,7 @@ class RubyGetPostDeleteVisitor extends NoopVisitor {
     Object visitFCallNode(FCallNode iVisited) {
         super.visitFCallNode(iVisited)
         if (iVisited.name == "get" && iVisited.position != node.position) nodes += iVisited
-        else if((iVisited.name == "delete" || iVisited.name == "post") && iVisited.position != node.position) otherNodes += iVisited
+        else if ((iVisited.name == "delete" || iVisited.name == "post") && iVisited.position != node.position) otherNodes += iVisited
         else if (iVisited.name in REQUEST_TYPES) allNodes = allNodes - iVisited
         iVisited
     }
@@ -34,7 +34,7 @@ class RubyGetPostDeleteVisitor extends NoopVisitor {
     Object visitCallNode(CallNode iVisited) {
         super.visitCallNode(iVisited)
         if (iVisited.name == "get" && iVisited.position != node.position) nodes += iVisited
-        else if((iVisited.name == "delete" || iVisited.name == "post") && iVisited.position != node.position) otherNodes += iVisited
+        else if ((iVisited.name == "delete" || iVisited.name == "post") && iVisited.position != node.position) otherNodes += iVisited
         else if (iVisited.name in REQUEST_TYPES) allNodes = allNodes - iVisited
         iVisited
     }

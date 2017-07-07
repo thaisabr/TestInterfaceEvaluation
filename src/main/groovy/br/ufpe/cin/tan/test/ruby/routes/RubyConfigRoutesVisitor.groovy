@@ -1,12 +1,12 @@
 package br.ufpe.cin.tan.test.ruby.routes
 
+import br.ufpe.cin.tan.util.RegexUtil
+import br.ufpe.cin.tan.util.ruby.RequestType
+import br.ufpe.cin.tan.util.ruby.RubyConstantData
 import groovy.util.logging.Slf4j
 import org.jrubyparser.ast.Node
 import org.jrubyparser.ast.StrNode
 import org.jrubyparser.ast.SymbolNode
-import br.ufpe.cin.tan.util.RegexUtil
-import br.ufpe.cin.tan.util.ruby.RequestType
-import br.ufpe.cin.tan.util.ruby.RubyConstantData
 
 @Slf4j
 class RubyConfigRoutesVisitor {
@@ -33,32 +33,32 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private static formatRouteValue(String name){
+    private static formatRouteValue(String name) {
         name.replaceAll("/:.[^/]*\$", "(/.*)").replaceAll("/\\(:.*\\)\$", "(/.*)")
                 .replaceAll("/:.*/", "(/.*)/").replaceAll("/\\(:.*\\)/", "(/.*)/")
     }
 
-    static configureActionName(String entry){
+    static configureActionName(String entry) {
         def actionName = entry
-        if(actionName.startsWith("/:")){
+        if (actionName.startsWith("/:")) {
             actionName = formatRouteValue(actionName)
-        } else if( actionName ==~ /.+\(\/:.+\)/ ){ //ex.: settings(/:tab)
+        } else if (actionName ==~ /.+\(\/:.+\)/) { //ex.: settings(/:tab)
             def index = actionName.indexOf("(")
-            def name = formatRouteValue(actionName.substring(index+1))
-            actionName = actionName.substring(0,index) + name
+            def name = formatRouteValue(actionName.substring(index + 1))
+            actionName = actionName.substring(0, index) + name
         }
         actionName
     }
 
-    def getRoutingMethods(){
-        routingMethods.collect{
-            if(it.value.startsWith(":") || it.value.startsWith("(:")) {
+    def getRoutingMethods() {
+        routingMethods.collect {
+            if (it.value.startsWith(":") || it.value.startsWith("(:")) {
                 it.value = it.value.replaceFirst("\\(:.*\\)", ".*").replaceFirst(":.*/", ".*/")
             }
-            if(!it.value.startsWith("/") && !it.value.startsWith(".") ) it.value = "/" + it.value
+            if (!it.value.startsWith("/") && !it.value.startsWith(".")) it.value = "/" + it.value
             it.value = configureActionName(it.value)
-            if(it.arg.startsWith("/")) it.arg = it.arg.substring(1)
-            if(it.name.startsWith("_")) it.name = it.name.substring(1)
+            if (it.arg.startsWith("/")) it.arg = it.arg.substring(1)
+            if (it.name.startsWith("_")) it.name = it.name.substring(1)
             it.name = it.name.replaceAll(/_{2,}/, "_")
             it
         }
@@ -82,8 +82,8 @@ class RubyConfigRoutesVisitor {
         for (int i = 0; i < args.size(); i++) {
             if (args.get(i).value in requestType) {
                 def type = RequestType.valueOfName(args.get(i).value)
-                if (styleRequestFirst) values += [name:args.get(i + 1).value, type:type]
-                else values += [name:args.get(i - 1).value, type:type]
+                if (styleRequestFirst) values += [name: args.get(i + 1).value, type: type]
+                else values += [name: args.get(i - 1).value, type: type]
                 i++
             }
         }
@@ -133,43 +133,42 @@ class RubyConfigRoutesVisitor {
         String path, name, aux
         def child = iVisited?.args?.childNodes()
         List<SymbolNode> entities = child?.findAll { it instanceof SymbolNode }
-        if(entities.empty){
-            entities = child?.findAll{ it instanceof StrNode }
-            if(!entities.empty) aux = entities.first().value
-            else{
+        if (entities.empty) {
+            entities = child?.findAll { it instanceof StrNode }
+            if (!entities.empty) aux = entities.first().value
+            else {
                 log.error "Unexpected value: call testCodeAnalyser.ruby.routes.RubyConfigRoutesVisitor: 116"
-                log.error "Position: ${iVisited.position.startLine+1}"
+                log.error "Position: ${iVisited.position.startLine + 1}"
             }
         } else aux = entities.first().name
 
-        if(aux){
+        if (aux) {
             if (prefix) path = prefix + "/" + aux
             else path = aux
-            if (methodName && methodName!= prefix) name = methodName + "_" + path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
+            if (methodName && methodName != prefix) name = methodName + "_" + path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
             else name = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
         }
-        [path:path, name:name]
+        [path: path, name: name]
     }
 
     private static getNameForRouteMethod(Node iVisited, String prefix, String methodName) {
         String value = ""
         String path, name = ""
         List<SymbolNode> entities = iVisited?.args?.childNodes()?.findAll { it instanceof SymbolNode }
-        if(!entities.empty) value = entities.first().name
+        if (!entities.empty) value = entities.first().name
         else {
             entities = iVisited?.args?.childNodes()?.findAll { it instanceof StrNode }
-            if(!entities.empty) value = entities.first().value
+            if (!entities.empty) value = entities.first().value
         }
         if (prefix) {
             path = prefix + "/" + value
             name = prefix.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "_")
-        }
-        else path = value
+        } else path = value
         if (methodName) {
-            if(name.empty) name = methodName
-            else if(methodName != name) name = methodName + "_" + name
+            if (name.empty) name = methodName
+            else if (methodName != name) name = methodName + "_" + name
         }
-        [path:path, name:name]
+        [path: path, name: name]
     }
 
     private
@@ -211,9 +210,9 @@ class RubyConfigRoutesVisitor {
         def name = ""
         def args = extractArgs(iVisited, argsVisitor)
         if (!args) return
-        if(!args.value.startsWith("/")) args.value = "/" + args.value
-        if(!args.name.empty) name = args.name
-        if(formattedPrefix && !formattedPrefix.empty && !name.empty) name = "${formattedPrefix}_$name"
+        if (!args.value.startsWith("/")) args.value = "/" + args.value
+        if (!args.name.empty) name = args.name
+        if (formattedPrefix && !formattedPrefix.empty && !name.empty) name = "${formattedPrefix}_$name"
         if (prefix && formattedPrefix) {
             def argPrefix = formattedPrefix.replaceAll("_", "/")
             this.routingMethods += new Route(name: name, file: RubyConstantData.ROUTES_ID,
@@ -239,9 +238,9 @@ class RubyConfigRoutesVisitor {
         def argsVisitor = new RubyRootPropertiesVisitor(iVisited?.name)
         def args = extractArgs(iVisited, argsVisitor)
         if (!args) return
-        if(!args.value.startsWith("/")) args.value = "/" + args.value
+        if (!args.value.startsWith("/")) args.value = "/" + args.value
         def isRedirect = false
-        if(args.arg.contains("/") && !args.arg.contains("#")){
+        if (args.arg.contains("/") && !args.arg.contains("#")) {
             def controller = args.arg
             def action = "index"
             args.arg = "${controller}#${action}"
@@ -249,7 +248,7 @@ class RubyConfigRoutesVisitor {
         }
         if (prefix) {
             def arg = args.arg
-            if(!isRedirect && formattedPrefix){
+            if (!isRedirect && formattedPrefix) {
                 def argPrefix = formattedPrefix.replaceAll("_", "/")
                 arg = "$argPrefix/${args.arg}"
             }
@@ -262,7 +261,7 @@ class RubyConfigRoutesVisitor {
 
     private registryMemberAndCollectionRoutes(Node node, String prefix, String original, String aliasSingular, String controller,
                                               String index, rangesOfNestedResources, rangesOfNestedResource,
-                                              String formattedPrefix){
+                                              String formattedPrefix) {
         def alreadyVisitedNodes = []
         def memberData = []
         def collectionData = []
@@ -278,7 +277,7 @@ class RubyConfigRoutesVisitor {
             def getPropertiesVisitor = new RubyGetPropertiesVisitor(false, true, prefix, original, aliasSingular, controller, index, formattedPrefix)
             getNode.accept(getPropertiesVisitor)
             def route = getPropertiesVisitor.route
-            if(route) collectionData += route
+            if (route) collectionData += route
         }
 
         def memberNodes = visitor.memberValues
@@ -289,13 +288,13 @@ class RubyConfigRoutesVisitor {
             def getPropertiesVisitor = new RubyGetPropertiesVisitor(true, false, prefix, original, aliasSingular, controller, index, formattedPrefix)
             getNode.accept(getPropertiesVisitor)
             def route = getPropertiesVisitor.route
-            if(route) memberData += route
+            if (route) memberData += route
         }
-        [visited:alreadyVisitedNodes, members:memberData, collection:collectionData, otherNodes:collectionNodes.others+memberNodes.others]
+        [visited: alreadyVisitedNodes, members: memberData, collection: collectionData, otherNodes: collectionNodes.others + memberNodes.others]
     }
 
     private registryMemberAndCollectionRoutesAlternativeSyntax(Node node, String prefix, String original, String aliasSingular, String controller,
-                                                               String index, String formattedPrefix){
+                                                               String index, String formattedPrefix) {
         def alreadyVisitedNodes = []
         def memberData = []
         def collectionData = []
@@ -313,21 +312,22 @@ class RubyConfigRoutesVisitor {
                 def getPropertiesVisitor = new RubyGetPropertiesVisitor(true, false, prefix, original, aliasSingular, controller, index, formattedPrefix)
                 getNode.accept(getPropertiesVisitor)
                 def route = getPropertiesVisitor.route
-                if(route) memberData += route
+                if (route) memberData += route
             } else if (visitor.onValue == "collection") {
                 collectionNodeValue = getNode
                 alreadyVisitedNodes += getNode
                 def getPropertiesVisitor = new RubyGetPropertiesVisitor(false, true, prefix, original, aliasSingular, controller, index, formattedPrefix)
                 getNode.accept(getPropertiesVisitor)
                 def route = getPropertiesVisitor.route
-                if(route) collectionData += route
+                if (route) collectionData += route
             }
         }
-        [visited:alreadyVisitedNodes, members:memberData, collection:collectionData, otherNodes:getVisitor.otherNodes]
+        [visited: alreadyVisitedNodes, members: memberData, collection: collectionData, otherNodes: getVisitor.otherNodes]
     }
 
-    private static generatePostAndDeleteRoutes(deleteNodes, String prefix, String original, String aliasSingular, String controller,
-                                               String index, String formattedPrefix){
+    private
+    static generatePostAndDeleteRoutes(deleteNodes, String prefix, String original, String aliasSingular, String controller,
+                                       String index, String formattedPrefix) {
         def alreadyVisitedNodes = []
         def routes = []
 
@@ -335,10 +335,10 @@ class RubyConfigRoutesVisitor {
             def visitor = new RubyGetPropertiesVisitor(false, false, prefix, original, aliasSingular, controller, index, formattedPrefix)
             node.accept(visitor)
             def route = visitor.route
-            if(route) routes += route
+            if (route) routes += route
         }
 
-        [visited:alreadyVisitedNodes, routes:routes]
+        [visited: alreadyVisitedNodes, routes: routes]
     }
 
     private extractResourcesData(Node node, String prefix, String original, String aliasSingular, String controller,
@@ -381,7 +381,7 @@ class RubyConfigRoutesVisitor {
         def args = argsVisitor.organizedValues
         return [nestedResourcesList: nestedResourcesList, nestedResourceList: nestedResourceList, args: args,
                 collectionRoutes   : collectionData as Set, memberRoutes: memberData as Set,
-                otherRoutes: return3.routes]
+                otherRoutes        : return3.routes]
     }
 
     private generateNestedResourcesRoute(resourcesData, String prefix, String original, String plural,
@@ -418,16 +418,18 @@ class RubyConfigRoutesVisitor {
         }
         registryRoutes(resourcesData, prefix, original, plural, singular, formattedPrefix)
 
-        def internals = nodes.findAll{ it.position.startLine >= node.position.startLine && it.position.startLine <= node.position.endLine }
-        def internalMatchNodes = internals.findAll{ it.name == "match" }
-        def internalGetNodes = internals.findAll{ it.name == "get" }
+        def internals = nodes.findAll {
+            it.position.startLine >= node.position.startLine && it.position.startLine <= node.position.endLine
+        }
+        def internalMatchNodes = internals.findAll { it.name == "match" }
+        def internalGetNodes = internals.findAll { it.name == "get" }
 
         /* extracting get */
-        internalGetNodes?.each{ generateResourcefulGetRoute(it, prefix, original, singular, formattedPrefix) }
+        internalGetNodes?.each { generateResourcefulGetRoute(it, prefix, original, singular, formattedPrefix) }
         nodes = nodes - internalGetNodes
 
         /* extracting match*/
-        internalMatchNodes?.each{ generateResourcefulMatchRoute(it, prefix, original, singular, formattedPrefix) }
+        internalMatchNodes?.each { generateResourcefulMatchRoute(it, prefix, original, singular, formattedPrefix) }
         nodes = nodes - internalMatchNodes
     }
 
@@ -435,24 +437,24 @@ class RubyConfigRoutesVisitor {
         def argsVisitor = new RubyNonResourcefulPropertiesVisitor()
         def args = extractArgs(iVisited, argsVisitor)
         if (!args) return
-        if(!args.value.startsWith("/")) args.value = "/" + args.value
+        if (!args.value.startsWith("/")) args.value = "/" + args.value
 
         String routeName = args.name
         String value = args.value
         String routeArg = args.arg
-        if(prefix && !prefix.empty) {
+        if (prefix && !prefix.empty) {
             routeName = "${prefix}_${singular}_${routeName}"
             value = "/${prefix}/${resources}/.*${value}"
             def argPrefix = formattedPrefix.replaceAll("_", "/")
-            if(routeArg && routeArg.empty) routeArg = "${argPrefix}/${resources}#${routeName}"
+            if (routeArg && routeArg.empty) routeArg = "${argPrefix}/${resources}#${routeName}"
             else routeArg = "$argPrefix/${routeArg}"
         } else {
             routeName = "${singular}_${routeName}"
             value = "/${resources}/.*${value}"
-            if(routeArg && routeArg.empty) routeArg = "${resources}#${routeName}"
+            if (routeArg && routeArg.empty) routeArg = "${resources}#${routeName}"
         }
 
-        def route = new Route(name:routeName, file: RubyConstantData.ROUTES_ID, value:value, arg:routeArg)
+        def route = new Route(name: routeName, file: RubyConstantData.ROUTES_ID, value: value, arg: routeArg)
         this.routingMethods += route
     }
 
@@ -462,24 +464,24 @@ class RubyConfigRoutesVisitor {
         def argsVisitor = new RubyMatchPropertiesVisitor(name)
         def args = extractArgs(iVisited, argsVisitor)
         if (!args) return
-        if(!args.value.startsWith("/")) args.value = "/" + args.value
+        if (!args.value.startsWith("/")) args.value = "/" + args.value
 
         String routeName = args.name
         String value = args.value
         String routeArg = args.arg
-        if(prefix && !prefix.empty) {
+        if (prefix && !prefix.empty) {
             routeName = "${prefix}_${singular}_${routeName}"
             value = "/${prefix}/${resources}/.*${value}"
             def argPrefix = formattedPrefix.replaceAll("_", "/")
-            if(!routeArg || routeArg.empty) routeArg = "${argPrefix}/${resources}#${routeName}"
+            if (!routeArg || routeArg.empty) routeArg = "${argPrefix}/${resources}#${routeName}"
             else routeArg = "$argPrefix/${routeArg}"
         } else {
             routeName = "${singular}_${routeName}"
             value = "/${resources}/.*${value}"
-            if(routeArg && routeArg.empty) routeArg = "${resources}#${routeName}"
+            if (routeArg && routeArg.empty) routeArg = "${resources}#${routeName}"
         }
 
-        def route = new Route(name:routeName, file: RubyConstantData.ROUTES_ID, value:value, arg:routeArg)
+        def route = new Route(name: routeName, file: RubyConstantData.ROUTES_ID, value: value, arg: routeArg)
         this.routingMethods += route
     }
 
@@ -495,16 +497,18 @@ class RubyConfigRoutesVisitor {
         }
         registryRoutes(resourcesData, prefix, original, plural, singular, formattedPrefix)
 
-        def internals = nodes.findAll{ it.position.startLine >= node.position.startLine && it.position.startLine <= node.position.endLine }
-        def internalMatchNodes = internals.findAll{ it.name == "match" }
-        def internalGetNodes = internals.findAll{ it.name == "get" }
+        def internals = nodes.findAll {
+            it.position.startLine >= node.position.startLine && it.position.startLine <= node.position.endLine
+        }
+        def internalMatchNodes = internals.findAll { it.name == "match" }
+        def internalGetNodes = internals.findAll { it.name == "get" }
 
         /* extracting get */
-        internalGetNodes?.each{ generateSingularResourcefulGetRoute(it, prefix, original, formattedPrefix) }
+        internalGetNodes?.each { generateSingularResourcefulGetRoute(it, prefix, original, formattedPrefix) }
         nodes = nodes - internalGetNodes
 
         /* extracting match*/
-        internalMatchNodes?.each{ generateSingularResourcefulMatchRoute(it, prefix, original, formattedPrefix) }
+        internalMatchNodes?.each { generateSingularResourcefulMatchRoute(it, prefix, original, formattedPrefix) }
         nodes = nodes - internalMatchNodes
     }
 
@@ -512,24 +516,24 @@ class RubyConfigRoutesVisitor {
         def argsVisitor = new RubyNonResourcefulPropertiesVisitor()
         def args = extractArgs(iVisited, argsVisitor)
         if (!args) return
-        if(!args.value.startsWith("/")) args.value = "/" + args.value
+        if (!args.value.startsWith("/")) args.value = "/" + args.value
 
         String routeName = args.name
         String value = args.value
         String routeArg = args.arg
-        if(prefix && !prefix.empty) {
+        if (prefix && !prefix.empty) {
             routeName = "${routeName}_${prefix}_${resource}"
             value = "${prefix}/${resource}${value}"
             def argPrefix = formattedPrefix.replaceAll("_", "/")
-            if(routeArg && routeArg.empty) routeArg = "${argPrefix}/${resource}#${routeName}"
+            if (routeArg && routeArg.empty) routeArg = "${argPrefix}/${resource}#${routeName}"
             else routeArg = "$argPrefix/${routeArg}"
         } else {
             routeName = "${routeName}_${resource}"
             value = "/${resource}${value}"
-            if(routeArg && routeArg.empty) routeArg = "${resource}#${routeName}"
+            if (routeArg && routeArg.empty) routeArg = "${resource}#${routeName}"
         }
 
-        def route = new Route(name:routeName, file: RubyConstantData.ROUTES_ID, value:value, arg:routeArg)
+        def route = new Route(name: routeName, file: RubyConstantData.ROUTES_ID, value: value, arg: routeArg)
         this.routingMethods += route
     }
 
@@ -539,24 +543,24 @@ class RubyConfigRoutesVisitor {
         def argsVisitor = new RubyMatchPropertiesVisitor(name)
         def args = extractArgs(iVisited, argsVisitor)
         if (!args) return
-        if(!args.value.startsWith("/")) args.value = "/" + args.value
+        if (!args.value.startsWith("/")) args.value = "/" + args.value
 
         String routeName = args.name
         String value = args.value
         String routeArg = args.arg
-        if(prefix && !prefix.empty) {
+        if (prefix && !prefix.empty) {
             routeName = "${routeName}_${prefix}_${resource}"
             value = "${prefix}/${resource}${value}"
             def argPrefix = formattedPrefix.replaceAll("_", "/")
-            if(!routeArg || routeArg.empty) routeArg = "${argPrefix}/${resource}#${routeName}"
+            if (!routeArg || routeArg.empty) routeArg = "${argPrefix}/${resource}#${routeName}"
             else routeArg = "$argPrefix/${routeArg}"
         } else {
             routeName = "${routeName}_${resource}"
             value = "/${resource}${value}"
-            if(routeArg && routeArg.empty) routeArg = "${resource}#${routeName}"
+            if (routeArg && routeArg.empty) routeArg = "${resource}#${routeName}"
         }
 
-        def route = new Route(name:routeName, file: RubyConstantData.ROUTES_ID, value:value, arg:routeArg)
+        def route = new Route(name: routeName, file: RubyConstantData.ROUTES_ID, value: value, arg: routeArg)
         this.routingMethods += route
     }
 
@@ -628,7 +632,7 @@ class RubyConfigRoutesVisitor {
 
     private generateIndexResourceRoute(String prefix, String original, String controller, String index, String formattedPrefix) {
         def singular = inflector.singularize(index)
-        if(singular == index){
+        if (singular == index) {
             index = index + "_index"
         }
         if (prefix && formattedPrefix) {
@@ -750,7 +754,7 @@ class RubyConfigRoutesVisitor {
             argsPrefix = "$controller#"
         }
         this.routingMethods += new Route(name: "$action$nameSufix", file: RubyConstantData.ROUTES_ID, value: "$pathValuePrefix$action",
-                arg: "$argsPrefix$action", type:type)
+                arg: "$argsPrefix$action", type: type)
     }
 
     private configureResourcesDefaultRoutes(String prefix, String index, String original, String controller,
@@ -788,7 +792,7 @@ class RubyConfigRoutesVisitor {
         }
     }
 
-    private extractRoutesInScope(Node iVisited, String prefix, String methodName){
+    private extractRoutesInScope(Node iVisited, String prefix, String methodName) {
         //to remember: it is necessary to deal with args like 'module' and 'as'
         def result = getNameForRouteMethod(iVisited, prefix, methodName)
         def childNodes = getChildNodes(iVisited)

@@ -30,7 +30,7 @@ class RubyCollectionAndMemberVisitor extends NoopVisitor {
             getAndPostValues = getVisitor.nodes
             otherValues = getVisitor.otherNodes
         }
-        [gets:getAndPostValues, others:otherValues]
+        [gets: getAndPostValues, others: otherValues]
     }
 
     def getCollectionValues() {
@@ -42,7 +42,7 @@ class RubyCollectionAndMemberVisitor extends NoopVisitor {
             getAndPostValues = getVisitor.nodes
             otherValues = getVisitor.otherNodes
         }
-        [gets:getAndPostValues, others:otherValues]
+        [gets: getAndPostValues, others: otherValues]
     }
 
     @Override

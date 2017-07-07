@@ -1,10 +1,10 @@
 package br.ufpe.cin.tan.test.ruby.routes
 
+import br.ufpe.cin.tan.util.ruby.RubyConstantData
 import org.jrubyparser.ast.ArrayNode
 import org.jrubyparser.ast.StrNode
 import org.jrubyparser.ast.SymbolNode
 import org.jrubyparser.util.NoopVisitor
-import br.ufpe.cin.tan.util.ruby.RubyConstantData
 
 class RubyNestedVisitor extends NoopVisitor {
 

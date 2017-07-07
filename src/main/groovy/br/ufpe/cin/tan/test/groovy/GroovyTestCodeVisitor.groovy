@@ -1,15 +1,15 @@
 package br.ufpe.cin.tan.test.groovy
 
-import groovy.util.logging.Slf4j
-import org.codehaus.groovy.ast.ClassCodeVisitorSupport
-import org.codehaus.groovy.ast.FieldNode
-import org.codehaus.groovy.ast.expr.*
-import org.codehaus.groovy.control.SourceUnit
 import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.test.StepCall
 import br.ufpe.cin.tan.test.TestCodeVisitorInterface
 import br.ufpe.cin.tan.util.Util
 import br.ufpe.cin.tan.util.groovy.GroovyUtil
+import groovy.util.logging.Slf4j
+import org.codehaus.groovy.ast.ClassCodeVisitorSupport
+import org.codehaus.groovy.ast.FieldNode
+import org.codehaus.groovy.ast.expr.*
+import org.codehaus.groovy.control.SourceUnit
 
 @Slf4j
 class GroovyTestCodeVisitor extends ClassCodeVisitorSupport implements TestCodeVisitorInterface {

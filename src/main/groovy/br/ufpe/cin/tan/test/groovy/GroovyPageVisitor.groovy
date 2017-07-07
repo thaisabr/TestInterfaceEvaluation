@@ -1,9 +1,9 @@
 package br.ufpe.cin.tan.test.groovy
 
+import br.ufpe.cin.tan.util.groovy.GroovyUtil
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.control.SourceUnit
-import br.ufpe.cin.tan.util.groovy.GroovyUtil
 
 class GroovyPageVisitor extends ClassCodeVisitorSupport {
     SourceUnit source

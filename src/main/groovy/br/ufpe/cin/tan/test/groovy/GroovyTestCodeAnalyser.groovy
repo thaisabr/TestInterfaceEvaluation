@@ -1,11 +1,6 @@
 package br.ufpe.cin.tan.test.groovy
 
 import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
-import groovy.util.logging.Slf4j
-import org.codehaus.groovy.ast.ClassNode
-import org.codehaus.groovy.control.CompilationUnit
-import org.codehaus.groovy.control.Phases
-import org.codehaus.groovy.control.SourceUnit
 import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
 import br.ufpe.cin.tan.test.FileToAnalyse
@@ -13,6 +8,11 @@ import br.ufpe.cin.tan.test.StepRegex
 import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
 import br.ufpe.cin.tan.test.TestCodeVisitorInterface
 import br.ufpe.cin.tan.util.Util
+import groovy.util.logging.Slf4j
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.control.CompilationUnit
+import org.codehaus.groovy.control.Phases
+import org.codehaus.groovy.control.SourceUnit
 
 @Slf4j
 class GroovyTestCodeAnalyser extends TestCodeAbstractAnalyser {

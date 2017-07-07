@@ -1,10 +1,10 @@
 package br.ufpe.cin.tan.test.groovy
 
+import br.ufpe.cin.tan.test.StepRegex
+import br.ufpe.cin.tan.util.ConstantData
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.expr.StaticMethodCallExpression
 import org.codehaus.groovy.control.SourceUnit
-import br.ufpe.cin.tan.test.StepRegex
-import br.ufpe.cin.tan.util.ConstantData
 
 class GroovyStepRegexVisitor extends ClassCodeVisitorSupport {
 

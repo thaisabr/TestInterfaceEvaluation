@@ -8,9 +8,9 @@ abstract class TaskInterface {
     Set classes //instantiated classes; keys:[name, file]
     TimeDuration timestamp //time to compute task interface
 
-    TaskInterface(){
+    TaskInterface() {
         classes = [] as Set
-        timestamp = new TimeDuration(0,0,0,0)
+        timestamp = new TimeDuration(0, 0, 0, 0)
     }
 
     abstract Set<String> findFilteredFiles()

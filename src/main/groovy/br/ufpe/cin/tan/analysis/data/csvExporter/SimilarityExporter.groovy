@@ -13,7 +13,7 @@ class SimilarityExporter {
     String filteredFile
     String similarityFile
 
-    SimilarityExporter(String filteredFile, String similarityFile){
+    SimilarityExporter(String filteredFile, String similarityFile) {
         this.filteredFile = filteredFile
         this.similarityFile = similarityFile
     }
@@ -45,11 +45,11 @@ class SimilarityExporter {
                 def itest2 = other[ExporterUtil.ITEST_INDEX_SHORT_HEADER].split(", ") as List
                 def ireal2 = other[ExporterUtil.IREAL_INDEX_SHORT_HEADER].split(", ") as List
 
-                def similarityAnalyser = new TestSimilarityAnalyser(itest1,itest2)
+                def similarityAnalyser = new TestSimilarityAnalyser(itest1, itest2)
                 def testSimJaccard = similarityAnalyser.calculateSimilarityByJaccard()
                 def testSimCosine = similarityAnalyser.calculateSimilarityByCosine()
 
-                similarityAnalyser = new TestSimilarityAnalyser(ireal1,ireal2)
+                similarityAnalyser = new TestSimilarityAnalyser(ireal1, ireal2)
                 def realSimJaccard = similarityAnalyser.calculateSimilarityByJaccard()
                 def realSimCosine = similarityAnalyser.calculateSimilarityByCosine()
 

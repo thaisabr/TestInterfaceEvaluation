@@ -38,49 +38,49 @@ class EvaluationExporter {
                             "Rails", "Gems", "#Visit_Call", "Lost_visit_call", "#Views_ITest", "#Code_View_Analysis",
                             "Code_View_Analysis", "Has_Merge"]
 
-    EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks){
+    EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks) {
         this(evaluationFile, tasks, true)
     }
 
-    EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks, boolean toFilter){
+    EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks, boolean toFilter) {
         file = new File(evaluationFile)
         this.tasks = tasks
         filterEmptyIReal = toFilter
-        if(tasks && !tasks.empty) url = tasks.first().doneTask.gitRepository.url
+        if (tasks && !tasks.empty) url = tasks.first().doneTask.gitRepository.url
         else url = ""
         initializeValues()
         generateSummaryData()
     }
 
-    def save(){
-        if(!tasks || tasks.empty) return
+    def save() {
+        if (!tasks || tasks.empty) return
         List<String[]> content = initialData
         tasks?.each { content += it.parseAllToArray() }
         CsvUtil.write(file.path, content)
     }
 
     private initializeValues() {
-        validTasks = tasks.findAll{ it.isValid() }
+        validTasks = tasks.findAll { it.isValid() }
 
         def invalid = tasks - validTasks
-        emptyIReal = invalid.findAll{ it.irealIsEmpty() }
-        if(filterEmptyIReal) tasks -= emptyIReal
+        emptyIReal = invalid.findAll { it.irealIsEmpty() }
+        if (filterEmptyIReal) tasks -= emptyIReal
 
-        stepCounter = tasks.findAll{ it.hasChangedStepDefs() }.size()
-        gherkinCounter = tasks.findAll{ it.hasChangedGherkinDefs()}.size()
-        hasGherkinTest = tasks.findAll{ it.hasImplementedAcceptanceTests() }
-        stepMatchError = tasks.findAll{ it.hasStepMatchError() }
-        compilationErrors = tasks.findAll{ it.hasCompilationError() }
-        gherkinCompilationErrors = tasks.findAll{ it.hasGherkinCompilationError() }
-        stepDefCompilationErrors = tasks.findAll{ it.hasStepDefCompilationError() }
+        stepCounter = tasks.findAll { it.hasChangedStepDefs() }.size()
+        gherkinCounter = tasks.findAll { it.hasChangedGherkinDefs() }.size()
+        hasGherkinTest = tasks.findAll { it.hasImplementedAcceptanceTests() }
+        stepMatchError = tasks.findAll { it.hasStepMatchError() }
+        compilationErrors = tasks.findAll { it.hasCompilationError() }
+        gherkinCompilationErrors = tasks.findAll { it.hasGherkinCompilationError() }
+        stepDefCompilationErrors = tasks.findAll { it.hasStepDefCompilationError() }
         unitCompilationErrors = tasks.findAll { it.hasUnitCompilationError() }
 
-        if(filterEmptyIReal) invalidTasks = invalid
+        if (filterEmptyIReal) invalidTasks = invalid
         else invalidTasks = (invalid + emptyIReal).unique()
-        emptyITest = validTasks.findAll{ it.itestIsEmpty() }
+        emptyITest = validTasks.findAll { it.itestIsEmpty() }
         def noEmptyITest = validTasks - emptyITest
         int zero = 0
-        zeroPrecisionAndRecall = noEmptyITest.findAll{ it.precision()==zero && it.recall()==zero }
+        zeroPrecisionAndRecall = noEmptyITest.findAll { it.precision() == zero && it.recall() == zero }
         others = noEmptyITest - zeroPrecisionAndRecall
     }
 
@@ -88,8 +88,8 @@ class EvaluationExporter {
         initialData = []
         initialData += ["Repository", url] as String[]
         initialData += ["Tasks with empty IReal", emptyIReal.size()] as String[]
-        if(filterEmptyIReal) initialData += ["Tasks with no-empty IReal", tasks.size()] as String[]
-        else initialData += ["Tasks with no-empty IReal", (tasks-emptyIReal).size()] as String[]
+        if (filterEmptyIReal) initialData += ["Tasks with no-empty IReal", tasks.size()] as String[]
+        else initialData += ["Tasks with no-empty IReal", (tasks - emptyIReal).size()] as String[]
         initialData += ["Tasks with relevant AST error", compilationErrors.size()] as String[]
         initialData += ["Tasks with AST error of Gherkin files", gherkinCompilationErrors.size()] as String[]
         initialData += ["Tasks with AST error of StepDef files", stepDefCompilationErrors.size()] as String[]

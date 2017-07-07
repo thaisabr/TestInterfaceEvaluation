@@ -19,32 +19,32 @@ class RelevantTaskExporter {
     List<AnalysedTask> relevantTasks
     List<AnalysedTask> emptyITestTasks
 
-    RelevantTaskExporter(String filename, List<AnalysedTask> tasks){
+    RelevantTaskExporter(String filename, List<AnalysedTask> tasks) {
         this.filename = filename
         def index = filename.lastIndexOf(File.separator)
-        folder = filename.substring(0,index)
+        folder = filename.substring(0, index)
         initTasks(tasks)
     }
 
-    def save(){
+    def save() {
         def tasksToSave = relevantTasks + emptyITestTasks
-        if(!tasksToSave || tasksToSave.empty) return
+        if (!tasksToSave || tasksToSave.empty) return
         saveIText(tasksToSave)
         saveTestCode(tasksToSave)
         saveAnalysisData(tasksToSave)
     }
 
-    private saveIText(List<AnalysedTask> tasks){
+    private saveIText(List<AnalysedTask> tasks) {
         ITextExporter iTextExporter = new ITextExporter(folder, tasks)
         iTextExporter.save()
     }
 
-    private saveTestCode(List<AnalysedTask> tasks){
+    private saveTestCode(List<AnalysedTask> tasks) {
         TestCodeExporter testCodeExporter = new TestCodeExporter(folder, tasks)
         testCodeExporter.save()
     }
 
-    private saveAnalysisData(List<AnalysedTask> tasksToSave){
+    private saveAnalysisData(List<AnalysedTask> tasksToSave) {
         List<String[]> content = []
         content += ["Repository", url] as String[]
         content += generateNumeralData()
@@ -53,29 +53,28 @@ class RelevantTaskExporter {
         CsvUtil.write(filename, content)
     }
 
-    private generateNumeralData(){
+    private generateNumeralData() {
         def tasksToSave = relevantTasks + emptyITestTasks
-        if(!tasksToSave || tasksToSave.empty) return []
+        if (!tasksToSave || tasksToSave.empty) return []
         double[] precisionValues = tasksToSave.collect { it.precision() }
         double[] recallValues = tasksToSave.collect { it.recall() }
         ExporterUtil.generateStatistics(precisionValues, recallValues)
     }
 
-    private initTasks(List<AnalysedTask> tasks){
-        if(!tasks || tasks.empty) {
+    private initTasks(List<AnalysedTask> tasks) {
+        if (!tasks || tasks.empty) {
             this.tasks = []
             url = ""
-        }
-        else {
-            this.tasks = tasks.findAll{ it.isValid() }
+        } else {
+            this.tasks = tasks.findAll { it.isValid() }
             url = tasks.first().doneTask.gitRepository.url
         }
         filterTasksByAcceptanceTests()
     }
 
-    private filterTasksByAcceptanceTests(){
-        relevantTasks = tasks.findAll{ it.itestFiles().size() > 0 }?.sort{ -it.itest.foundAcceptanceTests.size() }
-        emptyITestTasks = (tasks - relevantTasks)?.sort{ -it.itest.foundAcceptanceTests.size() }
+    private filterTasksByAcceptanceTests() {
+        relevantTasks = tasks.findAll { it.itestFiles().size() > 0 }?.sort { -it.itest.foundAcceptanceTests.size() }
+        emptyITestTasks = (tasks - relevantTasks)?.sort { -it.itest.foundAcceptanceTests.size() }
     }
 
 }

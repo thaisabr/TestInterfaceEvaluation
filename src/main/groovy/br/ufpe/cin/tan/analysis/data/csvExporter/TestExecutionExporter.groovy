@@ -9,15 +9,15 @@ class TestExecutionExporter {
     String testFile
     List<AnalysedTask> tasks
 
-    TestExecutionExporter(String testFile, List<AnalysedTask> tasks){
+    TestExecutionExporter(String testFile, List<AnalysedTask> tasks) {
         this.testFile = testFile
         this.tasks = tasks
     }
 
-    def save(){
+    def save() {
         List<String[]> content = []
 
-        if(!tasks || tasks.empty) return
+        if (!tasks || tasks.empty) return
 
         def url = tasks.first().doneTask.gitRepository.url
         content += ["Repository", url] as String[]
@@ -33,14 +33,14 @@ class TestExecutionExporter {
         CsvUtil.write(testFile, content)
     }
 
-    private static extractTests(task){
+    private static extractTests(task) {
         def scenarios = ""
         Set<AcceptanceTest> tests = task.itest.foundAcceptanceTests
-        tests.each{ test ->
+        tests.each { test ->
             def lines = test.scenarioDefinition*.location.line
             scenarios += test.gherkinFilePath + "(" + lines.join(",") + ")" + ";"
         }
-        if(scenarios.size()>1) scenarios = scenarios.substring(0, scenarios.size()-1)
+        if (scenarios.size() > 1) scenarios = scenarios.substring(0, scenarios.size() - 1)
         scenarios
     }
 

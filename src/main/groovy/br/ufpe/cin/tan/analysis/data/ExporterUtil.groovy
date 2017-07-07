@@ -8,10 +8,12 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 
 class ExporterUtil {
 
-    public static String[] SHORT_HEADER = ["TASK", "#DAYS", "#DEVS", "#COMMITS", "HASHES", "#GHERKIN_TESTS", "#ITest", "#IReal",
-                                    "ITest", "IReal", "PRECISION", "RECALL", "RAILS", "#visit_call", "lost_visit_call","#ITest_views",
-                                    "#view_analysis_code", "view_analysis_code", "methods_no_origin", "renamed_files",
-                                    "deleted_files", "noFound_views", "#noFound_views", "TIMESTAMP", "has_merge"]
+    public
+    static String[] SHORT_HEADER = ["TASK", "#DAYS", "#DEVS", "#COMMITS", "HASHES", "#GHERKIN_TESTS", "#ITest", "#IReal",
+                                    "ITest", "IReal", "PRECISION", "RECALL", "RAILS", "#visit_call", "lost_visit_call",
+                                    "#ITest_views", "#view_analysis_code", "view_analysis_code", "methods_no_origin",
+                                    "renamed_files", "deleted_files", "noFound_views", "#noFound_views", "TIMESTAMP",
+                                    "has_merge"]
 
     public static final int RECALL_INDEX_SHORT_HEADER = SHORT_HEADER.size() - 14
     public static final int PRECISION_INDEX_SHORT_HEADER = RECALL_INDEX_SHORT_HEADER - 1
@@ -22,9 +24,9 @@ class ExporterUtil {
     public static final int INITIAL_TEXT_SIZE_SHORT_HEADER = 8
     public static final int ITEST_VIEWS_SIZE_INDEX_SHORT_HEADER = 15
 
-    static generateStatistics(double[] precisionValues, double[] recallValues){
+    static generateStatistics(double[] precisionValues, double[] recallValues) {
         int zero = 0
-        if(!precisionValues || precisionValues.size()==zero || !recallValues || recallValues.size()==zero) return []
+        if (!precisionValues || precisionValues.size() == zero || !recallValues || recallValues.size() == zero) return []
         List<String[]> content = []
         def precisionStats = new DescriptiveStatistics(precisionValues)
         def recallStats = new DescriptiveStatistics(recallValues)
@@ -47,7 +49,7 @@ class ExporterUtil {
         result
     }
 
-    static String[] configureLine(String[] value){
+    static String[] configureLine(String[] value) {
         def originalItest = configureITask(value, ITEST_INDEX_SHORT_HEADER)
         def itest = findControllers(originalItest)
         def originalIReal = configureITask(value, IREAL_INDEX_SHORT_HEADER)
@@ -66,16 +68,16 @@ class ExporterUtil {
         line
     }
 
-    private static Set<String> findControllers(Set<String> set){
+    private static Set<String> findControllers(Set<String> set) {
         set.findAll { Util.isControllerFile(it) }
     }
 
-    private static Set configureITask(String[] value, int index){
-        def originalItest = value[index].replaceAll(RegexUtil.FILE_SEPARATOR_REGEX,"/")
-                .substring(1,value[index].size()-1)
+    private static Set configureITask(String[] value, int index) {
+        def originalItest = value[index].replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "/")
+                .substring(1, value[index].size() - 1)
                 .split(",")
                 .flatten()
-                .collect{ it.trim() } as Set
+                .collect { it.trim() } as Set
         originalItest
     }
 }

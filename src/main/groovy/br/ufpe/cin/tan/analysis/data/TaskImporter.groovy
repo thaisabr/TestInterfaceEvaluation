@@ -22,15 +22,21 @@ class TaskImporter {
     List<String[]> importedTasks
     List<String[]> ptImportedTasks
     List<String[]> bigTasks
-    List<String[]> notPtImportedTasks //tasks extracted from the input CSV file that do not have production and test code
-    List<DoneTask> falsePtTasks //tasks that have production and test code, but not gherkin scenarios
-    List<DoneTask> candidateTasks //tasks extracted from the input CSV file that changed production code and gherkin scenarios
 
-    TaskImporter(File file){
+    //tasks extracted from the input CSV file that do not have production and test code
+    List<String[]> notPtImportedTasks
+
+    //tasks that have production and test code, but not gherkin scenarios
+    List<DoneTask> falsePtTasks
+
+    //tasks extracted from the input CSV file that changed production code and gherkin scenarios
+    List<DoneTask> candidateTasks
+
+    TaskImporter(File file) {
         this.file = file
         importTasksFromCsv()
         updateTasks()
-        if(importedTasks.size()>0) url = importedTasks.first()[URL_INDEX]
+        if (importedTasks.size() > 0) url = importedTasks.first()[URL_INDEX]
         else url = ""
         log.info "All tasks imported from '${file.path}': ${importedTasks.size()}"
         log.info "Big tasks (more than ${MAX_TASK_SIZE} commits): ${bigTasks.size()}"
@@ -38,28 +44,28 @@ class TaskImporter {
         log.info "Relevant imported tasks: ${ptImportedTasks.size()}"
     }
 
-    def extractPtTasks(){
+    def extractPtTasks() {
         extractTasks(ptImportedTasks)
     }
 
-    def extractPtTasks(int begin, int end){
+    def extractPtTasks(int begin, int end) {
         List<String[]> entries = ptImportedTasks.subList(begin, end)
         extractTasks(entries)
     }
 
-    private extractTasks(List<String[]> entries){
+    private extractTasks(List<String[]> entries) {
         falsePtTasks = []
         List<DoneTask> doneTasks = []
         try {
             entries.each { entry ->
                 def hashes = entry[HASHES_INDEX].tokenize(',[]')*.trim()
                 def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX], hashes, entry[LAST_COMMIT])
-                if(task.hasTest()) doneTasks += task
+                if (task.hasTest()) doneTasks += task
                 else falsePtTasks += task
             }
         } catch (Exception ex) {
             log.error "Error while extracting tasks from CSV file.\nError message: ${ex.message}"
-            ex.stackTrace.each{ log.error it.toString() }
+            ex.stackTrace.each { log.error it.toString() }
             doneTasks = []
         }
         candidateTasks = doneTasks.sort { it.id }
@@ -71,7 +77,7 @@ class TaskImporter {
         importedTasks = entries
     }
 
-    private updateTasks(){
+    private updateTasks() {
         falsePtTasks = []
         candidateTasks = []
         bigTasks = importedTasks.findAll { (it[COMMITS_INDEX] as int) > MAX_TASK_SIZE }

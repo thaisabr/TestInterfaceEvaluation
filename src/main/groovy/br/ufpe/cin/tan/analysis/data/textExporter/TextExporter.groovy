@@ -8,21 +8,21 @@ abstract class TextExporter {
     List<AnalysedTask> tasks
     String filePrefix
 
-    TextExporter(String folderName, List<AnalysedTask> tasks){
+    TextExporter(String folderName, List<AnalysedTask> tasks) {
         this.folderName = folderName
         this.tasks = tasks
         configureFilePrefix()
     }
 
-    def save(){
-        tasks?.each{ writeFile(it) }
+    def save() {
+        tasks?.each { writeFile(it) }
     }
 
     abstract void writeFile(AnalysedTask task)
 
-    private configureFilePrefix(){
-        def folder = new File(folderName + File.separator+ ConstantData.DEFAULT_TEXT_FOLDER)
-        if(!folder.exists()) folder.mkdir()
+    private configureFilePrefix() {
+        def folder = new File(folderName + File.separator + ConstantData.DEFAULT_TEXT_FOLDER)
+        if (!folder.exists()) folder.mkdir()
         filePrefix = "${folder}${File.separator}"
     }
 

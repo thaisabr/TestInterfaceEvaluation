@@ -11,7 +11,7 @@ class ControllerFilterExporter {
     String controllerOrgFile
     List<String[]> entries
 
-    ControllerFilterExporter(String file){
+    ControllerFilterExporter(String file) {
         this.file = file
         this.controllerFile = file - ConstantData.CSV_FILE_EXTENSION + ConstantData.CONTROLLER_FILE_SUFIX
         this.controllerOrgFile = controllerFile - ConstantData.CONTROLLER_FILE_SUFIX + ConstantData.CONTROLLER_ORGANIZED_FILE_SUFIX
@@ -24,11 +24,11 @@ class ControllerFilterExporter {
         double[] recallValues = values.collect { it[ExporterUtil.RECALL_INDEX_SHORT_HEADER] as double }
         List<String[]> content = []
         content += ExporterUtil.generateStatistics(precisionValues, recallValues)
-        content += entries.get(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER-1)
+        content += entries.get(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER - 1)
         content
     }
 
-    private extractData(){
+    private extractData() {
         entries.subList(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER, entries.size())
     }
 

@@ -61,7 +61,7 @@ class GherkinManager {
         result
     }
 
-    static extractCommonText(locations, Feature feature, lines) {
+    static extractCommonText(List locations, Feature feature, List lines) {
         def text = ""
         if (!feature) return text
         def featureLocation = feature.location.line
@@ -79,6 +79,22 @@ class GherkinManager {
 
         } else {
             for (int i = featureLocation - 1; i < lines.size(); i++) {
+                text += lines.get(i).trim() + "\n"
+            }
+        }
+
+        text += extractBackgroundText(feature, lines)
+        text
+    }
+
+    private static extractBackgroundText(Feature feature, List lines) {
+        def text = ""
+        if (!feature) return text
+        Background background = (Background) feature?.children?.find { it instanceof Background }
+        if (background) {
+            def init = background.location.line
+            def endLine = background.steps?.last()?.location?.line
+            for (int i = init - 1; i < endLine; i++) {
                 text += lines.get(i).trim() + "\n"
             }
         }

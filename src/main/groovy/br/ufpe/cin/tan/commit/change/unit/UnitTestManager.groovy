@@ -1,7 +1,7 @@
 package br.ufpe.cin.tan.commit.change.unit
 
-import groovy.util.logging.Slf4j
 import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
+import groovy.util.logging.Slf4j
 
 @Slf4j
 class UnitTestManager {

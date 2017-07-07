@@ -45,7 +45,7 @@ class ChangedGherkinFile implements CodeChange {
     @Override
     String toString() {
         def text = "Gherkin file: ${path}\nFeature: ${feature.name}\n"
-        Background background = feature?.children?.find{ it instanceof Background }
+        Background background = (Background) feature?.children?.find { it instanceof Background }
         if (background) {
             text += "Background (line ${background.location.line}):${background.name}\n"
             background.steps.each {

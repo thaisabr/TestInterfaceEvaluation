@@ -15,7 +15,7 @@ class GherkinManager {
 
     Set compilationErrors
 
-    GherkinManager(){
+    GherkinManager() {
         compilationErrors = [] as Set
     }
 
@@ -111,7 +111,7 @@ class GherkinManager {
         definitions.each { change ->
             def text = ""
             def initialLine = change.location.line
-            if( !(change instanceof Background) && !change.tags.empty ) {
+            if (!(change instanceof Background) && !change.tags.empty) {
                 text += change.tags*.name.flatten().join(" ") + "\n"
             }
             def index = locations.indexOf(initialLine)
@@ -143,8 +143,8 @@ class GherkinManager {
         ChangedGherkinFile changedGherkinFile = null
         def newFeature = parseGherkinFile(content, path, commit.name)
         def scenarios = []
-        if(newFeature && newFeature.children) scenarios = newFeature.children.findAll{ !(it instanceof Background) }
-        if(!scenarios.empty){
+        if (newFeature && newFeature.children) scenarios = newFeature.children.findAll { !(it instanceof Background) }
+        if (!scenarios.empty) {
             changedGherkinFile = new ChangedGherkinFile(path: path, feature: newFeature, changedScenarioDefinitions: scenarios)
         }
         changedGherkinFile

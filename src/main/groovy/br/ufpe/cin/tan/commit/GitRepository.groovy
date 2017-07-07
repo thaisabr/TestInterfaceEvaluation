@@ -1,11 +1,20 @@
 package br.ufpe.cin.tan.commit
 
+import br.ufpe.cin.tan.commit.change.ChangedProdFile
 import br.ufpe.cin.tan.commit.change.CodeChange
 import br.ufpe.cin.tan.commit.change.RenamingChange
-import br.ufpe.cin.tan.commit.change.ChangedProdFile
+import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
 import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
+import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
+import br.ufpe.cin.tan.commit.change.stepdef.ChangedStepdefFile
 import br.ufpe.cin.tan.commit.change.stepdef.StepdefManager
+import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
 import br.ufpe.cin.tan.commit.change.unit.UnitTestManager
+import br.ufpe.cin.tan.exception.CloningRepositoryException
+import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
+import br.ufpe.cin.tan.util.ConstantData
+import br.ufpe.cin.tan.util.RegexUtil
+import br.ufpe.cin.tan.util.Util
 import gherkin.ast.Background
 import gherkin.ast.ScenarioDefinition
 import groovy.util.logging.Slf4j
@@ -23,15 +32,6 @@ import org.eclipse.jgit.treewalk.AbstractTreeIterator
 import org.eclipse.jgit.treewalk.CanonicalTreeParser
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.PathFilter
-import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
-import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
-import br.ufpe.cin.tan.commit.change.stepdef.ChangedStepdefFile
-import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
-import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
-import br.ufpe.cin.tan.util.ConstantData
-import br.ufpe.cin.tan.util.RegexUtil
-import br.ufpe.cin.tan.util.Util
-import br.ufpe.cin.tan.exception.CloningRepositoryException
 
 import java.util.regex.Matcher
 
@@ -64,12 +64,13 @@ class GitRepository {
     }
 
     /* Commits are sorted by the sequence they are search. For security reason, entry hashes considering the*/
+
     Iterable<RevCommit> searchAllRevCommitsBySha(String... hash) {
         def commits = searchAllRevCommits()
         def logs = []
-        hash.each{ h ->
-            def c = commits?.find{ it.name == h }
-            if(c) logs += c
+        hash.each { h ->
+            def c = commits?.find { it.name == h }
+            if (c) logs += c
         }
         logs
     }
@@ -104,16 +105,16 @@ class GitRepository {
         git.close()
     }
 
-    def parseGherkinFile(String filename, String sha){
+    def parseGherkinFile(String filename, String sha) {
         RevCommit revCommit = searchAllRevCommitsBySha(sha)?.first()
         def content = extractFileContent(revCommit, filename)
         def feature = gherkinManager.parseGherkinFile(content, filename, revCommit.name)
-        [feature:feature, content:content]
+        [feature: feature, content: content]
     }
 
     static GitRepository getRepository(String url) throws CloningRepositoryException {
         def repository = repositories.find { ((it.url - ConstantData.GIT_EXTENSION) == url) }
-        if(repository) repository.gherkinManager = new GherkinManager()
+        if (repository) repository.gherkinManager = new GherkinManager()
         else {
             repository = new GitRepository(url)
             repositories += repository
@@ -125,7 +126,7 @@ class GitRepository {
         this.gherkinManager = new GherkinManager()
         this.removedSteps = [] as Set
         if (path.startsWith("http")) {
-            if(path.endsWith(ConstantData.GIT_EXTENSION)) this.url = path
+            if (path.endsWith(ConstantData.GIT_EXTENSION)) this.url = path
             else this.url = path + ConstantData.GIT_EXTENSION
             this.name = Util.configureGitRepositoryName(url)
             this.localPath = Util.REPOSITORY_FOLDER_PATH + name
@@ -306,12 +307,12 @@ class GitRepository {
 
         if (!newFeature || !oldFeature) return changedGherkinFile
 
-        def newScenarioDefinitions = newFeature?.children?.findAll{ !(it instanceof Background) }
-        def oldScenarioDefinitions = oldFeature?.children?.findAll{ !(it instanceof Background) }
+        def newScenarioDefinitions = newFeature?.children?.findAll { !(it instanceof Background) }
+        def oldScenarioDefinitions = oldFeature?.children?.findAll { !(it instanceof Background) }
 
         //searches for changed or removed scenario definitions
         List<ScenarioDefinition> changedScenarioDefinitions = []
-        if(!Util.RESTRICT_GHERKIN_CHANGES) {
+        if (!Util.RESTRICT_GHERKIN_CHANGES) {
             oldScenarioDefinitions?.each { definition ->
                 def foundDefinition = newScenarioDefinitions?.find { it.name == definition.name }
                 if (foundDefinition) {
@@ -367,7 +368,7 @@ class GitRepository {
             def lines = 0..<result.readLines().size()
             if (Util.isUnitTestFile(entry.newPath)) {
                 //change = extractUnitChanges(commit, entry.newPath, lines, parser)
-            } else if(Util.isProductionFile(entry.newPath)){
+            } else if (Util.isProductionFile(entry.newPath)) {
                 change = new ChangedProdFile(path: entry.newPath, type: entry.changeType, lines: lines)
             }
         }
@@ -384,7 +385,7 @@ class GitRepository {
             def lines = computeChanges(commit, entry.newPath)
             if (Util.isUnitTestFile(entry.newPath)) {
                 //change = extractUnitChanges(commit, entry.newPath, lines, parser)
-            } else if(Util.isProductionFile(entry.newPath)){
+            } else if (Util.isProductionFile(entry.newPath)) {
                 change = new ChangedProdFile(path: entry.newPath, type: entry.changeType, lines: lines)
             }
         }
@@ -434,7 +435,7 @@ class GitRepository {
         treeWalk.addTree(tree)
         treeWalk.setRecursive(true)
         if (filename) treeWalk.setFilter(PathFilter.create(filename))
-        if(!treeWalk.next()){
+        if (!treeWalk.next()) {
             log.warn "Did not find expected file '${filename}'. It does not exist anymore!"
             treeWalk = null
         }
@@ -444,12 +445,12 @@ class GitRepository {
 
     String extractFileContent(RevCommit commit, String filename) {
         def result = ""
-        if(!filename || filename.empty) return result
+        if (!filename || filename.empty) return result
         def searchedFile = filename.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement("/"))
 
         def git = Git.open(new File(localPath))
         TreeWalk treeWalk = generateTreeWalk(commit?.tree, searchedFile)
-        if(treeWalk){
+        if (treeWalk) {
             ObjectId objectId = treeWalk.getObjectId(0)
             if (objectId == ObjectId.zeroId()) return result
             try {
@@ -461,7 +462,7 @@ class GitRepository {
             }
             catch (Exception ex) {
                 log.error "Error while trying to retrieve content of file '${searchedFile}' for commit '${commit.name}'"
-                ex.stackTrace.each{ log.error it.toString() }
+                ex.stackTrace.each { log.error it.toString() }
             }
         }
 
@@ -486,7 +487,7 @@ class GitRepository {
             oldTreeParser.reset(oldReader, tree.getId())
         } catch (Exception ex) {
             log.error ex.message
-            ex.stackTrace.each{ log.error it.toString() }
+            ex.stackTrace.each { log.error it.toString() }
         }
         finally {
             walk?.dispose()
@@ -518,10 +519,14 @@ class GitRepository {
         def commits = []
         logs?.each { c ->
             List<CodeChange> codeChanges = extractAllCodeChangesFromCommit(c, parser)
-            List<ChangedProdFile> prodFiles = codeChanges.findAll { it instanceof ChangedProdFile } as List<ChangedProdFile>
+            List<ChangedProdFile> prodFiles = codeChanges.findAll {
+                it instanceof ChangedProdFile
+            } as List<ChangedProdFile>
 
             // identifies changed gherkin files and scenario definitions
-            List<ChangedGherkinFile> gherkinChanges = codeChanges?.findAll { it instanceof ChangedGherkinFile } as List<ChangedGherkinFile>
+            List<ChangedGherkinFile> gherkinChanges = codeChanges?.findAll {
+                it instanceof ChangedGherkinFile
+            } as List<ChangedGherkinFile>
 
             //identifies changed step files
             List<ChangedStepdefFile> stepChanges = codeChanges?.findAll {
@@ -538,12 +543,13 @@ class GitRepository {
 
             commits += new Commit(hash: c.name, message: c.fullMessage.replaceAll(RegexUtil.NEW_LINE_REGEX, " "),
                     author: c.authorIdent.name, date: c.commitTime, coreChanges: prodFiles, gherkinChanges: gherkinChanges,
-                    unitChanges: unitChanges, stepChanges: stepChanges, renameChanges: renameChanges, merge:c.parentCount>1)
+                    unitChanges: unitChanges, stepChanges: stepChanges, renameChanges: renameChanges, merge: c.parentCount > 1)
         }
         commits
     }
 
     /* PROBLEM: Deal with removed lines. */
+
     private List<Integer> computeChanges(RevCommit commit, String filename) {
         def changedLines = []
         def git = Git.open(new File(localPath))
@@ -553,7 +559,7 @@ class GitRepository {
         BlameResult blameResult = blamer.call()
 
         String text = extractFileContent(commit, filename)
-        if(!text && text.empty) {
+        if (!text && text.empty) {
             git.close()
             return changedLines
         }
@@ -561,13 +567,13 @@ class GitRepository {
         List<String> fileContent = []
         try {
             fileContent = text.readLines()
-            for(int i=0; i<fileContent.size(); i++){
+            for (int i = 0; i < fileContent.size(); i++) {
                 RevCommit c = blameResult?.getSourceCommit(i)
                 if (c?.name == commit.name) changedLines += i
             }
-        } catch (Exception ignored){
+        } catch (Exception ignored) {
             log.error "Error: git blame '${filename}' (size ${fileContent.size()}) (commit ${commit.name})"
-            fileContent.each{ log.error it.toString() }
+            fileContent.each { log.error it.toString() }
             log.error "Exception: ${ignored.class}; '${ignored.message}'"
         }
 

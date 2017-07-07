@@ -1,10 +1,10 @@
 package br.ufpe.cin.tan.commit
 
-import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
 import br.ufpe.cin.tan.commit.change.ChangedProdFile
+import br.ufpe.cin.tan.commit.change.RenamingChange
+import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
 import br.ufpe.cin.tan.commit.change.stepdef.ChangedStepdefFile
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
-import br.ufpe.cin.tan.commit.change.RenamingChange
 
 /***
  * Represents a git commit.

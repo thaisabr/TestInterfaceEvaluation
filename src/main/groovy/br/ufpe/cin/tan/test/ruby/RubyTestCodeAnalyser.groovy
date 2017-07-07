@@ -1,14 +1,8 @@
 package br.ufpe.cin.tan.test.ruby
 
-import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
-import groovy.util.logging.Slf4j
-import org.jrubyparser.CompatVersion
-import org.jrubyparser.Parser
-import org.jrubyparser.ast.Node
-import org.jrubyparser.lexer.SyntaxException
-import org.jrubyparser.parser.ParserConfiguration
-import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
 import br.ufpe.cin.tan.analysis.itask.ITest
+import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
+import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
 import br.ufpe.cin.tan.test.FileToAnalyse
 import br.ufpe.cin.tan.test.StepRegex
@@ -25,6 +19,12 @@ import br.ufpe.cin.tan.util.RegexUtil
 import br.ufpe.cin.tan.util.Util
 import br.ufpe.cin.tan.util.ruby.RubyConstantData
 import br.ufpe.cin.tan.util.ruby.RubyUtil
+import groovy.util.logging.Slf4j
+import org.jrubyparser.CompatVersion
+import org.jrubyparser.Parser
+import org.jrubyparser.ast.Node
+import org.jrubyparser.lexer.SyntaxException
+import org.jrubyparser.parser.ParserConfiguration
 
 import java.util.regex.Matcher
 
@@ -73,6 +73,11 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
             reader?.close()
         }
         result
+    }
+
+    static List<String> recoverFileContent(String path) {
+        FileReader reader = new FileReader(path)
+        reader?.readLines()
     }
 
     Node generateAst(String path) {
@@ -262,8 +267,8 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
             def className = RubyUtil.underscoreToCamelCase(data.controller + "_controller")
             def filePaths = RubyUtil.getClassPathForRubyClass(className, this.projectFiles)
             filePaths.each{ filePath ->
-                visitor?.taskInterface?.methods += [name: data.action, type: className, file: filePath]
-                interfaceFromViews.methods += [name: data.action, type: className, file: filePath]
+                visitor?.taskInterface?.methods += [name: data.action, type: className, file: filePath, step: visitor.step]
+                interfaceFromViews.methods += [name: data.action, type: className, file: filePath, step: visitor.step]
             }
             controller = data.controller
             action = data.action
@@ -397,7 +402,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
                 def methodName2 = method + RubyConstantData.ROUTE_URL_SUFIX
                 def matches = methods.findAll{ it.name == methodName1 || it.name == methodName2 }
                 matches?.each { m ->
-                    def newMethod = [name:m.name, type: RubyUtil.getClassName(m.path), file: m.path]
+                    def newMethod = [name: m.name, type: RubyUtil.getClassName(m.path), file: m.path, step: visitor.step]
                     visitor?.taskInterface?.methods += newMethod
                     interfaceFromViews.methods += newMethod
                     log.info "False rails path method: ${newMethod.name} (${newMethod.file})"
@@ -495,17 +500,19 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         def methodsUnknownReceiver = calls?.findAll{ it.receiver.empty && !it.name.empty }
         def notFoundMethods = []
         methodsUnknownReceiver.each{ method ->
+            log.info "method with unknown receiver: ${method}"
             def matches = methods.findAll{
                 def counter = method.arguments as int
                 it.name == method.name && counter <= it.args && counter >= it.args - it.optionalArgs
             }
             matches?.each { m ->
-                def newMethod = [name:m.name, type: RubyUtil.getClassName(m.path), file: m.path]
+                def newMethod = [name: m.name, type: RubyUtil.getClassName(m.path), file: m.path, step: visitor.step]
                 visitor?.taskInterface?.methods += newMethod
                 interfaceFromViews.methods += newMethod
             }
             if(matches.empty){
-                def newMethod = [name: method, type: "Object", file: null]
+                log.info "method with unknown receiver: '${method}' has no match"
+                def newMethod = [name: method.name, type: "Object", file: null, step: visitor.step]
                 visitor?.taskInterface?.methods += newMethod
                 interfaceFromViews.methods += newMethod
                 notFoundMethods += method
@@ -658,8 +665,10 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     TestCodeVisitorInterface parseStepBody(FileToAnalyse file) {
         def node = this.generateAst(file.path)
         def visitor = new RubyTestCodeVisitor(projectFiles, file.path, methods)
-        def testCodeVisitor = new RubyStepsFileVisitor(file.methods, visitor)
+        def fileContent = recoverFileContent(file.path)
+        def testCodeVisitor = new RubyStepsFileVisitor(file.methods, visitor, fileContent)
         node?.accept(testCodeVisitor)
+        visitor.methodBodies += testCodeVisitor.body
         visitor
     }
 
@@ -667,15 +676,17 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
      * Visits selected method bodies from a source code file searching for other method calls. The result is stored as a
      * field of the input visitor.
      *
-     * @param file a map object that identifies a file by 'path' and 'methods'. A method is identified by its name.
+     * @param file a map object that identifies a file by 'path' and 'methods'. A method is identified by its name and step.
      * @param visitor visitor to visit method bodies
      */
     @Override
-    visitFile(file, TestCodeVisitorInterface visitor) {
+    visitFile(file, TestCodeVisitorInterface visitor) { //[path:, methods: [name:, step:]]
         def node = this.generateAst(file.path)
         visitor.lastVisitedFile = file.path
-        def auxVisitor = new RubyMethodVisitor(file.methods, (RubyTestCodeVisitor) visitor)
+        def fileContent = recoverFileContent(file.path)
+        def auxVisitor = new RubyMethodVisitor(file.methods, (RubyTestCodeVisitor) visitor, fileContent)
         node?.accept(auxVisitor)
+        visitor.methodBodies += auxVisitor.body
     }
 
     @Override

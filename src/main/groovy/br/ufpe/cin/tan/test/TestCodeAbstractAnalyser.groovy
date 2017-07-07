@@ -1,18 +1,18 @@
 package br.ufpe.cin.tan.test
 
-import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
+import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
+import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
+import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
 import br.ufpe.cin.tan.commit.change.stepdef.ChangedStepdefFile
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
-import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
-import br.ufpe.cin.tan.analysis.itask.ITest
+import br.ufpe.cin.tan.util.ConstantData
+import br.ufpe.cin.tan.util.Util
 import gherkin.ast.Background
 import gherkin.ast.Scenario
 import gherkin.ast.ScenarioOutline
 import gherkin.ast.Step
 import groovy.util.logging.Slf4j
-import br.ufpe.cin.tan.util.ConstantData
-import br.ufpe.cin.tan.util.Util
 
 /***
  * Provides the common logic for test code parsers and the base method to compute task interfaces by
@@ -29,17 +29,11 @@ abstract class TestCodeAbstractAnalyser {
     List<String> projectFiles
     List<String> viewFiles
 
+    AnalysisData analysisData
     protected Set notFoundViews
     protected Set compilationErrors
-    Set matchStepErrors
-    Set<AcceptanceTest> foundAcceptanceTests
-    Set codeFromViewAnalysis
-    int visitCallCounter
-    Set lostVisitCall //keys: path, line
-
     GherkinManager gherkinManager
-
-    Set trace //keys: path, lines
+    Set codeFromViewAnalysis
 
     /***
      * Initializes fields used to link step declaration and code.
@@ -56,11 +50,8 @@ abstract class TestCodeAbstractAnalyser {
         viewFiles = []
         notFoundViews = [] as Set
         compilationErrors = [] as Set
-        matchStepErrors = [] as Set
-        foundAcceptanceTests = []
         codeFromViewAnalysis = [] as Set
-        lostVisitCall = [] as Set
-        trace = [] as Set
+        analysisData = new AnalysisData()
     }
 
     /***
@@ -119,7 +110,7 @@ abstract class TestCodeAbstractAnalyser {
     abstract boolean hasCompilationError(String path)
 
     def configureProperties() {
-        trace = []
+        analysisData.trace = []
         projectFiles = Util.findFilesFromDirectoryByLanguage(repositoryPath)
         configureRegexList() // Updates regex list used to match step definition and step code
         configureMethodsList()
@@ -161,30 +152,25 @@ abstract class TestCodeAbstractAnalyser {
     }
 
     List<FileToAnalyse> findCodeForStepOrganizedByFile(StepCall call, boolean extractArgs) {
-        def calledSteps = []  //path, line, args
+        //new StepCall(text: step, path: lastVisitedFile, line: iVisited.position.startLine, parentType: configureStep())
+        def calledSteps = []  //path, line, args, parentType
         List<FileToAnalyse> result = []
 
         /* find step declaration */
         def stepCodeMatch = regexList?.findAll { call.text ==~ it.value }
-        if (stepCodeMatch && stepCodeMatch.size() > 0) { //step code was found
+        def match = null
+        if (!stepCodeMatch.empty) match = stepCodeMatch.first() //we consider only the first match
+        if (stepCodeMatch.size() > 1) {
+            log.warn "There are many implementations for step code: ${call.text}; ${call.path} (${call.line})"
+        }
+        if (match) { //step code was found
             def args = []
-            if (extractArgs) args = extractArgsFromStepText(call.text, stepCodeMatch.get(0).value)
-
-            if (stepCodeMatch.size() == 1) {
-                stepCodeMatch = stepCodeMatch.get(0)
-                calledSteps += [path: stepCodeMatch.path, line: stepCodeMatch.line, args: args]
-            } else {
-                log.warn "There are many implementations for step code (findStepCode(stepText,path,line)): ${call.text}; " +
-                        "${call.path} (${call.line})"
-                stepCodeMatch?.each {
-                    log.warn it.toString()
-                    calledSteps += [path: it.path, line: it.line, args: args]
-                }
-            }
+            if (extractArgs) args = extractArgsFromStepText(call.text, match.value)
+            calledSteps += [path: match.path, line: match.line, args: args, parentType: call.parentType]
         } else {
             log.warn "Step code was not found: ${call.text}; ${call.path} (${call.line})"
             def text = call.text.replaceAll(/".+"/,"\"\"").replaceAll(/'.+'/,"\'\'")
-            matchStepErrors += [path: call.path, text: text]
+            analysisData.matchStepErrors += [path: call.path, text: text]
         }
 
         /* organizes step declarations in files */
@@ -194,7 +180,7 @@ abstract class TestCodeAbstractAnalyser {
             if (codes) {
                 def methodsToAnalyse = []
                 codes.each { code ->
-                    methodsToAnalyse += new MethodToAnalyse(line: code.line, args: code.args)
+                    methodsToAnalyse += new MethodToAnalyse(line: code.line, args: code.args, type: code.parentType)
                 }
                 result += new FileToAnalyse(path: file, methods: methodsToAnalyse.unique())
             }
@@ -202,35 +188,40 @@ abstract class TestCodeAbstractAnalyser {
         result
     }
 
-    List<StepCode> findCodeForStep(step, String path, boolean extractArgs) {
+    List<StepCode> findCodeForStep(step, String path, boolean extractArgs, StepCode last) {
         List<StepCode> code = []
         def stepCodeMatch = regexList?.findAll { step.text ==~ it.value }
-        if (stepCodeMatch && stepCodeMatch.size() > 0) { //step code was found
+        def match = null
+        if (!stepCodeMatch.empty) match = stepCodeMatch.first() //we consider only the first match
+        if (stepCodeMatch.size() > 1) {
+            log.warn "There are many implementations for step code: ${step.text}; $path (${step.location.line})"
+        }
+        if (match) { //step code was found
             def args = []
-            if (extractArgs) args = extractArgsFromStepText(step.text, stepCodeMatch.get(0).value)
-            if (stepCodeMatch.size() == 1 as int) {
-                stepCodeMatch = stepCodeMatch.get(0)
-                code += new StepCode(step: step, codePath: stepCodeMatch.path, line: stepCodeMatch.line, args: args)
-            } else {
-                log.warn "There are many implementations for step code: ${step.text}; $path (${step.location.line})"
-                stepCodeMatch?.each {
-                    log.warn it.toString()
-                    code += new StepCode(step: step, codePath: it.path, line: it.line, args: args)
-                }
-            }
+            if (extractArgs) args = extractArgsFromStepText(step.text, match.value)
+            def keyword = step.keyword
+            if (keyword == ConstantData.GENERIC_STEP) keyword = ConstantData.WHEN_STEP_EN
+            if (last && (keyword in [ConstantData.AND_STEP_EN, ConstantData.BUT_STEP_EN])) keyword = last.type
+            code += new StepCode(step: step, codePath: match.path, line: match.line, args: args, type: keyword)
         } else {
             log.warn "Step code was not found: ${step.text}; $path (${step.location.line})"
             def text = step.text.replaceAll(/".+"/,"\"\"").replaceAll(/'.+'/,"\'\'")
-            matchStepErrors += [path: path, text: text]
+            analysisData.matchStepErrors += [path: path, text: text]
         }
         code
     }
 
     List<StepCode> findCodeForSteps(List steps, String path) {
         List<StepCode> codes = []
-        steps?.each { step ->
-            def code = findCodeForStep(step, path, true)
+        for (int i = 0; i < steps.size(); i++) {
+            def previousStep = null
+            if (i > 0) previousStep = codes.last()
+            def code = findCodeForStep(steps.get(i), path, true, previousStep)
             if (code && !code.empty) codes += code
+            else {
+                codes = []
+                break
+            }
         }
         codes
     }
@@ -238,21 +229,17 @@ abstract class TestCodeAbstractAnalyser {
     List findCodeForStepIndependentFromAcceptanceTest(StepDefinition step) {
         def result = []
         def stepCodeMatch = regexList?.findAll { step.regex == it.value }
-        if (stepCodeMatch && stepCodeMatch.size() > 0) { //step code was found
-            if (stepCodeMatch.size() == 1 as int) {
-                stepCodeMatch = stepCodeMatch.get(0)
-                result += [path: stepCodeMatch.path, line: stepCodeMatch.line]
-            } else {
-                log.warn "There are many implementations for step code: ${step.value}; ${step.path} (${step.line})"
-                stepCodeMatch?.each {
-                    log.warn it.toString()
-                    result += [path: it.path, line: it.line]
-                }
-            }
+        def match = null
+        if (!stepCodeMatch.empty) match = stepCodeMatch.first() //we consider only the first match
+        if (stepCodeMatch.size() > 1) {
+            log.warn "There are many implementations for step code: ${step.value}; ${step.path} (${step.line})"
+        }
+        if (match) { //step code was found
+            result += [path: match.path, line: match.line]
         } else {
             log.warn "Step code was not found: ${step.value}; ${step.path} (${step.line})"
             def text = step.value.replaceAll(/".+"/,"\"\"").replaceAll(/'.+'/,"\'\'")
-            matchStepErrors += [path: step.path, text: text]
+            analysisData.matchStepErrors += [path: step.path, text: text]
         }
         result
     }
@@ -268,7 +255,10 @@ abstract class TestCodeAbstractAnalyser {
             if (!partialResult.empty) {
                 def resumedResult = [path: partialResult?.first()?.path, lines: partialResult*.line?.unique()?.sort()]
                 def methodsToAnalyse = []
-                resumedResult.lines.each { methodsToAnalyse += new MethodToAnalyse(line: it, args: []) }
+                //we consider when as default because we always analyse it
+                resumedResult.lines.each {
+                    methodsToAnalyse += new MethodToAnalyse(line: it, args: [], type: ConstantData.WHEN_STEP_EN)
+                }
                 result += new FileToAnalyse(path: resumedResult.path, methods: methodsToAnalyse)
             }
         }
@@ -325,12 +315,12 @@ abstract class TestCodeAbstractAnalyser {
      * Identifies methods to visit from a list of method calls, considering the visit history.
      * The methods of interest are defined by test code.
      *
-     * @param lastCalledMethods list of map objects identifying called methods by 'name', 'type' and 'file'.
+     * @param lastCalledMethods list of map objects identifying called methods by 'name', 'type', 'file' and 'step'.
      * @param allVisitedFiles A collection all visited files identified by 'path' and visited 'methods'.
      * @return a list of methods grouped by path.
      */
-    def listFilesToVisit(lastCalledMethods, allVisitedFiles) {
-        def validCalledMethods = lastCalledMethods.findAll { it.file!=null && it.type!="StepCall"}
+    def listFilesToParse(lastCalledMethods, allVisitedFiles) {
+        def validCalledMethods = lastCalledMethods.findAll { it.file != null && it.type != "StepCall" }
         def methods = groupMethodsToVisitByFile(validCalledMethods)
         def filesToVisit = []
         methods.each { file ->
@@ -355,7 +345,8 @@ abstract class TestCodeAbstractAnalyser {
         def testFiles = []
         def calledTestMethods = methodsList?.findAll { it.file != null && Util.isTestFile(it.file) }?.unique()
         calledTestMethods*.file.unique().each { path ->
-            def methods = calledTestMethods.findAll { it.file == path }*.name
+            def methodsInPath = calledTestMethods.findAll { it.file == path }
+            def methods = methodsInPath.collect { [name: it.name, step: it.step] }
             testFiles += [path: path, methods: methods]
         }
         return testFiles
@@ -373,7 +364,7 @@ abstract class TestCodeAbstractAnalyser {
     }
 
     def updateTrace(FileToAnalyse file){
-        trace += [path: file.path, methods: file.methods*.line]
+        analysisData.trace += [path: file.path, methods: file.methods*.line]
     }
 
     def updateTrace(List<FileToAnalyse> files){
@@ -381,25 +372,25 @@ abstract class TestCodeAbstractAnalyser {
     }
 
     private updateTraceMethod(List files){
-        files.each{ file -> trace += [path: file.path, methods: file.methods] }
+        files.each { file -> analysisData.trace += [path: file.path, methods: file.methods] }
     }
 
     private consolidateTrace(){
         def aux = []
-        def files = trace*.path
-        def groupsByFile = trace.groupBy({ t -> t.path})
+        def files = analysisData.trace*.path
+        def groupsByFile = analysisData.trace.groupBy({ t -> t.path })
         files.each{ file ->
             def methods = groupsByFile[file].collect{ it.methods }.flatten().unique()
             def path = file-repositoryPath
             def index = path.indexOf(File.separator+File.separator)+1
             aux += [path: path.substring(index), methods:methods]
         }
-        trace = aux.sort{ it.path }
+        analysisData.trace = aux.sort { it.path }
     }
 
     private ITest computeInterface(List<FileToAnalyse> filesToAnalyse, Set removedSteps) {
         def interfaces = []
-        List<StepCall> calledSteps = [] //keys:text, path, line
+        List<StepCall> calledSteps = []
 
         updateTrace(filesToAnalyse)
         filesToAnalyse?.eachWithIndex { stepDefFile, index ->
@@ -410,7 +401,16 @@ abstract class TestCodeAbstractAnalyser {
 
             /* second level: To visit methods until there is no more method calls of methods defined in test code. */
             def visitedFiles = []
-            def filesToParse = listFilesToVisit(testCodeVisitor.taskInterface.methods, visitedFiles)
+            def filesToParse = listFilesToParse(testCodeVisitor.taskInterface.methods, visitedFiles) //[path: file.path, methods: [name:, step:]]
+            log.info "Files to parse: ${filesToParse.size()}"
+            filesToParse.each {
+                log.info "path: ${it?.path}"
+                log.info "methods: ${it?.methods?.size()}"
+                it.methods.each { m ->
+                    log.info m.toString()
+                }
+                log.info ""
+            }
 
             while (!filesToParse.empty) {
                 /* copies methods from task interface */
@@ -424,7 +424,7 @@ abstract class TestCodeAbstractAnalyser {
                 /* computes methods to visit based on visit history */
                 visitedFiles = updateVisitedFiles(visitedFiles, filesToParse)
                 def lastCalledMethods = testCodeVisitor.taskInterface.methods - backupCalledMethods
-                filesToParse = listFilesToVisit(lastCalledMethods, visitedFiles)
+                filesToParse = listFilesToParse(lastCalledMethods, visitedFiles)
             }
 
             /* updates called steps */
@@ -440,8 +440,9 @@ abstract class TestCodeAbstractAnalyser {
             /* updates task interface */
             interfaces += testCodeVisitor.taskInterface
 
-            visitCallCounter += testCodeVisitor.visitCallCounter
-            lostVisitCall += testCodeVisitor.lostVisitCall
+            analysisData.visitCallCounter += testCodeVisitor.visitCallCounter
+            analysisData.lostVisitCall += testCodeVisitor.lostVisitCall
+            analysisData.testCode += testCodeVisitor.methodBodies
         }
 
         /* identifies more step definitions to analyse */
@@ -453,26 +454,31 @@ abstract class TestCodeAbstractAnalyser {
         if (!newStepsToAnalyse.empty) interfaces += computeInterface(newStepsToAnalyse, removedSteps)
 
         /* collapses step code interfaces to define the interface for the whole task */
+        fillITest(interfaces, removedSteps)
+    }
+
+    private fillITest(List<ITest> interfaces, Set removedSteps) {
         def itest = ITest.collapseInterfaces(interfaces)
         itest.matchStepErrors = organizeMatchStepErrors(removedSteps)
         itest.compilationErrors = organizeCompilationErrors()
-        itest.notFoundViews = notFoundViews.sort()
-        itest.foundAcceptanceTests = foundAcceptanceTests
         itest.codeFromViewAnalysis = this.getCodeFromViewAnalysis()
-        itest.visitCallCounter = visitCallCounter
-        itest.lostVisitCall = lostVisitCall
+        itest.notFoundViews = notFoundViews.sort()
+        itest.foundAcceptanceTests = analysisData.foundAcceptanceTests
+        itest.visitCallCounter = analysisData.visitCallCounter
+        itest.lostVisitCall = analysisData.lostVisitCall
+        itest.code = analysisData.testCode
         itest.trace = consolidateTrace()
         itest
     }
 
     private organizeMatchStepErrors(Set removedSteps) {
         def result = [] as Set
-        def errors = matchStepErrors - removedSteps
+        def errors = analysisData.matchStepErrors - removedSteps
         def files = errors*.path.unique()
         files.each { file ->
             def index = file.indexOf(repositoryPath)
             def name = index >= 0 ? file.substring(index) - (repositoryPath + File.separator) : file
-            def texts = (matchStepErrors.findAll{it.path == file}*.text)?.unique()?.sort()
+            def texts = (analysisData.matchStepErrors.findAll { it.path == file }*.text)?.unique()?.sort()
             result += [path:name, text:texts, size:texts.size()]
         }
         result
@@ -514,7 +520,7 @@ abstract class TestCodeAbstractAnalyser {
             }
         }
 
-        foundAcceptanceTests = acceptanceTests
+        analysisData.foundAcceptanceTests = acceptanceTests
         log.info "Number of implemented acceptance tests: ${acceptanceTests.size()}"
         acceptanceTests?.each { log.info it.toString() }
         acceptanceTests
@@ -572,7 +578,7 @@ abstract class TestCodeAbstractAnalyser {
     }
 
     /***
-     * Organizes StepCode objects by codeParse attribute.
+     * Organizes StepCode objects by codePath attribute.
      *
      * @param stepCodes list of related stepCodes
      * @return a list of path (step code path) and lines (start line of step codes) pairs
@@ -581,10 +587,14 @@ abstract class TestCodeAbstractAnalyser {
         List<FileToAnalyse> result = []
         def files = (stepCodes*.codePath)?.flatten()?.unique()
         files?.each { file ->
-            def codes = stepCodes.findAll { it.codePath == file }
+            def codes = []
+            if (Util.WHEN_FILTER) codes = stepCodes.findAll {
+                it.codePath == file && it.type != ConstantData.THEN_STEP_EN
+            }
+            else codes = stepCodes.findAll { it.codePath == file }
             List<MethodToAnalyse> methods = []
             codes?.each {
-                methods += new MethodToAnalyse(line: it.line, args: it.args)
+                methods += new MethodToAnalyse(line: it.line, args: it.args, type: it.type)
             }
             if (!methods.empty) result += new FileToAnalyse(path: file, methods: methods.unique())
 

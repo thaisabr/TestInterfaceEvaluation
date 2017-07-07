@@ -9,7 +9,7 @@ trait TestCodeVisitorInterface {
 
     abstract void setLastVisitedFile(String path)
 
-    abstract getCalledSteps()
+    abstract List<StepCall> getCalledSteps()
 
     MethodToAnalyse getStepDefinitionMethod() {
         null
@@ -21,6 +21,10 @@ trait TestCodeVisitorInterface {
 
     Set getLostVisitCall(){
         [] as Set
+    }
+
+    List<String> getMethodBodies() {
+        []
     }
 
 }

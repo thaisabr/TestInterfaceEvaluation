@@ -32,6 +32,7 @@ abstract class Util {
     public static final String GEM_AST
     public static final boolean VIEW_ANALYSIS
     public static final boolean CONTROLLER_FILTER
+    public static final boolean WHEN_FILTER
     public static final boolean VIEW_FILTER
     public static final boolean MULTIPLE_TASK_FILES
     public static final List<String> COVERAGE_GEMS
@@ -83,6 +84,7 @@ abstract class Util {
         GEM_AST = configureGemAst()
         VIEW_ANALYSIS = configureViewAnalysis()
         CONTROLLER_FILTER = configureControllerFilter()
+        WHEN_FILTER = configureWhenFilter()
         VIEW_FILTER = configureViewFilter()
         createFolders()
         COVERAGE_GEMS = configureCoverageGems()
@@ -168,6 +170,10 @@ abstract class Util {
 
     private static boolean configureControllerFilter(){
         configureBooleanProperties(properties.(ConstantData.PROP_CONTROLLER_FILTER), ConstantData.DEFAULT_CONTROLLER_FILTER)
+    }
+
+    private static boolean configureWhenFilter() {
+        configureBooleanProperties(properties.(ConstantData.PROP_WHEN_FILTER), ConstantData.DEFAULT_WHEN_FILTER)
     }
 
     private static boolean configureViewFilter(){

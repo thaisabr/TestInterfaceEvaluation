@@ -66,22 +66,31 @@ abstract class ConstantData {
     public static final List<String> STEP_KEYWORDS_PT = new GherkinDialectProvider().getDialect("pt", null).stepKeywords.unique()*.trim()
     public static final List<String> STEP_KEYWORDS_DE = new GherkinDialectProvider().getDialect("de", null).stepKeywords.unique()*.trim()
     public static final List<String> ALL_STEP_KEYWORDS = STEP_KEYWORDS + STEP_KEYWORDS_PT + STEP_KEYWORDS_DE
+    public static final String GIVEN_STEP_EN = new GherkinDialectProvider().defaultDialect.givenKeywords.last()
+    public static final String WHEN_STEP_EN = new GherkinDialectProvider().defaultDialect.whenKeywords.last()
+    public static final String THEN_STEP_EN = new GherkinDialectProvider().defaultDialect.thenKeywords.last()
+    public static final String AND_STEP_EN = new GherkinDialectProvider().defaultDialect.andKeywords.last()
+    public static final String BUT_STEP_EN = new GherkinDialectProvider().defaultDialect.butKeywords.last()
+    public static final String GENERIC_STEP = "* "
 
     public static final String INFLECTOR_FILE = "inflector.rb"
 
-    public static final String PROP_VIEW_ANALYSIS = "spgroup.views.analysis"
+    public static final String PROP_VIEW_ANALYSIS = "spgroup.itest.views"
     public static final boolean DEFAULT_VIEW_ANALYSIS = false
     public static final  String DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER = "error"
 
     public static final String PROP_CONTROLLER_FILTER = "spgroup.itest.filter.controller"
     public static final boolean DEFAULT_CONTROLLER_FILTER = false
 
+    public static final String PROP_WHEN_FILTER = "spgroup.itest.filter.when"
+    public static final boolean DEFAULT_WHEN_FILTER = false
+
     public static final String PROP_VIEW_FILTER = "spgroup.itest.filter.view"
     public static final boolean DEFAULT_VIEW_FILTER = false
 
     public static final String PROP_COVERAGE_GEMS = "spgroup.gems.coverage"
 
-    public static final String PROP_RESTRICT_GHERKIN_CHANGES = "spgroup.gherkin.adds"
+    public static final String PROP_RESTRICT_GHERKIN_CHANGES = "spgroup.itest.filter.gherkinAdds"
     public static final boolean DEFAULT_RESTRICT_GHERKIN_CHANGES = false
 
 }

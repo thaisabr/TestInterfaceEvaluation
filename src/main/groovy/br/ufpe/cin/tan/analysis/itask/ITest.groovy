@@ -5,7 +5,7 @@ import br.ufpe.cin.tan.util.Util
 
 class ITest extends TaskInterface {
 
-    Set methods //static and non-static called methods; keys:[name, type, file]
+    Set methods //static and non-static called methods; keys:[name, type, file, step]
     Set staticFields //declared static fields; [name, type, value, file]
     Set fields //declared fields; [name, type, value, file]
     Set accessedProperties //accessed fields and constants, for example: "foo.bar"
@@ -25,6 +25,8 @@ class ITest extends TaskInterface {
     Set lostVisitCall
     Set trace
 
+    List<String> code
+
     ITest() {
         super()
         this.methods = [] as Set
@@ -40,6 +42,7 @@ class ITest extends TaskInterface {
         this.codeFromViewAnalysis = [] as Set
         this.lostVisitCall = [] as Set
         this.trace = [] as Set
+        this.code = []
     }
 
     @Override
@@ -75,13 +78,13 @@ class ITest extends TaskInterface {
     }
 
     //filtering result to only identify view and/or controller files
-    Set<String> findFilteredFiles(){
+    Set<String> findFilteredFiles() {
         Util.filterFiles(this.findAllProdFiles())
     }
 
-    Set<String> getViewFilesForFurtherAnalysis(){
+    Set<String> getViewFilesForFurtherAnalysis() {
         def files = getAllProdFiles()
-        files?.findAll{ String f -> Util.isViewFile(f) }
+        files?.findAll { String f -> Util.isViewFile(f) }
     }
 
     def collapseInterfaces(ITest task) {
@@ -98,12 +101,33 @@ class ITest extends TaskInterface {
         this.foundAcceptanceTests += task.foundAcceptanceTests
         this.codeFromViewAnalysis += task.codeFromViewAnalysis
         this.visitCallCounter += task.visitCallCounter
-        this.timestamp += this.timestamp
+        this.timestamp += task.timestamp
+        this.code += task.code
     }
 
     static ITest collapseInterfaces(List<ITest> interfaces) {
         def taskInterface = new ITest()
         interfaces.each { taskInterface.collapseInterfaces(it) }
+        return taskInterface
+    }
+
+    ITest minus(ITest task) {
+        def taskInterface = new ITest()
+        taskInterface.classes = classes - task.classes
+        taskInterface.methods = methods - task.methods
+        taskInterface.staticFields = staticFields - task.staticFields
+        taskInterface.fields = fields - task.fields
+        taskInterface.accessedProperties = accessedProperties - task.accessedProperties
+        taskInterface.calledPageMethods = calledPageMethods - task.calledPageMethods
+        taskInterface.referencedPages = referencedPages - task.referencedPages
+        taskInterface.matchStepErrors = matchStepErrors - task.matchStepErrors
+        taskInterface.compilationErrors = compilationErrors - task.compilationErrors
+        taskInterface.notFoundViews = notFoundViews - task.notFoundViews
+        taskInterface.foundAcceptanceTests = foundAcceptanceTests - task.foundAcceptanceTests
+        taskInterface.codeFromViewAnalysis = codeFromViewAnalysis - task.codeFromViewAnalysis
+        taskInterface.visitCallCounter = visitCallCounter - task.visitCallCounter
+        taskInterface.timestamp = timestamp - task.timestamp
+        taskInterface.code = code - task.code
         return taskInterface
     }
 
@@ -113,38 +137,40 @@ class ITest extends TaskInterface {
      *
      * @return a list of files
      */
-    Set<String> findAllFiles(){
+    Set<String> findAllFiles() {
         def classes = classes*.file
-        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" }*.file
+        def methodFiles = methods?.findAll { it.type != null && !it.type.empty && it.type != "StepCall" }*.file
         def files = ((classes + methodFiles + referencedPages) as Set)?.sort()
         def canonicalPath = Util.getRepositoriesCanonicalPath()
         files?.findResults { i -> i ? i - canonicalPath : null } as Set
     }
 
-    private Set<String> getAllProdFiles(){
+    private Set<String> getAllProdFiles() {
         //production classes
         def classes = (classes?.findAll { Util.isProductionFile(it.file) })*.file
 
         //production methods
-        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" &&
-                it.file && Util.isProductionFile(it.file) }*.file
+        def methodFiles = methods?.findAll {
+            it.type != null && !it.type.empty && it.type != "StepCall" &&
+                    it.file && Util.isProductionFile(it.file)
+        }*.file
 
         //production files
         ((classes + methodFiles + referencedPages) as Set)?.sort()
     }
 
-    String toStringDetailed(){
+    String toStringDetailed() {
         def text = ""
 
         text += "Classes: ${classes.size()}\n"
-        classes?.each{ text += it.toString() + "\n" }
+        classes?.each { text += it.toString() + "\n" }
 
-        def methodFiles = methods?.findAll { it.type!=null && !it.type.empty && it.type!="StepCall" }
+        def methodFiles = methods?.findAll { it.type != null && !it.type.empty && it.type != "StepCall" }
         text += "\nMethods: ${methodFiles.size()}\n"
-        methodFiles?.each{ text += it.toString() + "\n" }
+        methodFiles?.each { text += it.toString() + "\n" }
 
         text += "\nReferenced pages: ${referencedPages.size()}\n"
-        referencedPages?.each{ text += it.toString() + "\n" }
+        referencedPages?.each { text += it.toString() + "\n" }
 
         text
     }

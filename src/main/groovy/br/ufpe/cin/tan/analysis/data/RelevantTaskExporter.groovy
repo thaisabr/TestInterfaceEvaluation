@@ -20,17 +20,29 @@ class RelevantTaskExporter {
         initTasks(tasks)
     }
 
-    def saveText(List<AnalysedTask> tasks){
+    def save(){
+        def tasksToSave = relevantTasks + emptyITestTasks
+        if(!tasksToSave || tasksToSave.empty) return
+        saveIText(tasksToSave)
+        saveTestCode(tasksToSave)
+        saveAnalysisData(tasksToSave)
+    }
+
+    private saveIText(List<AnalysedTask> tasks){
         def index = filename.lastIndexOf(File.separator)
         def folder = filename.substring(0,index)
         ITextExporter iTextExporter = new ITextExporter(folder, tasks)
         iTextExporter.save()
     }
 
-    def save(){
-        def tasksToSave = relevantTasks + emptyITestTasks
-        if(!tasksToSave || tasksToSave.empty) return
-        /*if (tasksToSave.size() > 1)*/ saveText(tasksToSave)
+    private saveTestCode(List<AnalysedTask> tasks){
+        def index = filename.lastIndexOf(File.separator)
+        def folder = filename.substring(0,index)
+        TestCodeExporter testCodeExporter = new TestCodeExporter(folder, tasks)
+        testCodeExporter.save()
+    }
+
+    private saveAnalysisData(List<AnalysedTask> tasksToSave){
         List<String[]> content = []
         content += ["Repository", url] as String[]
         content += generateNumeralData()

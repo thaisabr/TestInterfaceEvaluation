@@ -2,17 +2,16 @@ package temporary
 
 import au.com.bytecode.opencsv.CSVReader
 import au.com.bytecode.opencsv.CSVWriter
-import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
-import groovy.util.logging.Slf4j
-import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
-import br.ufpe.cin.tan.similarity.test.TestSimilarityAnalyser
-import br.ufpe.cin.tan.similarity.text.TextualSimilarityAnalyser
 import br.ufpe.cin.tan.analysis.AnalysedTask
 import br.ufpe.cin.tan.analysis.task.DoneTask
+import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
+import br.ufpe.cin.tan.similarity.test.TestSimilarityAnalyser
+import br.ufpe.cin.tan.similarity.text.TextualSimilarityAnalyser
 import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.RegexUtil
 import br.ufpe.cin.tan.util.Util
-
+import groovy.util.logging.Slf4j
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 
 @Slf4j
 class DataManager {
@@ -250,7 +249,7 @@ class DataManager {
         try {
             relevantEntries.each { entry ->
                 def hashes = entry[3].tokenize(',[]')*.trim()
-                def task = new DoneTask(entry[1], entry[2], hashes)
+                def task = new DoneTask(entry[1], entry[2] as int, hashes)
                 if(task.hasTest()) tasks += task
                 else tasksThatSeemsToHaveTest += entry[2]
             }

@@ -59,7 +59,7 @@ class TaskImporter {
         try {
             entries.each { entry ->
                 def hashes = entry[HASHES_INDEX].tokenize(',[]')*.trim()
-                def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX], hashes, entry[LAST_COMMIT])
+                def task = new DoneTask(entry[URL_INDEX], entry[TASK_INDEX] as int, hashes, entry[LAST_COMMIT])
                 if (task.hasTest()) doneTasks += task
                 else falsePtTasks += task
             }

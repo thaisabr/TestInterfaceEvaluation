@@ -46,18 +46,18 @@ class DoneTask extends Task {
     String pathSufix
     int msgLimit
 
-    DoneTask(String repositoryUrl, String id, List<String> shas) throws CloningRepositoryException {
+    DoneTask(String repositoryUrl, int id, List<String> shas) throws CloningRepositoryException {
         super(repositoryUrl, id)
         configureInitialTestData(shas)
     }
 
-    DoneTask(String repositoryUrl, String id, List<String> shas, String last) throws CloningRepositoryException {
+    DoneTask(String repositoryUrl, int id, List<String> shas, String last) throws CloningRepositoryException {
         super(repositoryUrl, id)
         lastHash = last
         configureInitialTestData(shas)
     }
 
-    DoneTask(String repositoryUrl, String id, List<String> shas, boolean basic) throws CloningRepositoryException {
+    DoneTask(String repositoryUrl, int id, List<String> shas, boolean basic) throws CloningRepositoryException {
         super(repositoryUrl, id)
         if (basic) configureBasicData(shas)
         else configureInitialTestData(shas)
@@ -84,7 +84,7 @@ class DoneTask extends Task {
 
             // computes task interface based on the production code exercised by tests
             def initTime = new Date()
-            taskInterface = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions, gitRepository.removedSteps)
+            taskInterface = testCodeAnalyser.computeInterfaceForDoneTask(changedGherkinFiles, changedStepDefinitions, gitRepository.removedSteps)
             configureTimestamp(initTime, taskInterface)
 
             registryCompilationErrors(taskInterface)
@@ -155,7 +155,7 @@ class DoneTask extends Task {
 
             // computes task interface based on the production code exercised by tests
             def initTime = new Date()
-            analysedTask.itest = testCodeParser.computeInterfaceForDoneTask(changedGherkinFiles,
+            analysedTask.itest = testCodeAnalyser.computeInterfaceForDoneTask(changedGherkinFiles,
                     changedStepDefinitions, gitRepository.removedSteps)
             configureTimestamp(initTime, analysedTask.itest)
             registryCompilationErrors(analysedTask)
@@ -249,7 +249,7 @@ class DoneTask extends Task {
         changedGherkinFiles = []
         changedStepDefinitions = []
         changedUnitFiles = []
-        commits = gitRepository.searchCommitsBySha(testCodeParser, *shas)
+        commits = gitRepository.searchCommitsBySha(testCodeAnalyser, *shas)
         commitsChangedGherkinFile = []
         commitsStepsChange = []
         configureLastCommit()
@@ -294,7 +294,7 @@ class DoneTask extends Task {
 
         stepDefinitions?.each { stepFile ->
             def content = gitRepository.extractFileContent(lastCommit, stepFile.path)
-            StepdefManager stepdefManager = new StepdefManager(testCodeParser)
+            StepdefManager stepdefManager = new StepdefManager(testCodeAnalyser)
             List<StepDefinition> stepDefs = stepdefManager.parseStepDefinitionFile(stepFile.path, content, lastCommit.name)
             if (stepDefs) {
                 def regexes = stepDefs*.regex
@@ -470,7 +470,7 @@ class DoneTask extends Task {
                 def index = path.lastIndexOf(File.separator)
                 taskInterface.classes += [name: path.substring(index + 1), file: path]
             } else {
-                taskInterface.classes += [name: testCodeParser.getClassForFile(path), file: path]
+                taskInterface.classes += [name: testCodeAnalyser.getClassForFile(path), file: path]
             }
         }
         taskInterface
@@ -530,7 +530,7 @@ class DoneTask extends Task {
 
         def rubyErrors = errors - gherkinErrors
         rubyErrors?.each { error ->
-            def hasError = testCodeParser.hasCompilationError(error.path)
+            def hasError = testCodeAnalyser.hasCompilationError(error.path)
             if (hasError) finalErrorSet += error
         }
 

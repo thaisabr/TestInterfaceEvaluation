@@ -30,9 +30,9 @@ class TodoTask extends Task {
      * @param scenarios a list of map objects that identifies a Gherkin file and its scenarios that
      *        are related to the task, by keywords 'path' and 'lines' respectively.
      */
-    TodoTask(String rootDirectory, boolean isRemote, String id, scenarios) throws CloningRepositoryException {
+    TodoTask(String rootDirectory, boolean isRemote, int id, scenarios) throws CloningRepositoryException {
         super(rootDirectory, id)
-        testCodeParser.configureProperties()
+        testCodeAnalyser.configureProperties()
         if (isRemote) findAllRelatedGherkinFile(gitRepository.localPath, scenarios)
         else findAllRelatedGherkinFile(rootDirectory, scenarios)
     }
@@ -45,7 +45,7 @@ class TodoTask extends Task {
         if (!testDescription.empty) {
             log.info "Task id: $id"
             def initTime = new Date()
-            taskInterface = testCodeParser.computeInterfaceForTodoTask(testDescription)
+            taskInterface = testCodeAnalyser.computeInterfaceForTodoTask(testDescription)
             def endTime = new Date()
             use(TimeCategory) {
                 timestamp = endTime - initTime

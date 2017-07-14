@@ -169,11 +169,6 @@ class GitRepository {
         }
     }
 
-    private List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent, TestCodeAbstractAnalyser parser) {
-        def diffs = extractDiff(null, commit, parent)
-        extractAllCodeChangeFromDiffs(commit, parent, diffs, parser)
-    }
-
     private List<CodeChange> extractCodeChangesByFirstCommit(RevCommit commit, TestCodeAbstractAnalyser parser) {
         List<CodeChange> codeChanges = []
         def git = Git.open(new File(localPath))
@@ -397,8 +392,9 @@ class GitRepository {
      * Important: DiffEntry.ChangeType.RENAME and DiffEntry.ChangeType.COPY are ignored. As consequence, if a renamed
      * file also has code changes, such changes are also ignored.
      */
-    private List<CodeChange> extractAllCodeChangeFromDiffs(RevCommit commit, RevCommit parent, List<DiffEntry> diffs,
-                                                           TestCodeAbstractAnalyser parser) {
+    private List<CodeChange> extractCodeChanges(RevCommit commit, RevCommit parent,
+                                                TestCodeAbstractAnalyser parser) {
+        def diffs = extractDiff(null, commit, parent)
         List<CodeChange> codeChanges = []
         diffs?.each { entry ->
             switch (entry.changeType) {
@@ -417,7 +413,8 @@ class GitRepository {
                 case DiffEntry.ChangeType.DELETE: //the file size is already known
                     if (Util.isProductionFile(entry.oldPath)) {
                         def result = extractFileContent(parent, entry.oldPath)
-                        codeChanges += new ChangedProdFile(path: entry.oldPath, type: entry.changeType, lines: 0..<result.readLines().size())
+                        codeChanges += new ChangedProdFile(path: entry.oldPath, type: entry.changeType,
+                                lines: 0..<result.readLines().size())
                     }
                     break
                 case DiffEntry.ChangeType.RENAME:

@@ -10,7 +10,7 @@ import java.util.regex.Matcher
 @Slf4j
 class RailsTask extends DoneTask {
 
-    RailsTask(String repositoryUrl, String id, List<String> hashes) throws CloningRepositoryException {
+    RailsTask(String repositoryUrl, int id, List<String> hashes) throws CloningRepositoryException {
         super(repositoryUrl, id, hashes)
     }
 

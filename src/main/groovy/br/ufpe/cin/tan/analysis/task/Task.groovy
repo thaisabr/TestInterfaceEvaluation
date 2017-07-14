@@ -16,11 +16,11 @@ import groovy.util.logging.Slf4j
 @Slf4j
 abstract class Task {
 
-    String id
+    int id
     GitRepository gitRepository
-    TestCodeAbstractAnalyser testCodeParser
+    TestCodeAbstractAnalyser testCodeAnalyser
 
-    Task(String rootDirectory, String id) throws CloningRepositoryException {
+    Task(String rootDirectory, int id) throws CloningRepositoryException {
         log.info "Configuring task '${id}'"
         this.id = id
         this.gitRepository = GitRepository.getRepository(rootDirectory)
@@ -30,13 +30,13 @@ abstract class Task {
     def configureTestCodeParser() {
         switch (Util.CODE_LANGUAGE) {
             case LanguageOption.JAVA:
-                testCodeParser = new JavaTestCodeAnalyser(gitRepository?.localPath, gitRepository.gherkinManager)
+                testCodeAnalyser = new JavaTestCodeAnalyser(gitRepository?.localPath, gitRepository.gherkinManager)
                 break
             case LanguageOption.GROOVY:
-                testCodeParser = new GroovyTestCodeAnalyser(gitRepository?.localPath, gitRepository.gherkinManager)
+                testCodeAnalyser = new GroovyTestCodeAnalyser(gitRepository?.localPath, gitRepository.gherkinManager)
                 break
             case LanguageOption.RUBY:
-                testCodeParser = new RubyTestCodeAnalyser(gitRepository?.localPath, gitRepository.gherkinManager)
+                testCodeAnalyser = new RubyTestCodeAnalyser(gitRepository?.localPath, gitRepository.gherkinManager)
                 break
             default: throw new InvalidLanguageException()
         }
@@ -46,9 +46,7 @@ abstract class Task {
         def text = ""
         def gherkinFiles = getAcceptanceTests()
         if (!gherkinFiles || gherkinFiles.empty) return text
-        gherkinFiles?.each { file ->
-            text += file.text + "\n"
-        }
+        gherkinFiles?.each { file -> text += file.text + "\n" }
         text.replaceAll("(?m)^\\s", "") //(?m) - regex multiline - to avoid lines that only contain blank space
     }
 

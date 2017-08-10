@@ -48,7 +48,7 @@ class RelevantTaskExporter {
         List<String[]> content = []
         content += ["Repository", url] as String[]
         content += generateNumeralData()
-        content += ExporterUtil.SHORT_HEADER
+        content += ExporterUtil.SHORT_HEADER_PLUS
         tasksToSave?.each { content += it.parseToArray() }
         CsvUtil.write(filename, content)
     }

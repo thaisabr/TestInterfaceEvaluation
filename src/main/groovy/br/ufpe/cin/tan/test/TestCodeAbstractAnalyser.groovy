@@ -115,10 +115,7 @@ abstract class TestCodeAbstractAnalyser {
         configureRegexList() // Updates regex list used to match step definition and step code
         configureMethodsList()
         def views = Util.findFilesFromDirectory(repositoryPath + File.separator + Util.VIEWS_FILES_RELATIVE_PATH)
-        viewFiles = views.findAll { file -> Util.VALID_VIEW_FILES.any { file.endsWith(it) } }
-        viewFiles += (views - viewFiles).findAll{
-            it.count(".")==1 && (it.endsWith(ConstantData.ERB_EXTENSION) || it.endsWith(ConstantData.HAML_EXTENSION) || it.endsWith(".slim"))
-        }
+        viewFiles = views.findAll { Util.isViewFile(it) }
     }
 
     /***
@@ -441,7 +438,10 @@ abstract class TestCodeAbstractAnalyser {
             interfaces += testCodeVisitor.taskInterface
 
             analysisData.visitCallCounter += testCodeVisitor.visitCallCounter
-            analysisData.lostVisitCall += testCodeVisitor.lostVisitCall
+            def canonicalPath = Util.getRepositoriesCanonicalPath()
+            analysisData.lostVisitCall += testCodeVisitor.lostVisitCall.collect {
+                [path: it.path - canonicalPath, line: it.line]
+            }
             analysisData.testCode += testCodeVisitor.methodBodies
         }
 

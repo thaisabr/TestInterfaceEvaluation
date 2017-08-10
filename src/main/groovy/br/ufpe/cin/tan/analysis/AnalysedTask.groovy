@@ -231,11 +231,15 @@ class AnalysedTask {
         if (views.empty) views = ""
         def filesFromViewAnalysis = filesFromViewAnalysis()
         def viewFileFromITest = itestViewFiles().size()
+        def diff1 = itestFiles - irealFiles
+        def diff2 = irealFiles - itestFiles
+        def hits = itestFiles.intersect(irealFiles)
         String[] line = [doneTask.id, doneTask.days, developers, doneTask.commitsQuantity, doneTask.hashes,
                          itest.foundAcceptanceTests.size(), itestSize, irealSize, itestFiles, irealFiles, precision(),
                          recall(), rails, itest.visitCallCounter, itest.lostVisitCall, viewFileFromITest,
                          filesFromViewAnalysis.size(), filesFromViewAnalysis, methods, renames, removedFiles, views,
-                         views.size(), itest.timestamp, hasMergeCommit()]
+                         views.size(), itest.timestamp, hasMergeCommit(), diff1.size(), diff2.size(), diff1, diff2,
+                         hits.size(), hits]
         line
     }
 

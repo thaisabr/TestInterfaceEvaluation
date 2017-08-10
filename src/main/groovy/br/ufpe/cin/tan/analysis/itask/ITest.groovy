@@ -161,16 +161,24 @@ class ITest extends TaskInterface {
 
     String toStringDetailed() {
         def text = ""
+        def canonicalPath = Util.getRepositoriesCanonicalPath()
 
         text += "Classes: ${classes.size()}\n"
-        classes?.each { text += it.toString() + "\n" }
+        classes?.each {
+            if (it.file) text += "[name:${it.name}, file:${it.file - canonicalPath}, step:${it.step}]\n"
+            else text += it.toString() + "\n"
+        }
 
         def methodFiles = methods?.findAll { it.type != null && !it.type.empty && it.type != "StepCall" }
         text += "\nMethods: ${methodFiles.size()}\n"
-        methodFiles?.each { text += it.toString() + "\n" }
+        methodFiles?.each {
+            if (it.file) text += "[name:${it.name}, type:${it.type}, file:${it.file - canonicalPath}, step:${it.step}]\n"
+            else text += it.toString() + "\n"
+        }
 
         text += "\nReferenced pages: ${referencedPages.size()}\n"
-        referencedPages?.each { text += it.toString() + "\n" }
+        def pages = referencedPages.collect { it - canonicalPath }.sort()
+        pages?.each { text += it.toString() + "\n" }
 
         text
     }

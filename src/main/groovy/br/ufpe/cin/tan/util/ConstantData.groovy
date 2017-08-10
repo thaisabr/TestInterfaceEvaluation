@@ -53,6 +53,9 @@ abstract class ConstantData {
     public static final String HTML_ERB_EXTENSION = HTML_EXTENSION + ERB_EXTENSION
     public static final String HAML_EXTENSION = ".haml"
     public static final String HTML_HAML_EXTENSION = HTML_EXTENSION + HAML_EXTENSION
+    public static final String MOBILE_HAML_EXTENSION = ".mobile" + HAML_EXTENSION
+    public static final String SLIM_EXTENSION = ".slim"
+    public static final String HTML_SLIM_EXTENSION = HTML_EXTENSION + SLIM_EXTENSION
     public static final String CSV_FILE_EXTENSION = ".csv"
     public static final String FEATURE_EXTENSION = ".feature"
     public static final String JAR_EXTENSION = ".jar"

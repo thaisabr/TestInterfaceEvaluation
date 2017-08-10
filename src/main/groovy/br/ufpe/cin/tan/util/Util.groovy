@@ -25,6 +25,7 @@ abstract class Util {
     public static final String VALID_EXTENSION
     public static final List<String> VALID_EXTENSIONS
     public static final List<String> VALID_VIEW_FILES
+    public static final List<String> SPECIAL_VALID_VIEW_FILES
     public static final String GEMS_PATH
     public static final String GEM_INFLECTOR
     public static final String GEM_I18N
@@ -59,16 +60,20 @@ abstract class Util {
         switch (CODE_LANGUAGE) {
             case LanguageOption.RUBY:
                 VALID_EXTENSION = ConstantData.RUBY_EXTENSION
-                VALID_VIEW_FILES = [".html", ".html.haml", ".html.erb", ".html.slim"]
+                SPECIAL_VALID_VIEW_FILES = [ConstantData.ERB_EXTENSION, ConstantData.HAML_EXTENSION, ConstantData.SLIM_EXTENSION]
+                VALID_VIEW_FILES = [ConstantData.HTML_HAML_EXTENSION, ConstantData.MOBILE_HAML_EXTENSION,
+                                    ConstantData.HTML_ERB_EXTENSION, ConstantData.HTML_SLIM_EXTENSION]
                 LIB_RELATIVE_PATH = "lib"
                 break
             case LanguageOption.GROOVY:
                 VALID_EXTENSION = ConstantData.GROOVY_EXTENSION
+                SPECIAL_VALID_VIEW_FILES = []
                 VALID_VIEW_FILES = []
                 LIB_RELATIVE_PATH = ""
                 break
             case LanguageOption.JAVA:
                 VALID_EXTENSION = ConstantData.JAVA_EXTENSION
+                SPECIAL_VALID_VIEW_FILES = []
                 VALID_VIEW_FILES = []
                 LIB_RELATIVE_PATH = ""
                 break
@@ -240,8 +245,7 @@ abstract class Util {
         if (VALID_FOLDERS.any { p.startsWith(it + File.separator) } && VALID_EXTENSIONS.any {
             p.endsWith(it)
         }) true
-        else if (VALID_FOLDERS.any { p.startsWith(it + File.separator) } && p.count(".") == 1 &&
-                (p.endsWith(ConstantData.ERB_EXTENSION) || p.endsWith(ConstantData.HAML_EXTENSION) || p.endsWith(".slim"))) true
+        else if (isViewFile(path)) true
         else false
     }
 
@@ -282,9 +286,9 @@ abstract class Util {
         def p = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         def root = extractRootFolder(path)
         p = p - root
-        if (p.startsWith("${VIEWS_FILES_RELATIVE_PATH}${File.separator}") &&
-                (p.endsWith(ConstantData.ERB_EXTENSION) || p.endsWith(ConstantData.HAML_EXTENSION))
-        ) true
+        def isCommonFile = VALID_VIEW_FILES.any { p.endsWith(it) }
+        def isSpecialFile = p.count(".") == 1 && SPECIAL_VALID_VIEW_FILES.any { p.endsWith(it) }
+        if (p.startsWith("${VIEWS_FILES_RELATIVE_PATH}${File.separator}") && (isCommonFile || isSpecialFile)) true
         else false
     }
 

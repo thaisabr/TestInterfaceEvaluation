@@ -32,7 +32,7 @@ abstract class ConstantData {
     public static final String DEFAULT_GEM_PARSER_FOLDER = "parser-2.3.1.4"
     public static final String DEFAULT_GEM_AST_FOLDER = "ast-2.3.0"
 
-    public static final String DEFAULT_EVALUATION_FOLDER = "output"
+    public static String DEFAULT_EVALUATION_FOLDER = "output"
     public static final String DEFAULT_TEXT_FOLDER = "text"
     public static
     final String DEFAULT_EVALUATION_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result.csv"
@@ -95,9 +95,12 @@ abstract class ConstantData {
     public static final String PROP_VIEW_FILTER = "spgroup.itest.filter.view"
     public static final boolean DEFAULT_VIEW_FILTER = false
 
-    public static final String PROP_COVERAGE_GEMS = "spgroup.gems.coverage"
-
     public static final String PROP_RESTRICT_GHERKIN_CHANGES = "spgroup.itest.filter.gherkinAdds"
     public static final boolean DEFAULT_RESTRICT_GHERKIN_CHANGES = false
+
+    public static final String PROP_COVERAGE_GEMS = "spgroup.gems.coverage"
+
+    public static final String PROP_RUN_ALL_CONFIGURATIONS = "spgroup.itest.all.configurations"
+    public static final boolean DEFAULT_RUN_ALL_CONFIGURATIONS = false
 
 }

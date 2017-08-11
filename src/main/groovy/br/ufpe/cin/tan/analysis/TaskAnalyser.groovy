@@ -82,7 +82,7 @@ class TaskAnalyser {
 
     private configureDefaultTaskLimit() {
         if (taskLimit <= 0) {
-            taskLimit = 10
+            taskLimit = ConstantData.DEFAULT_TASK_LIMIT
             String message = "Because no task limit was defined, the default value '${taskLimit}' will be used." +
                     "\nIt is necessary for incremental analysis works fine."
             log.warn message
@@ -94,6 +94,7 @@ class TaskAnalyser {
             incrementalAnalysis = true
             configureDefaultTaskLimit()
         } else incrementalAnalysis = false
+        log.info "< Analysis strategy: Task limit = $taskLimit (value <=0 implies all tasks); incremental analysis = $incrementalAnalysis >"
     }
 
     private extractPtTasksPartially() {
@@ -139,7 +140,7 @@ class TaskAnalyser {
             def candidate = taskImporter.candidateTasks.get(j)
             analyse(candidate)
         }
-        log.info "Task interfaces were computed for ${counter} tasks!"
+        log.info "(analyseLimitedTasks) Task interfaces were computed for ${counter} tasks!"
     }
 
     private analyse(DoneTask task) {

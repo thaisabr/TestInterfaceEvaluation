@@ -103,4 +103,5 @@ abstract class ConstantData {
     public static final String PROP_RUN_ALL_CONFIGURATIONS = "spgroup.itest.all.configurations"
     public static final boolean DEFAULT_RUN_ALL_CONFIGURATIONS = false
 
+    public static final int DEFAULT_TASK_LIMIT = 10
 }

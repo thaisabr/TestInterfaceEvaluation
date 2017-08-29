@@ -1,7 +1,7 @@
 package br.ufpe.cin.tan.analysis.itask
 
+import br.ufpe.cin.tan.test.ruby.MethodBody
 import br.ufpe.cin.tan.util.Util
-
 
 class ITest extends TaskInterface {
 
@@ -25,7 +25,7 @@ class ITest extends TaskInterface {
     Set lostVisitCall
     Set trace
 
-    List<String> code
+    Set<MethodBody> code
 
     ITest() {
         super()
@@ -42,7 +42,7 @@ class ITest extends TaskInterface {
         this.codeFromViewAnalysis = [] as Set
         this.lostVisitCall = [] as Set
         this.trace = [] as Set
-        this.code = []
+        this.code = [] as Set
     }
 
     @Override

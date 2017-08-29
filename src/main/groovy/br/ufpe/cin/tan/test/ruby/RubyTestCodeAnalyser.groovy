@@ -37,6 +37,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     ITest interfaceFromViews
     ViewCodeExtractor viewCodeExtractor
     static counter = 1
+    Set<MethodBody> methodBodies
 
     RubyTestCodeAnalyser(String repositoryPath, GherkinManager gherkinManager) {
         super(repositoryPath, gherkinManager)
@@ -45,6 +46,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         this.problematicRoutes = [] as Set
         this.interfaceFromViews = new ITest()
         if (Util.VIEW_ANALYSIS) viewCodeExtractor = new ViewCodeExtractor()
+        methodBodies = [] as Set
     }
 
     /***
@@ -106,16 +108,18 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
 
     private extractMethodReturnUsingArgs(pageMethod) { //keywords: file, name, args
         def result = []
-        def pageVisitor = new RubyConditionalVisitor(pageMethod.name, pageMethod.args)
-        this.generateAst(pageMethod.file)?.accept(pageVisitor)
+        def pageVisitor = new RubyConditionalVisitor(pageMethod.name, pageMethod.args, new FileReader(pageMethod.file)?.readLines())
+        generateAst(pageMethod.file)?.accept(pageVisitor)
+        methodBodies.add(new MethodBody(pageVisitor.body))
         result += pageVisitor.pages
         result += pageVisitor.auxiliaryMethods
         result
     }
 
     private extractAllPossibleReturnFromMethod(pageMethod) { //keywords: file, name, args
-        def pageVisitor = new RubyMethodReturnVisitor(pageMethod.name, pageMethod.args)
+        def pageVisitor = new RubyMethodReturnVisitor(pageMethod.name, pageMethod.args, new FileReader(pageMethod.file)?.readLines())
         generateAst(pageMethod.file)?.accept(pageVisitor) //extracts path from method
+        methodBodies.add(new MethodBody(pageVisitor.body))
         pageVisitor.values
     }
 
@@ -611,6 +615,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
             def allReturn = false
             if (!data.specificReturn || (data.specificReturn && data.specificFailed)) allReturn = true
             log.info "Found route related to auxiliary path method '${auxMethod.name}': ${!data.result.empty} (all return: $allReturn)"
+            visitor.methodBodies += methodBodies
         }
 
         /* deals with rails *_path methods */
@@ -673,7 +678,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         def fileContent = recoverFileContent(file.path)
         def testCodeVisitor = new RubyStepsFileVisitor(file.methods, visitor, fileContent)
         node?.accept(testCodeVisitor)
-        visitor.methodBodies += testCodeVisitor.body
+        visitor.methodBodies.add(new MethodBody(testCodeVisitor.body))
         visitor
     }
 
@@ -691,7 +696,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         def fileContent = recoverFileContent(file.path)
         def auxVisitor = new RubyMethodVisitor(file.methods, (RubyTestCodeVisitor) visitor, fileContent)
         node?.accept(auxVisitor)
-        visitor.methodBodies += auxVisitor.body
+        visitor.methodBodies.add(new MethodBody(auxVisitor.body))
     }
 
     @Override

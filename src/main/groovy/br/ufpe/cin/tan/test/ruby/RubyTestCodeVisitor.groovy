@@ -29,7 +29,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
     String step
     boolean filteredAnalysis
 
-    List<String> methodBodies
+    Set<MethodBody> methodBodies
 
     int visitCallCounter
     Set lostVisitCall //keys: path, line
@@ -39,7 +39,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
         lastVisitedFile = currentFile
         calledSteps = []
         lostVisitCall = [] as Set
-        methodBodies = []
+        methodBodies = [] as Set
         projectFiles = []
         viewFiles = []
         projectMethods = [] as Set

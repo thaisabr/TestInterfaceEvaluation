@@ -12,16 +12,26 @@ class RubyMethodReturnVisitor extends NoopVisitor {
     String methodName
     List<String> args
     def returnNodes //keys: line, value
+    List<String> fileContent
+    List<String> body
 
-    RubyMethodReturnVisitor(String name, List<String> args) {
+    RubyMethodReturnVisitor(String name, List<String> args, List<String> fileContent) {
         this.values = [] as Set
         this.methodName = name
         this.args = args
         this.returnNodes = []
+        this.fileContent = fileContent
+        this.body = []
+    }
+
+    private extractMethodBody(MethodDefNode iVisited) {
+        def methodBody = fileContent.getAt([iVisited.position.startLine..iVisited.position.endLine])
+        body += methodBody
     }
 
     private extractViewPathFromNode(MethodDefNode iVisited) {
         if (iVisited.name == this.methodName) {
+            extractMethodBody(iVisited)
             def lines = iVisited.position.startLine..iVisited.position.endLine
             def nodes = this.returnNodes?.findAll { it.line in lines }
             this.values = nodes*.value

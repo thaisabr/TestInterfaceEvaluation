@@ -1,6 +1,7 @@
 package br.ufpe.cin.tan.test
 
 import br.ufpe.cin.tan.analysis.itask.ITest
+import br.ufpe.cin.tan.test.ruby.MethodBody
 
 
 trait TestCodeVisitorInterface {
@@ -23,7 +24,7 @@ trait TestCodeVisitorInterface {
         [] as Set
     }
 
-    List<String> getMethodBodies() {
+    Set<MethodBody> getMethodBodies() {
         []
     }
 

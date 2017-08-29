@@ -1,5 +1,7 @@
 package br.ufpe.cin.tan.test
 
+import br.ufpe.cin.tan.test.ruby.MethodBody
+
 class AnalysisData {
 
     Set matchStepErrors
@@ -8,7 +10,7 @@ class AnalysisData {
     int visitCallCounter
     Set lostVisitCall //keys: path, line
     Set trace //keys: path, lines
-    List<String> testCode
+    Set<MethodBody> testCode
 
     AnalysisData() {
         matchStepErrors = [] as Set
@@ -16,7 +18,7 @@ class AnalysisData {
         codeFromViewAnalysis = [] as Set
         lostVisitCall = [] as Set
         trace = [] as Set
-        testCode = []
+        testCode = [] as Set
     }
 
 }

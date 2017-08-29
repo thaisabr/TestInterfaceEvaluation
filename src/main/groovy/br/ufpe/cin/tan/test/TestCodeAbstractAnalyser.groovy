@@ -466,7 +466,7 @@ abstract class TestCodeAbstractAnalyser {
         itest.foundAcceptanceTests = analysisData.foundAcceptanceTests
         itest.visitCallCounter = analysisData.visitCallCounter
         itest.lostVisitCall = analysisData.lostVisitCall
-        itest.code = analysisData.testCode
+        itest.code += analysisData.testCode
         itest.trace = consolidateTrace()
         itest
     }

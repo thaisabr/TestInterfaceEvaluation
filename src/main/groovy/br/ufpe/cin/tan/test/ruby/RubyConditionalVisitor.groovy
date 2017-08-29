@@ -12,14 +12,17 @@ class RubyConditionalVisitor extends NoopVisitor {
     String methodName
     String arg
     Set<ConditionalExpression> expressions
+    List<String> fileContent
+    List<String> body
 
-    RubyConditionalVisitor(String methodName, List<String> args) {
+    RubyConditionalVisitor(String methodName, List<String> args, List<String> fileContent) {
         this.pages = [] as Set
         this.auxiliaryMethods = []
         this.methodName = methodName
         if (args && !args.empty) this.arg = args?.first()
         this.expressions = [] as Set
-
+        this.fileContent = fileContent
+        this.body = []
     }
 
     private static extractIfResult(Node node) {
@@ -92,11 +95,17 @@ class RubyConditionalVisitor extends NoopVisitor {
         result
     }
 
+    private extractMethodBody(MethodDefNode iVisited) {
+        def methodBody = fileContent.getAt([iVisited.position.startLine..iVisited.position.endLine])
+        body += methodBody
+    }
+
     private extractViewPathFromNode(MethodDefNode iVisited) {
         if (iVisited.name == methodName) {
-            def lines = iVisited.position.startLine..iVisited.position.endLine
+            extractMethodBody(iVisited)
 
             //identifies all possible return values of the method
+            def lines = iVisited.position.startLine..iVisited.position.endLine
             def matches = expressions.findAll { it.line in lines }?.sort { it.line }
 
             //checks if there is a specific return for the argument

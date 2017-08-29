@@ -19,6 +19,7 @@ class EvaluationExporter {
     List<AnalysedTask> stepDefCompilationErrors
     List<AnalysedTask> unitCompilationErrors
     List<AnalysedTask> invalidTasks
+    List<AnalysedTask> noRequiredGems
     List<AnalysedTask> validTasks
     List<AnalysedTask> emptyITest
     List<AnalysedTask> zeroPrecisionAndRecall
@@ -77,6 +78,7 @@ class EvaluationExporter {
 
         if (filterEmptyIReal) invalidTasks = invalid
         else invalidTasks = (invalid + emptyIReal).unique()
+        noRequiredGems = invalid.findAll { !it.satisfiesGemsFilter() }
         emptyITest = validTasks.findAll { it.itestIsEmpty() }
         def noEmptyITest = validTasks - emptyITest
         int zero = 0
@@ -97,6 +99,7 @@ class EvaluationExporter {
         initialData += ["Tasks with AST error of production files", productionErrors] as String[]
         initialData += ["Tasks with AST error of unit test files", unitCompilationErrors.size()] as String[]
         initialData += ["Tasks with step match error", stepMatchError.size()] as String[]
+        initialData += ["Tasks without required gems", noRequiredGems.size()] as String[]
         initialData += ["Tasks with changed stepdef", stepCounter] as String[]
         initialData += ["Tasks with changed Gherkin", gherkinCounter] as String[]
         initialData += ["Tasks with implemented Gherkin scenarios", hasGherkinTest.size()] as String[]

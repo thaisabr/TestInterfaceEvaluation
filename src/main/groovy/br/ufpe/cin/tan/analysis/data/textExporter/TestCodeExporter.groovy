@@ -22,8 +22,10 @@ class TestCodeExporter extends TextExporter {
         def name = "${filePrefix}${analysedTask.doneTask.id}$testcodeFileSufix"
         File file = new File(name)
         file.withWriter("utf-8") { out ->
-            analysedTask.itest.code.each { line ->
-                out.write(line + "\n")
+            analysedTask.itest.code.each { method ->
+                method.lines.each { line ->
+                    out.write(line + "\n")
+                }
             }
         }
         writeTraceFile(analysedTask)

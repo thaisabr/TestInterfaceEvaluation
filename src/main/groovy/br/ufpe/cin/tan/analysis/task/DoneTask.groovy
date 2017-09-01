@@ -80,7 +80,7 @@ class DoneTask extends Task {
 
         try {
             // resets repository to the state of the last commit to extract changes
-            gitRepository.reset(commits?.last()?.hash)
+            gitRepository.reset(lastHash)
 
             // computes task interface based on the production code exercised by tests
             def initTime = new Date()
@@ -107,7 +107,7 @@ class DoneTask extends Task {
 
         try {
             // resets repository to the state of the last commit to extract changes
-            gitRepository.reset(commits?.last()?.hash)
+            gitRepository.reset(lastHash)
 
             //computes task text based in gherkin scenarios
             text = super.computeTextBasedInterface()
@@ -127,7 +127,7 @@ class DoneTask extends Task {
 
         try {
             // resets repository to the state of the last commit to extract changes
-            gitRepository.reset(commits?.last()?.hash)
+            gitRepository.reset(lastHash)
 
             //computes real interface
             def initTime = new Date()
@@ -151,7 +151,7 @@ class DoneTask extends Task {
 
         try {
             // resets repository to the state of the last commit to extract changes
-            gitRepository.reset(commits?.last()?.hash)
+            gitRepository.reset(lastHash)
 
             // computes task interface based on the production code exercised by tests
             def initTime = new Date()
@@ -239,7 +239,10 @@ class DoneTask extends Task {
             def revcommits = gitRepository.searchAllRevCommitsBySha(lastHash)
             if (revcommits) lastCommit = revcommits.first()
             else throw new Exception("Error while configuring last commit '$lastHash'")
-        } else if (!commits.empty) lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
+        } else if (!commits.empty) {
+            lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
+            lastHash = lastCommit.name
+        }
         else throw new Exception("Error while configuring last commit. Does the task contain commits?")
     }
 

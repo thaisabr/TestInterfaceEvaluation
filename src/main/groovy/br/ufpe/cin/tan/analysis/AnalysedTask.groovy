@@ -173,7 +173,7 @@ class AnalysedTask {
     def configureGems(String path) {
         def result = RubyUtil.checkRailsVersionAndGems(path) //[rails, ruby, gems]
         gems = result.gems
-        rails = result.rails.replaceAll(/[^\.\d]/, "")
+        rails = result.rails
         ruby = result.ruby
         if (gems.size() > 0) {
             coverageGems = gems.findAll { it == "coveralls" || it == "simplecov" }

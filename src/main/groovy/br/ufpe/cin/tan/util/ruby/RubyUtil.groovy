@@ -71,8 +71,12 @@ class RubyUtil extends Util {
                 def foundGem = lines.find { !(it.trim().startsWith("#")) && it ==~ regex }
                 if (foundGem) {
                     if (gem == "rails") {
-                        def index = foundGem.lastIndexOf(",")
-                        if (index > -1) railsVersion = foundGem?.substring(index + 1)?.trim()
+                        def comment = foundGem.indexOf("#")
+                        def value = foundGem
+                        if (comment > -1) value = foundGem.substring(0, comment)
+                        def index = value.lastIndexOf(",")
+                        if (index > -1) railsVersion = value.substring(index + 1).trim()
+                        railsVersion = railsVersion.replaceAll(/[^\.\d]/, "")
                     } else gems += gem
 
                 }

@@ -83,8 +83,10 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     }
 
     Node generateAst(String path) {
-        FileReader reader = new FileReader(path)
-        this.generateAst(reader, path)
+        def index = path.indexOf(repositoryPath)
+        def filename = index >= 0 ? path : repositoryPath + File.separator + path
+        FileReader reader = new FileReader(filename)
+        this.generateAst(reader, filename)
     }
 
     Node generateAst(String path, String content) {

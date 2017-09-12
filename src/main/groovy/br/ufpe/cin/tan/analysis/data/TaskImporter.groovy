@@ -2,6 +2,7 @@ package br.ufpe.cin.tan.analysis.data
 
 import br.ufpe.cin.tan.analysis.task.DoneTask
 import br.ufpe.cin.tan.util.CsvUtil
+import br.ufpe.cin.tan.util.Util
 import groovy.util.logging.Slf4j
 
 
@@ -15,7 +16,6 @@ class TaskImporter {
     int PROD_FILES_INDEX = 4
     int TEST_FILES_INDEX = 5
     int LAST_COMMIT = 6
-    int MAX_TASK_SIZE = 80
 
     File file
     String url
@@ -39,7 +39,7 @@ class TaskImporter {
         if (importedTasks.size() > 0) url = importedTasks.first()[URL_INDEX]
         else url = ""
         log.info "All tasks imported from '${file.path}': ${importedTasks.size()}"
-        log.info "Big tasks (more than ${MAX_TASK_SIZE} commits): ${bigTasks.size()}"
+        log.info "Big tasks (more than ${Util.TASK_MAX_SIZE} commits): ${bigTasks.size()}"
         log.info "Invalid imported tasks (do not have production and test code or big tasks): ${notPtImportedTasks.size()}"
         log.info "Relevant imported tasks: ${ptImportedTasks.size()}"
     }
@@ -80,7 +80,7 @@ class TaskImporter {
     private updateTasks() {
         falsePtTasks = []
         candidateTasks = []
-        bigTasks = importedTasks.findAll { (it[COMMITS_INDEX] as int) > MAX_TASK_SIZE }
+        bigTasks = importedTasks.findAll { (it[COMMITS_INDEX] as int) > Util.TASK_MAX_SIZE }
         def validTasks = importedTasks - bigTasks
         ptImportedTasks = validTasks.findAll {
             ((it[PROD_FILES_INDEX] as int) > 0 && (it[TEST_FILES_INDEX] as int) > 0)

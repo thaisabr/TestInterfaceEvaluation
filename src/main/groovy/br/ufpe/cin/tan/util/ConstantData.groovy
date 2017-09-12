@@ -7,6 +7,7 @@ abstract class ConstantData {
 
     public static final String PROPERTIES_FILE_NAME = "configuration.properties"
     public static final String PROP_TASK_FILE = "spgroup.task.file.path"
+    public static final String PROP_TASK_MAX_SIZE = "spgroup.task.max.size"
     public static final String PROP_CODE_LANGUAGE = "spgroup.language"
     public static final String PROP_GHERKIN = "spgroup.gherkin.files.relative.path"
     public static final String PROP_STEPS = "spgroup.steps.files.relative.path"
@@ -20,6 +21,7 @@ abstract class ConstantData {
     public static final String PROP_GEM_AST = "spgroup.gems.ast"
 
     public static final String DEFAULT_TASKS_FOLDER = "tasks"
+    public static final int DEFAULT_TASK_SIZE = 80
     public static final String DEFAULT_REPOSITORY_FOLDER = "spg_repos"
     public static final String DEFAULT_LANGUAGE = "ruby"
     public static final String DEFAULT_GHERKIN_FOLDER = "features"

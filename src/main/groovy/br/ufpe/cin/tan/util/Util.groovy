@@ -9,6 +9,7 @@ abstract class Util {
     static final String GEM_SUFFIX = Matcher.quoteReplacement(File.separator) + "lib"
     static final Properties properties
     public static final String TASKS_FILE
+    public static final int TASK_MAX_SIZE
     public static final String REPOSITORY_FOLDER_PATH
     public static final LanguageOption CODE_LANGUAGE
     public static final String GHERKIN_FILES_RELATIVE_PATH
@@ -44,6 +45,7 @@ abstract class Util {
         properties = new Properties()
         loadProperties()
         TASKS_FILE = configureTasksFilePath()
+        TASK_MAX_SIZE = configureTaskMaxSize()
         MULTIPLE_TASK_FILES = TASKS_FILE.empty
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
         CODE_LANGUAGE = configureLanguage()
@@ -118,6 +120,13 @@ abstract class Util {
 
     private static configureTasksFilePath() {
         configureMandatoryProperties(properties.(ConstantData.PROP_TASK_FILE), "")
+    }
+
+    private static int configureTaskMaxSize() {
+        def maxSize = ConstantData.DEFAULT_TASK_SIZE
+        def value = properties.(ConstantData.PROP_TASK_MAX_SIZE)
+        if (value) maxSize = value as int
+        maxSize
     }
 
     private static configureRepositoryFolderPath() {

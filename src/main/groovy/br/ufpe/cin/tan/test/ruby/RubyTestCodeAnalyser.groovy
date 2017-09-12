@@ -55,26 +55,23 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
      * @return the root node of the AST
      */
     Node generateAst(reader, String path) {
-        Parser rubyParser = new Parser()
-        CompatVersion version = CompatVersion.RUBY2_0
-        ParserConfiguration config = new ParserConfiguration(0, version)
-        Node result = null
-
-        try {
-            result = rubyParser.parse("<code>", reader, config)
-        } catch (SyntaxException ex) {
-            log.error "Problem to visit file $path: ${ex.message}"
-            def msg = ""
-            if (ex.message && !ex.message.empty) {
-                def index = ex.message.indexOf(",")
-                msg = index >= 0 ? ex.message.substring(index + 1).trim() : ex.message.trim()
+        def result1 = parseFile(reader, path, CompatVersion.RUBY2_3)
+        if (result1.errors.size() == 0) {
+            return result1.node
+        } else {
+            def result2 = parseFile(reader, path, CompatVersion.RUBY2_0)
+            if (result2.errors.size() == 0) {
+                return result2.node
+            } else {
+                if (result1.errors.size() <= result2.errors.size()) {
+                    compilationErrors += result1.errors
+                    return result1.node
+                } else {
+                    compilationErrors += result2.errors
+                    return result2.node
+                }
             }
-            compilationErrors += [path: path, msg: msg]
         }
-        finally {
-            reader?.close()
-        }
-        result
     }
 
     static List<String> recoverFileContent(String path) {
@@ -92,6 +89,29 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     Node generateAst(String path, String content) {
         StringReader reader = new StringReader(content)
         this.generateAst(reader, path)
+    }
+
+    private static parseFile(reader, String path, CompatVersion version) {
+        def errors = []
+        Parser rubyParser = new Parser()
+        ParserConfiguration config = new ParserConfiguration(0, version)
+        Node result = null
+
+        try {
+            result = rubyParser.parse("<code>", reader, config)
+        } catch (SyntaxException ex) {
+            log.error "Problem to visit file $path (parser ${version.name()}): ${ex.message}"
+            def msg = ""
+            if (ex.message && !ex.message.empty) {
+                def index = ex.message.indexOf(",")
+                msg = index >= 0 ? ex.message.substring(index + 1).trim() : ex.message.trim()
+            }
+            errors += [path: path, msg: msg]
+        }
+        finally {
+            reader?.close()
+        }
+        [node: result, errors: errors]
     }
 
     private generateProjectRoutes() {

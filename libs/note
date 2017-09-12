@@ -1,0 +1,1 @@
+On the first project build, please run mvn install:install-file.

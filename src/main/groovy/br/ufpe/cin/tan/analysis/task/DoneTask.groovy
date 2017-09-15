@@ -144,6 +144,39 @@ class DoneTask extends Task {
         taskInterface
     }
 
+    IReal computeRandomInterface() {
+        def randomInterface = [] as Set
+
+        try {
+            // resets repository to the state of the last commit to extract changes
+            gitRepository.reset(lastHash)
+
+            //candidate files
+            def currentFiles = Util.findAllProductionFiles(identifyAllProjectFiles())
+
+            // resets repository to last version
+            gitRepository.reset()
+
+            //decide interface size
+            def maxSize = currentFiles.size()
+            Random random1 = new Random()
+            def low = 1
+            int high = maxSize + 1
+            def randomSize = random1.nextInt(high - low) + low
+
+            //decide interface content
+            Random random2 = new Random()
+            while (randomInterface.size() < randomSize) {
+                def index = random2.nextInt(maxSize)
+                randomInterface += currentFiles.getAt(index)
+            }
+        } catch (Exception ex) {
+            log.error "Error while computing random interface."
+            registryErrorMessage(ex)
+        }
+        organizeProductionFiles(randomInterface)
+    }
+
     AnalysedTask computeInterfaces() {
         def analysedTask = new AnalysedTask(this)
         if (hasNoCommits() || !hasTest()) return analysedTask
@@ -443,12 +476,16 @@ class DoneTask extends Task {
         stepFiles
     }
 
-    private IReal identifyProductionChangedFiles() {
-        /* Identifies all project files */
+    private List<String> identifyAllProjectFiles() {
         def canonicalPath = Util.getRepositoriesCanonicalPath()
         def currentFiles = Util.findFilesFromDirectory(gitRepository.localPath).collect {
             it - (canonicalPath + gitRepository.name + File.separator)
         }
+        currentFiles
+    }
+
+    private IReal identifyProductionChangedFiles() {
+        def currentFiles = identifyAllProjectFiles()
 
         /* Identifies all changed files by task */
         def filenames = commits*.coreChanges*.path?.flatten()?.unique()?.sort()

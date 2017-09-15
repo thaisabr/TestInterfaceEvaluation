@@ -48,6 +48,7 @@ abstract class ConstantData {
     public static final String RELEVANT_TASKS_FILE_SUFIX = "-relevant.csv"
     public static final String RELEVANT_TASKS_DETAILS_FILE_SUFIX = "-relevant-detailed.csv"
     public static final String INVALID_TASKS_FILE_SUFIX = "-invalid.csv"
+    public static final String RANDOM_RESULTS_FILE_SUFIX = "-random.csv"
 
     public static final String NON_PRIMITIVE_ARRAY_PREFIX = "[L"
     public static final String HTML_EXTENSION = ".html"
@@ -104,6 +105,9 @@ abstract class ConstantData {
 
     public static final String PROP_RUN_ALL_CONFIGURATIONS = "spgroup.itest.all.configurations"
     public static final boolean DEFAULT_RUN_ALL_CONFIGURATIONS = false
+
+    public static final String PROP_RANDOM_BASELINE = "spgroup.itest.random.baseline"
+    public static final boolean DEFAULT_RANDOM_BASELINE = false
 
     public static final int DEFAULT_TASK_LIMIT = 10
 }

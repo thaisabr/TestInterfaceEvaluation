@@ -79,11 +79,11 @@ class ExporterUtil {
         line
     }
 
-    private static Set<String> findControllers(Set<String> set) {
+    static Set<String> findControllers(Set<String> set) {
         set.findAll { Util.isControllerFile(it) }
     }
 
-    private static Set configureITask(String[] value, int index) {
+    static Set configureITask(String[] value, int index) {
         def originalItest = value[index].replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, "/")
                 .substring(1, value[index].size() - 1)
                 .split(",")

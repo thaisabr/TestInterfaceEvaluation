@@ -19,14 +19,38 @@ class Main {
         Main mainObj = new Main(limit)
         if (Util.RUNNING_ALL_CONFIGURATIONS) {
             mainObj.runAllAnalysisConfig()
-        } else mainObj.runAnalysis()
+        } else {
+            if (Util.RANDOM_BASELINE) mainObj.runAnalysisAndRandomResult()
+            else mainObj.runAnalysis()
+        }
     }
 
     private runAnalysis() {
         if (Util.MULTIPLE_TASK_FILES) { // analyse a set of csv files
             def cvsFiles = Util.findTaskFiles()
-            cvsFiles?.each { new TaskAnalyser(it, limit).analyseAll() }
-        } else new TaskAnalyser(Util.TASKS_FILE, limit).analyseAll() //analyse a csv file
+            cvsFiles?.each {
+                def taskAnalyser = new TaskAnalyser(it, limit)
+                taskAnalyser.analyseAll()
+            }
+        } else { //analyse a csv file
+            def taskAnalyser = new TaskAnalyser(Util.TASKS_FILE, limit)
+            taskAnalyser.analyseAll()
+        }
+    }
+
+    private runAnalysisAndRandomResult() {
+        if (Util.MULTIPLE_TASK_FILES) { // analyse a set of csv files
+            def cvsFiles = Util.findTaskFiles()
+            cvsFiles?.each {
+                def taskAnalyser = new TaskAnalyser(it, limit)
+                taskAnalyser.analyseAll()
+                taskAnalyser.generateRandomResult()
+            }
+        } else { //analyse a csv file
+            def taskAnalyser = new TaskAnalyser(Util.TASKS_FILE, limit)
+            taskAnalyser.analyseAll()
+            taskAnalyser.generateRandomResult()
+        }
     }
 
     private runAllAnalysisConfig() {
@@ -40,7 +64,8 @@ class Main {
 
         //all
         Util.setRunningConfiguration(false, false, "output_all")
-        runAnalysis()
+        if (Util.RANDOM_BASELINE) runAnalysisAndRandomResult()
+        else runAnalysis()
 
         //all_when
         Util.setRunningConfiguration(true, false, "output_all_when")

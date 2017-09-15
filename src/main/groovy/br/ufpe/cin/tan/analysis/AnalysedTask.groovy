@@ -13,6 +13,7 @@ class AnalysedTask {
     DoneTask doneTask
     ITest itest
     IReal ireal
+    IReal irandom
     List<String> methods
     int stepCalls
     String itext
@@ -36,6 +37,7 @@ class AnalysedTask {
         this.itest = new ITest()
         this.ireal = new IReal()
         this.itext = ""
+        this.irandom = new IReal()
         this.gems = []
         this.coverageGems = []
         this.rails = ""
@@ -107,6 +109,10 @@ class AnalysedTask {
         ireal.findFilteredFiles().empty
     }
 
+    def irandomFiles() {
+        irandom.findFilteredFiles()
+    }
+
     def itestFiles() {
         itest.findFilteredFiles()
     }
@@ -129,6 +135,14 @@ class AnalysedTask {
 
     double recall() {
         TaskInterfaceEvaluator.calculateFilesRecall(itest, ireal)
+    }
+
+    double randomPrecision() {
+        TaskInterfaceEvaluator.calculateFilesPrecision(irandom, ireal)
+    }
+
+    double randomRecall() {
+        TaskInterfaceEvaluator.calculateFilesRecall(irandom, ireal)
     }
 
     def getDates() {
@@ -240,6 +254,19 @@ class AnalysedTask {
                          filesFromViewAnalysis.size(), filesFromViewAnalysis, methods, renames, removedFiles, views,
                          views.size(), itest.timestamp, hasMergeCommit(), diff1.size(), diff2.size(), diff1, diff2,
                          hits.size(), hits]
+        line
+    }
+
+    def parseRandomResultToArray() {
+        def irandomFiles = this.irandomFiles()
+        def irandomSize = irandomFiles.size()
+        def irealFiles = this.irealFiles()
+        def irealSize = irealFiles.size()
+        def diff1 = irandomFiles - irealFiles
+        def diff2 = irealFiles - irandomFiles
+        def hits = irandomFiles.intersect(irealFiles)
+        String[] line = [doneTask.id, irandomSize, irealSize, irandomFiles, irealFiles, randomPrecision(), randomRecall(),
+                         diff1.size(), diff2.size(), diff1, diff2, hits.size(), hits]
         line
     }
 

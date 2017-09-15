@@ -1,7 +1,6 @@
 package br.ufpe.cin.tan.evaluation
 
-import br.ufpe.cin.tan.analysis.itask.IReal
-import br.ufpe.cin.tan.analysis.itask.ITest
+import br.ufpe.cin.tan.analysis.itask.TaskInterface
 
 class TaskInterfaceEvaluator {
 
@@ -12,7 +11,7 @@ class TaskInterfaceEvaluator {
      * @param iReal task interface computed after task is done
      * @return value between 0 and 1
      */
-    static double calculateFilesPrecision(ITest iTest, IReal iReal) {
+    static double calculateFilesPrecision(TaskInterface iTest, TaskInterface iReal) {
         double result = 0
         if (invalidInput(iTest, iReal)) return result
         def testFiles = iTest.findFilteredFiles()
@@ -28,7 +27,7 @@ class TaskInterfaceEvaluator {
      * @param iReal task interface computed after task is done
      * @return value between 0 and 1
      */
-    static double calculateFilesRecall(ITest iTest, IReal iReal) {
+    static double calculateFilesRecall(TaskInterface iTest, TaskInterface iReal) {
         double result = 0
         if (invalidInput(iTest, iReal)) return result
         def realFiles = iReal.findFilteredFiles()

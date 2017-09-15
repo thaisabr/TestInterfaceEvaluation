@@ -4,6 +4,7 @@ import br.ufpe.cin.tan.analysis.data.TaskImporter
 import br.ufpe.cin.tan.analysis.data.csvExporter.*
 import br.ufpe.cin.tan.analysis.task.DoneTask
 import br.ufpe.cin.tan.util.ConstantData
+import br.ufpe.cin.tan.util.Util
 import groovy.util.logging.Slf4j
 
 @Slf4j
@@ -30,6 +31,7 @@ class TaskAnalyser {
     String relevantTasksFile
     String relevantTasksDetailsFile
     String invalidTasksFile
+    String randomTasksFile
 
     RelevantTaskExporter relevantTaskExporter
 
@@ -46,6 +48,28 @@ class TaskAnalyser {
         configureOutputFiles()
         selectedTasks = []
         invalidTasks = []
+        log.info "<  Generate random result: '${Util.RANDOM_BASELINE}'  >"
+    }
+
+    def generateRandomResult() {
+        if (selectedTasks.empty) {
+            taskImporter.extractPtTasks()
+            log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${taskImporter.candidateTasks.size()}"
+            log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${taskImporter.falsePtTasks.size()}"
+            taskImporter.candidateTasks.each { task ->
+                def analysedTask = new AnalysedTask(task)
+                analysedTask.ireal = task.computeRealInterface()
+                analysedTask.irandom = task.computeRandomInterface()
+                selectedTasks += analysedTask
+            }
+        } else {
+            selectedTasks.each { task ->
+                task.irandom = task.doneTask.computeRandomInterface()
+            }
+        }
+        log.info "Random task interfaces were computed for ${taskImporter.candidateTasks.size()} tasks!"
+        exportRandomResult()
+        filterRandomResult() //temporary code
     }
 
     def analyseAll() {
@@ -54,7 +78,7 @@ class TaskAnalyser {
     }
 
     def analysePrecisionAndRecall() {
-        if (incrementalAnalysis) extractPtTasksPartially()
+        if (incrementalAnalysis) generateResultPartially()
         else generateResult()
         exportTasks()
         exportAllDetailedInfo()
@@ -78,6 +102,7 @@ class TaskAnalyser {
         relevantTasksFile = name + ConstantData.RELEVANT_TASKS_FILE_SUFIX
         relevantTasksDetailsFile = name + ConstantData.RELEVANT_TASKS_DETAILS_FILE_SUFIX
         invalidTasksFile = name + ConstantData.INVALID_TASKS_FILE_SUFIX
+        randomTasksFile = name + ConstantData.RANDOM_RESULTS_FILE_SUFIX
     }
 
     private configureDefaultTaskLimit() {
@@ -97,7 +122,7 @@ class TaskAnalyser {
         log.info "< Analysis strategy: Task limit = $taskLimit (value <=0 implies all tasks); incremental analysis = $incrementalAnalysis >"
     }
 
-    private extractPtTasksPartially() {
+    private generateResultPartially() {
         def allTasksToAnalyse = taskImporter.ptImportedTasks.size()
         def groups = allTasksToAnalyse.intdiv(100)
         def remainder = allTasksToAnalyse % 100
@@ -185,6 +210,13 @@ class TaskAnalyser {
         }
     }
 
+    private exportRandomResult() {
+        if (!selectedTasks.empty) {
+            def randomResultExporter = new RandomResultExporter(randomTasksFile, selectedTasks)
+            randomResultExporter.save()
+        }
+    }
+
     private exportTasks() {
         exportRelevantTasks()
         exportInvalidTasks()
@@ -210,6 +242,11 @@ class TaskAnalyser {
     private filterResult() {
         ControllerFilterExporter controllerFilterExporter = new ControllerFilterExporter(relevantTasksFile)
         controllerFilterExporter.save()
+    }
+
+    private filterRandomResult() {
+        ControllerFilterRandomExporter filterRandomExporter = new ControllerFilterRandomExporter(randomTasksFile)
+        filterRandomExporter.save()
     }
 
     private organizeResultForTestExecution() {

@@ -40,6 +40,7 @@ abstract class Util {
     public static final List<String> COVERAGE_GEMS
     public static boolean RESTRICT_GHERKIN_CHANGES
     public static final boolean RUNNING_ALL_CONFIGURATIONS
+    public static final boolean RANDOM_BASELINE
 
     static {
         properties = new Properties()
@@ -96,10 +97,9 @@ abstract class Util {
         VIEW_FILTER = configureViewFilter()
         createFolders()
         COVERAGE_GEMS = configureCoverageGems()
-
         RESTRICT_GHERKIN_CHANGES = configureGherkinAdds()
-
         RUNNING_ALL_CONFIGURATIONS = configureRunningConfigurations()
+        RANDOM_BASELINE = configureRandomBaseline()
     }
 
     private static loadProperties() {
@@ -204,6 +204,11 @@ abstract class Util {
     private static boolean configureRunningConfigurations() {
         configureBooleanProperties(properties.(ConstantData.PROP_RUN_ALL_CONFIGURATIONS), ConstantData.DEFAULT_RUN_ALL_CONFIGURATIONS)
     }
+
+    private static boolean configureRandomBaseline() {
+        configureBooleanProperties(properties.(ConstantData.PROP_RANDOM_BASELINE), ConstantData.DEFAULT_RANDOM_BASELINE)
+    }
+    //
 
     private static createFolder(String folder) {
         File zipFolder = new File(folder)

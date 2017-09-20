@@ -91,7 +91,7 @@ class GherkinManager {
         def text = ""
         if (!feature) return text
         Background background = (Background) feature?.children?.find { it instanceof Background }
-        if (background) {
+        if (background && !background.steps.empty) {
             def init = background.location.line
             def endLine = background.steps?.last()?.location?.line
             for (int i = init - 1; i < endLine; i++) {

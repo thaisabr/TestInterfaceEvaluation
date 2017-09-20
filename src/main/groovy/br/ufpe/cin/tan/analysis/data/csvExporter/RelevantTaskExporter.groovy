@@ -73,7 +73,7 @@ class RelevantTaskExporter {
     }
 
     private filterTasksByAcceptanceTests() {
-        relevantTasks = tasks.findAll { it.itestFiles().size() > 0 }?.sort { -it.itest.foundAcceptanceTests.size() }
+        relevantTasks = tasks.findAll { it.isRelevant() }?.sort { -it.itest.foundAcceptanceTests.size() }
         emptyITestTasks = (tasks - relevantTasks)?.sort { -it.itest.foundAcceptanceTests.size() }
     }
 

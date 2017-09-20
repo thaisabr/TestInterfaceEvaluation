@@ -56,6 +56,11 @@ class AnalysedTask {
         itest.trace
     }
 
+    boolean isRelevant() {
+        if (itestIsEmpty()) false
+        else true
+    }
+
     int getDevelopers() {
         doneTask?.developers
     }

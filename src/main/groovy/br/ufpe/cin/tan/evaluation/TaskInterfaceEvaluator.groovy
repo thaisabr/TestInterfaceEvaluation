@@ -1,6 +1,7 @@
 package br.ufpe.cin.tan.evaluation
 
 import br.ufpe.cin.tan.analysis.itask.TaskInterface
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation
 
 class TaskInterfaceEvaluator {
 
@@ -50,6 +51,13 @@ class TaskInterfaceEvaluator {
         def truePositives = calculateTruePositives(iTest, iReal)
         if (truePositives > 0) result = (double) truePositives / iReal.size()
         result
+    }
+
+    static Double calculateCorrelation(double[] independent, double[] dependent) {
+        PearsonsCorrelation pearsonsCorrelation = new PearsonsCorrelation()
+        Double value = pearsonsCorrelation.correlation(independent, dependent)
+        if (Double.isNaN(value)) null
+        else Math.round(value * 100) / 100
     }
 
     private static calculateTruePositives(Set set1, Set set2) {

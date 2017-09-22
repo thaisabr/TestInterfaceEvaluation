@@ -52,9 +52,11 @@ class ValidTaskExporter {
 
     private generateNumeralData() {
         if (!tasks || tasks.empty) return []
+        double[] tests = tasks.collect { it.itestFiles().size() }
         double[] precisionValues = tasks.collect { it.precision() }
         double[] recallValues = tasks.collect { it.recall() }
-        ExporterUtil.generateStatistics(precisionValues, recallValues)
+        def content = ExporterUtil.generateStatistics(precisionValues, recallValues, tests)
+        content
     }
 
     private initTasks(List<AnalysedTask> tasks) {

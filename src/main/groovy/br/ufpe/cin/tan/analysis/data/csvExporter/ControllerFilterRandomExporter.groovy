@@ -9,13 +9,11 @@ class ControllerFilterRandomExporter {
 
     String file
     String controllerFile
-    String controllerOrgFile
     List<String[]> entries
 
     ControllerFilterRandomExporter(String file) {
         this.file = file
         this.controllerFile = file - ConstantData.CSV_FILE_EXTENSION + ConstantData.CONTROLLER_FILE_SUFIX
-        this.controllerOrgFile = controllerFile - ConstantData.CONTROLLER_FILE_SUFIX + ConstantData.CONTROLLER_ORGANIZED_FILE_SUFIX
         entries = CsvUtil.read(file)
     }
 
@@ -25,12 +23,12 @@ class ControllerFilterRandomExporter {
         double[] recallValues = values.collect { it[6] as double }
         List<String[]> content = []
         content += ExporterUtil.generateStatistics(precisionValues, recallValues)
-        content += entries.get(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER - 1)
+        content += entries.get(ExporterUtil.INITIAL_TEXT_SIZE_NO_CORRELATION_SHORT_HEADER - 1)
         content
     }
 
     private extractData() {
-        entries.subList(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER, entries.size())
+        entries.subList(ExporterUtil.INITIAL_TEXT_SIZE_NO_CORRELATION_SHORT_HEADER, entries.size())
     }
 
     def save() {

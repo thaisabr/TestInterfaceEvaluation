@@ -8,13 +8,11 @@ class ControllerFilterExporter {
 
     String file
     String controllerFile
-    String controllerOrgFile
     List<String[]> entries
 
     ControllerFilterExporter(String file) {
         this.file = file
         this.controllerFile = file - ConstantData.CSV_FILE_EXTENSION + ConstantData.CONTROLLER_FILE_SUFIX
-        this.controllerOrgFile = controllerFile - ConstantData.CONTROLLER_FILE_SUFIX + ConstantData.CONTROLLER_ORGANIZED_FILE_SUFIX
         entries = CsvUtil.read(file)
     }
 

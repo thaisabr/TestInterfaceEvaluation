@@ -48,9 +48,7 @@ class TextualSimilarityAnalyser {
         def frequencies = [:]
         Terms vector = reader.getTermVector(docId, "content")
         if (!vector) return frequencies
-        TermsEnum termsEnum = null
-        termsEnum = vector.iterator(termsEnum)
-
+        TermsEnum termsEnum = vector.iterator()
         BytesRef text
         while ((text = termsEnum?.next()) != null) {
             String term = text.utf8ToString()

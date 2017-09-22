@@ -2,8 +2,8 @@ package br.ufpe.cin.tan.similarity.text
 
 import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
 import gherkin.GherkinDialectProvider
+import org.apache.lucene.analysis.CharArraySet
 import org.apache.lucene.analysis.standard.StandardAnalyzer
-import org.apache.lucene.analysis.util.CharArraySet
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.FieldType
@@ -54,7 +54,6 @@ class IndexManager {
     }
 
     private configureStopWords(def dialect) {
-        stopwords = new CharArraySet(200, true)
         def words = []
         words += dialect.backgroundKeywords.unique()*.trim()
         words += dialect.examplesKeywords.unique()*.trim()
@@ -62,7 +61,7 @@ class IndexManager {
         words += dialect.scenarioKeywords.unique()*.trim()
         words += dialect.scenarioOutlineKeywords.unique()*.trim()
         words += dialect.stepKeywords.unique()*.trim()
-        stopwords.addAll(words)
+        stopwords = new CharArraySet(words, true)
     }
 
     private addDoc(String text) {

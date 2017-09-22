@@ -10,6 +10,7 @@ import br.ufpe.cin.tan.test.groovy.GroovyTestCodeAnalyser
 import br.ufpe.cin.tan.test.java.JavaTestCodeAnalyser
 import br.ufpe.cin.tan.test.ruby.RubyTestCodeAnalyser
 import br.ufpe.cin.tan.util.LanguageOption
+import br.ufpe.cin.tan.util.RegexUtil
 import br.ufpe.cin.tan.util.Util
 import groovy.util.logging.Slf4j
 
@@ -46,7 +47,10 @@ abstract class Task {
         def text = ""
         def gherkinFiles = getAcceptanceTests()
         if (!gherkinFiles || gherkinFiles.empty) return text
-        gherkinFiles?.each { file -> text += file.text + "\n" }
+        gherkinFiles?.each { file ->
+            def lines = file.text.readLines().findAll { !(it ==~ RegexUtil.GHERKIN_COMMENTED_LINE_REGEX) }
+            text += lines.join("\n") + "\n"
+        }
         text.replaceAll("(?m)^\\s", "") //(?m) - regex multiline - to avoid lines that only contain blank space
     }
 

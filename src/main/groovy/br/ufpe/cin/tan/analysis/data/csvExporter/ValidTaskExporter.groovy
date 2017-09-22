@@ -7,19 +7,17 @@ import br.ufpe.cin.tan.analysis.data.textExporter.TestCodeExporter
 import br.ufpe.cin.tan.util.CsvUtil
 
 /**
- * Filter and export analysed tasks that contain acceptance test and no empty IReal.
+ * Filter and export analysed tasks that contain acceptance test.
  * According to the configuration.properties file, the usage of coverage gems (in case of Rails projects) is also considered.
  */
-class RelevantTaskExporter {
+class ValidTaskExporter {
 
     String filename
     String folder
     String url
     List<AnalysedTask> tasks
-    List<AnalysedTask> relevantTasks
-    List<AnalysedTask> emptyITestTasks
 
-    RelevantTaskExporter(String filename, List<AnalysedTask> tasks) {
+    ValidTaskExporter(String filename, List<AnalysedTask> tasks) {
         this.filename = filename
         def index = filename.lastIndexOf(File.separator)
         folder = filename.substring(0, index)
@@ -27,11 +25,10 @@ class RelevantTaskExporter {
     }
 
     def save() {
-        def tasksToSave = relevantTasks + emptyITestTasks
-        if (!tasksToSave || tasksToSave.empty) return
-        saveIText(tasksToSave)
-        saveTestCode(tasksToSave)
-        saveAnalysisData(tasksToSave)
+        if (!tasks || tasks.empty) return
+        saveIText(tasks)
+        saveTestCode(tasks)
+        saveAnalysisData(tasks)
     }
 
     private saveIText(List<AnalysedTask> tasks) {
@@ -54,10 +51,9 @@ class RelevantTaskExporter {
     }
 
     private generateNumeralData() {
-        def tasksToSave = relevantTasks + emptyITestTasks
-        if (!tasksToSave || tasksToSave.empty) return []
-        double[] precisionValues = tasksToSave.collect { it.precision() }
-        double[] recallValues = tasksToSave.collect { it.recall() }
+        if (!tasks || tasks.empty) return []
+        double[] precisionValues = tasks.collect { it.precision() }
+        double[] recallValues = tasks.collect { it.recall() }
         ExporterUtil.generateStatistics(precisionValues, recallValues)
     }
 
@@ -66,15 +62,9 @@ class RelevantTaskExporter {
             this.tasks = []
             url = ""
         } else {
-            this.tasks = tasks.findAll { it.isValid() }
+            this.tasks = tasks.findAll { it.isValid() }?.sort { -it.itest.foundAcceptanceTests.size() }
             url = tasks.first().doneTask.gitRepository.url
         }
-        filterTasksByAcceptanceTests()
-    }
-
-    private filterTasksByAcceptanceTests() {
-        relevantTasks = tasks.findAll { it.isRelevant() }?.sort { -it.itest.foundAcceptanceTests.size() }
-        emptyITestTasks = (tasks - relevantTasks)?.sort { -it.itest.foundAcceptanceTests.size() }
     }
 
 }

@@ -14,8 +14,9 @@ class TaskAnalyser {
     TaskImporter taskImporter
 
     /* after task analysis */
-    List<AnalysedTask> selectedTasks
+    List<AnalysedTask> validTasks
     List<AnalysedTask> invalidTasks
+    List<AnalysedTask> relevantTasks
 
     /* analysis strategy */
     int taskLimit
@@ -25,15 +26,17 @@ class TaskAnalyser {
     String evaluationFile
     String organizedFile
     String filteredFile
-    String similarityFile
+    String similarityRelevantFile
+    String similarityValidFile
     String similarityOrganizedFile
     String testFile
     String relevantTasksFile
     String relevantTasksDetailsFile
+    String validTasksDetailsFile
+    String validTasksFile
     String invalidTasksFile
-    String randomTasksFile
-
-    RelevantTaskExporter relevantTaskExporter
+    String randomRelevantTasksFile
+    String randomValidTasksFile
 
     TaskAnalyser(String tasksFile) {
         this(tasksFile, 0)
@@ -46,13 +49,15 @@ class TaskAnalyser {
         taskImporter = new TaskImporter(file)
         decideAnalysisStrategy()
         configureOutputFiles()
-        selectedTasks = []
+        validTasks = []
         invalidTasks = []
+        relevantTasks = []
+        log.info "<  Restrict gherkin changes: '${Util.RESTRICT_GHERKIN_CHANGES}'  >"
         log.info "<  Generate random result: '${Util.RANDOM_BASELINE}'  >"
     }
 
     def generateRandomResult() {
-        if (selectedTasks.empty) {
+        if (validTasks.empty) {
             taskImporter.extractPtTasks()
             log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${taskImporter.candidateTasks.size()}"
             log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${taskImporter.falsePtTasks.size()}"
@@ -60,10 +65,11 @@ class TaskAnalyser {
                 def analysedTask = new AnalysedTask(task)
                 analysedTask.ireal = task.computeRealInterface()
                 analysedTask.irandom = task.computeRandomInterface()
-                selectedTasks += analysedTask
+                validTasks += analysedTask
+                if (analysedTask.isRelevant()) relevantTasks += analysedTask
             }
         } else {
-            selectedTasks.each { task ->
+            validTasks.each { task ->
                 task.irandom = task.doneTask.computeRandomInterface()
             }
         }
@@ -96,13 +102,17 @@ class TaskAnalyser {
         def name = evaluationFile - ConstantData.CSV_FILE_EXTENSION
         organizedFile = name + ConstantData.ORGANIZED_FILE_SUFIX
         filteredFile = name + ConstantData.FILTERED_FILE_SUFIX
-        similarityFile = name + ConstantData.SIMILARITY_FILE_SUFIX
+        similarityRelevantFile = name + "-relevant" + ConstantData.SIMILARITY_FILE_SUFIX
+        similarityValidFile = name + "-valid" + ConstantData.SIMILARITY_FILE_SUFIX
         similarityOrganizedFile = name + ConstantData.SIMILARITY_ORGANIZED_FILE_SUFIX
         testFile = name + ConstantData.TEST_EXECUTION_FILE_SUFIX
         relevantTasksFile = name + ConstantData.RELEVANT_TASKS_FILE_SUFIX
         relevantTasksDetailsFile = name + ConstantData.RELEVANT_TASKS_DETAILS_FILE_SUFIX
+        validTasksDetailsFile = name + ConstantData.VALID_TASKS_DETAILS_FILE_SUFIX
+        validTasksFile = name + ConstantData.VALID_TASKS_FILE_SUFIX
         invalidTasksFile = name + ConstantData.INVALID_TASKS_FILE_SUFIX
-        randomTasksFile = name + ConstantData.RANDOM_RESULTS_FILE_SUFIX
+        randomRelevantTasksFile = name + "-relevant" + ConstantData.RANDOM_RESULTS_FILE_SUFIX
+        randomValidTasksFile = name + "-valid" + ConstantData.RANDOM_RESULTS_FILE_SUFIX
     }
 
     private configureDefaultTaskLimit() {
@@ -118,7 +128,9 @@ class TaskAnalyser {
         if (taskImporter.importedTasks.size() > 200) {
             incrementalAnalysis = true
             configureDefaultTaskLimit()
-        } else incrementalAnalysis = false
+        } else {
+            incrementalAnalysis = false
+        }
         log.info "< Analysis strategy: Task limit = $taskLimit (value <=0 implies all tasks); incremental analysis = $incrementalAnalysis >"
     }
 
@@ -131,7 +143,7 @@ class TaskAnalyser {
         log.info "Groups of 100 units: ${groups} + Remainder: ${remainder}"
 
         def i = 0, j = 100, analysedGroups = 0, counter = 0
-        while (analysedGroups < groups && selectedTasks.size() < taskLimit) {
+        while (analysedGroups < groups && relevantTasks.size() < taskLimit) {
             counter++
             taskImporter.extractPtTasks(i, j)
             i = j
@@ -141,8 +153,8 @@ class TaskAnalyser {
             analyseLimitedTasks()
         }
 
-        if (remainder > 0 && selectedTasks.size() < taskLimit) {
-            log.info "Last try to find valid tasks!"
+        if (remainder > 0 && relevantTasks.size() < taskLimit) {
+            log.info "Last try to find relevant tasks!"
             taskImporter.extractPtTasks(i, i + remainder)
             printPartialDataAnalysis(++counter)
             analyseLimitedTasks()
@@ -155,12 +167,13 @@ class TaskAnalyser {
         log.info "Extracted tasks at round $round: ${candidatesSize + falsePtTasksSize}"
         log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${candidatesSize}"
         log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${falsePtTasksSize}"
-        log.info "Selected tasks so far: ${selectedTasks.size()}"
+        log.info "Valid tasks so far: ${validTasks.size()}"
+        log.info "Relevant tasks so far: ${relevantTasks.size()}"
     }
 
     private analyseLimitedTasks() {
         def counter = 0
-        for (int j = 0; j < taskImporter.candidateTasks.size() && selectedTasks.size() < taskLimit; j++) {
+        for (int j = 0; j < taskImporter.candidateTasks.size() && relevantTasks.size() < taskLimit; j++) {
             counter++
             def candidate = taskImporter.candidateTasks.get(j)
             analyse(candidate)
@@ -170,7 +183,10 @@ class TaskAnalyser {
 
     private analyse(DoneTask task) {
         def analysedTask = task.computeInterfaces()
-        if (analysedTask.isValid()) selectedTasks += analysedTask
+        if (analysedTask.isValid()) {
+            validTasks += analysedTask
+            if (analysedTask.isRelevant()) relevantTasks += analysedTask
+        }
         else invalidTasks += analysedTask
     }
 
@@ -197,44 +213,64 @@ class TaskAnalyser {
         }
     }
 
-    private exportRelevantTasks() {
-        if (selectedTasks.empty) log.info "There is no valid tasks to save!"
+    private exportValidAndRelevantTasks() {
+        if (relevantTasksFile.empty) log.info "There is no relevant tasks to save!"
         else {
-            relevantTaskExporter = new RelevantTaskExporter(relevantTasksFile, selectedTasks)
+            def relevantTaskExporter = new ValidTaskExporter(relevantTasksFile, relevantTasks)
             relevantTaskExporter.save()
-            def tasks = relevantTaskExporter.relevantTasks + relevantTaskExporter.emptyITestTasks
-            EvaluationExporter evaluationExporter = new EvaluationExporter(relevantTasksDetailsFile, tasks)
+            EvaluationExporter evaluationExporter = new EvaluationExporter(relevantTasksDetailsFile, relevantTasks)
             evaluationExporter.save()
             organizeResultForTestExecution()
-            log.info "Valid tasks were saved in ${relevantTasksFile}, ${relevantTasksDetailsFile} and ${testFile}."
+            log.info "Relevant tasks were saved in ${relevantTasksFile}, ${relevantTasksDetailsFile} and ${testFile}."
+        }
+
+        if (validTasksFile.empty) log.info "There is no valid tasks to save!"
+        else {
+            def relevantTaskExporter = new ValidTaskExporter(validTasksFile, validTasks)
+            relevantTaskExporter.save()
+            EvaluationExporter evaluationExporter = new EvaluationExporter(validTasksDetailsFile, validTasks)
+            evaluationExporter.save()
+            log.info "Valid tasks were saved in ${validTasksDetailsFile}."
         }
     }
 
     private exportRandomResult() {
-        if (!selectedTasks.empty) {
-            def randomResultExporter = new RandomResultExporter(randomTasksFile, selectedTasks)
+        if (!relevantTasksFile.empty) {
+            def randomResultExporter = new RandomResultExporter(randomRelevantTasksFile, relevantTasks)
+            randomResultExporter.save()
+        }
+        if (!validTasks.empty) {
+            def randomResultExporter = new RandomResultExporter(randomValidTasksFile, validTasks)
             randomResultExporter.save()
         }
     }
 
     private exportTasks() {
-        exportRelevantTasks()
+        exportValidAndRelevantTasks()
         exportInvalidTasks()
     }
 
     private exportAllDetailedInfo() {
-        if (!selectedTasks.empty) {
-            EvaluationExporter evaluationExporter = new EvaluationExporter(evaluationFile, selectedTasks)
+        if (!validTasks.empty) {
+            EvaluationExporter evaluationExporter = new EvaluationExporter(evaluationFile, validTasks)
             evaluationExporter.save()
         }
     }
 
     private analyseSimilarity() {
-        if (selectedTasks.empty) return
-        log.info "<  Analysing similarity among tasks from '$relevantTasksFile'  >"
-        SimilarityExporter similarityExporter = new SimilarityExporter(relevantTasksFile, similarityFile)
-        similarityExporter.save()
-        log.info "The results were saved!"
+        if (!relevantTasksFile.empty) {
+            log.info "<  Analysing similarity among tasks from '$relevantTasksFile'  >"
+            SimilarityExporter similarityExporter = new SimilarityExporter(relevantTasksFile, similarityRelevantFile)
+            similarityExporter.save()
+            log.info "The results were saved!"
+        }
+        if (!validTasksFile.empty) {
+            log.info "<  Analysing similarity among tasks from '$validTasksFile'  >"
+            SimilarityExporter similarityExporter = new SimilarityExporter(validTasksFile, similarityValidFile)
+            similarityExporter.save()
+            log.info "The results were saved!"
+        }
+
     }
 
     /* filter results to only consider controller files (via csv) - TEMPORARY CODE */
@@ -242,15 +278,19 @@ class TaskAnalyser {
     private filterResult() {
         ControllerFilterExporter controllerFilterExporter = new ControllerFilterExporter(relevantTasksFile)
         controllerFilterExporter.save()
+        controllerFilterExporter = new ControllerFilterExporter(validTasksFile)
+        controllerFilterExporter.save()
     }
 
     private filterRandomResult() {
-        ControllerFilterRandomExporter filterRandomExporter = new ControllerFilterRandomExporter(randomTasksFile)
+        ControllerFilterRandomExporter filterRandomExporter = new ControllerFilterRandomExporter(randomRelevantTasksFile)
+        filterRandomExporter.save()
+        filterRandomExporter = new ControllerFilterRandomExporter(randomValidTasksFile)
         filterRandomExporter.save()
     }
 
     private organizeResultForTestExecution() {
-        TestExecutionExporter testExecutionExporter = new TestExecutionExporter(testFile, relevantTaskExporter.relevantTasks)
+        TestExecutionExporter testExecutionExporter = new TestExecutionExporter(testFile, relevantTasks)
         testExecutionExporter.save()
     }
 

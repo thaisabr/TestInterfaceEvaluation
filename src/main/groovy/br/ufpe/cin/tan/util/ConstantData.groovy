@@ -47,6 +47,8 @@ abstract class ConstantData {
     public static final String TEST_EXECUTION_FILE_SUFIX = "-tests.csv"
     public static final String RELEVANT_TASKS_FILE_SUFIX = "-relevant.csv"
     public static final String RELEVANT_TASKS_DETAILS_FILE_SUFIX = "-relevant-detailed.csv"
+    public static final String VALID_TASKS_DETAILS_FILE_SUFIX = "-valid-detailed.csv"
+    public static final String VALID_TASKS_FILE_SUFIX = "-valid.csv"
     public static final String INVALID_TASKS_FILE_SUFIX = "-invalid.csv"
     public static final String RANDOM_RESULTS_FILE_SUFIX = "-random.csv"
 

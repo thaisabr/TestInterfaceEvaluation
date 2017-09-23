@@ -13,6 +13,10 @@ import java.util.regex.Matcher
 @Slf4j
 class SimilarityExporter {
 
+    public static final int TEXT_SIMILARITY_INDEX = 2
+    public static final int REAL_JACCARD_INDEX = 4
+    public static final int REAL_COSINE_INDEX = 6
+    public static final int INITIAL_TEXT_SIZE = 4
     String analysedTasksFile
     String similarityFile
 
@@ -67,9 +71,9 @@ class SimilarityExporter {
             }
         }
 
-        def textSimilarity = data.collect { it[2] as double } as double[]
-        def dataRealJaccard = data.collect { it[4] as double } as double[]
-        def dataRealCosine = data.collect { it[6] as double } as double[]
+        def textSimilarity = data.collect { it[TEXT_SIMILARITY_INDEX] as double } as double[]
+        def dataRealJaccard = data.collect { it[REAL_JACCARD_INDEX] as double } as double[]
+        def dataRealCosine = data.collect { it[REAL_COSINE_INDEX] as double } as double[]
         def correlationJaccard = TaskInterfaceEvaluator.calculateCorrelation(textSimilarity, dataRealJaccard)
         def correlationCosine = TaskInterfaceEvaluator.calculateCorrelation(textSimilarity, dataRealCosine)
         content += ["Correlation Jaccard Text-Real", correlationJaccard.toString()] as String[]

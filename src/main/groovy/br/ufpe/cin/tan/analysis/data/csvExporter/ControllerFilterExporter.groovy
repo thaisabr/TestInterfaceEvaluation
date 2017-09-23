@@ -1,7 +1,6 @@
 package br.ufpe.cin.tan.analysis.data.csvExporter
 
 import br.ufpe.cin.tan.analysis.data.ExporterUtil
-import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.CsvUtil
 
 class ControllerFilterExporter {
@@ -10,15 +9,15 @@ class ControllerFilterExporter {
     String controllerFile
     List<String[]> entries
 
-    ControllerFilterExporter(String file) {
+    ControllerFilterExporter(String file, String controllerFile) {
         this.file = file
-        this.controllerFile = file - ConstantData.CSV_FILE_EXTENSION + ConstantData.CONTROLLER_FILE_SUFIX
+        this.controllerFile = controllerFile
         entries = CsvUtil.read(file)
     }
 
     private generateMainHeader() {
         List<String[]> values = extractData()
-        double[] tests = values.collect { it[ExporterUtil.ITEST_SIZE_INDEX_SHORT_HEADER] as double }
+        double[] tests = values.collect { it[ExporterUtil.IMPLEMENTED_GHERKIN_TESTS] as double }
         double[] precisionValues = values.collect { it[ExporterUtil.PRECISION_INDEX_SHORT_HEADER] as double }
         double[] recallValues = values.collect { it[ExporterUtil.RECALL_INDEX_SHORT_HEADER] as double }
         List<String[]> content = []

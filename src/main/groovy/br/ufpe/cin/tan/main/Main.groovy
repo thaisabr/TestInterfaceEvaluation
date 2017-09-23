@@ -1,6 +1,7 @@
 package br.ufpe.cin.tan.main
 
 import br.ufpe.cin.tan.analysis.TaskAnalyser
+import br.ufpe.cin.tan.analysis.data.csvExporter.AggregatedStatisticsExporter
 import br.ufpe.cin.tan.util.Util
 import groovy.util.logging.Slf4j
 
@@ -26,12 +27,16 @@ class Main {
     }
 
     private runAnalysis() {
+        def analysers = []
         if (Util.MULTIPLE_TASK_FILES) { // analyse a set of csv files
             def cvsFiles = Util.findTaskFiles()
             cvsFiles?.each {
                 def taskAnalyser = new TaskAnalyser(it, limit)
                 taskAnalyser.analyseAll()
+                analysers += taskAnalyser
             }
+            AggregatedStatisticsExporter statisticsExporter = new AggregatedStatisticsExporter(analysers)
+            statisticsExporter.generateAggregatedStatistics()
         } else { //analyse a csv file
             def taskAnalyser = new TaskAnalyser(Util.TASKS_FILE, limit)
             taskAnalyser.analyseAll()
@@ -39,13 +44,17 @@ class Main {
     }
 
     private runAnalysisAndRandomResult() {
+        def analysers = []
         if (Util.MULTIPLE_TASK_FILES) { // analyse a set of csv files
             def cvsFiles = Util.findTaskFiles()
             cvsFiles?.each {
                 def taskAnalyser = new TaskAnalyser(it, limit)
                 taskAnalyser.analyseAll()
                 taskAnalyser.generateRandomResult()
+                analysers += taskAnalyser
             }
+            AggregatedStatisticsExporter statisticsExporter = new AggregatedStatisticsExporter(analysers)
+            statisticsExporter.generateAggregatedStatistics()
         } else { //analyse a csv file
             def taskAnalyser = new TaskAnalyser(Util.TASKS_FILE, limit)
             taskAnalyser.analyseAll()

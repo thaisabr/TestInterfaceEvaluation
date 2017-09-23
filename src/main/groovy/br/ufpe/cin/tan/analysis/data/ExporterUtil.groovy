@@ -23,6 +23,7 @@ class ExporterUtil {
     public static final int ITEST_INDEX_SHORT_HEADER = IREAL_INDEX_SHORT_HEADER - 1
     public static final int ITEST_SIZE_INDEX_SHORT_HEADER = ITEST_INDEX_SHORT_HEADER - 2
     public static final int IREAL_SIZE_INDEX_SHORT_HEADER = IREAL_INDEX_SHORT_HEADER - 2
+    public static final int IMPLEMENTED_GHERKIN_TESTS = 5
     public static final int INITIAL_TEXT_SIZE_SHORT_HEADER = 10
     public static final int INITIAL_TEXT_SIZE_NO_CORRELATION_SHORT_HEADER = INITIAL_TEXT_SIZE_SHORT_HEADER - 2
     public static final int ITEST_VIEWS_SIZE_INDEX_SHORT_HEADER = 15
@@ -41,8 +42,8 @@ class ExporterUtil {
         content += ["Recall standard deviation (RT)", recallStats.standardDeviation] as String[]
         def correlationITestPrecision = TaskInterfaceEvaluator.calculateCorrelation(tests, precisionValues)
         def correlationITestRecall = TaskInterfaceEvaluator.calculateCorrelation(tests, recallValues)
-        content += ["Correlation #ITest-Precision", correlationITestPrecision.toString()] as String[]
-        content += ["Correlation #ITest-Recall", correlationITestRecall.toString()] as String[]
+        content += ["Correlation #Test-Precision", correlationITestPrecision.toString()] as String[]
+        content += ["Correlation #Test-Recall", correlationITestRecall.toString()] as String[]
         content
     }
 

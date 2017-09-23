@@ -24,16 +24,16 @@ class TaskAnalyser {
 
     /* Output files*/
     String evaluationFile
-    String organizedFile
     String filteredFile
     String similarityRelevantFile
     String similarityValidFile
-    String similarityOrganizedFile
     String testFile
     String relevantTasksFile
     String relevantTasksDetailsFile
-    String validTasksDetailsFile
+    String relevantTasksControllerFile
     String validTasksFile
+    String validTasksDetailsFile
+    String validTasksControllerFile
     String invalidTasksFile
     String randomRelevantTasksFile
     String randomValidTasksFile
@@ -100,16 +100,16 @@ class TaskAnalyser {
         evaluationFile = folder.path + File.separator + file.name
 
         def name = evaluationFile - ConstantData.CSV_FILE_EXTENSION
-        organizedFile = name + ConstantData.ORGANIZED_FILE_SUFIX
         filteredFile = name + ConstantData.FILTERED_FILE_SUFIX
         similarityRelevantFile = name + "-relevant" + ConstantData.SIMILARITY_FILE_SUFIX
         similarityValidFile = name + "-valid" + ConstantData.SIMILARITY_FILE_SUFIX
-        similarityOrganizedFile = name + ConstantData.SIMILARITY_ORGANIZED_FILE_SUFIX
         testFile = name + ConstantData.TEST_EXECUTION_FILE_SUFIX
         relevantTasksFile = name + ConstantData.RELEVANT_TASKS_FILE_SUFIX
         relevantTasksDetailsFile = name + ConstantData.RELEVANT_TASKS_DETAILS_FILE_SUFIX
+        relevantTasksControllerFile = relevantTasksFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.CONTROLLER_FILE_SUFIX
         validTasksDetailsFile = name + ConstantData.VALID_TASKS_DETAILS_FILE_SUFIX
         validTasksFile = name + ConstantData.VALID_TASKS_FILE_SUFIX
+        validTasksControllerFile = validTasksFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.CONTROLLER_FILE_SUFIX
         invalidTasksFile = name + ConstantData.INVALID_TASKS_FILE_SUFIX
         randomRelevantTasksFile = name + "-relevant" + ConstantData.RANDOM_RESULTS_FILE_SUFIX
         randomValidTasksFile = name + "-valid" + ConstantData.RANDOM_RESULTS_FILE_SUFIX
@@ -276,9 +276,10 @@ class TaskAnalyser {
     /* filter results to only consider controller files (via csv) - TEMPORARY CODE */
 
     private filterResult() {
-        ControllerFilterExporter controllerFilterExporter = new ControllerFilterExporter(relevantTasksFile)
+        ControllerFilterExporter controllerFilterExporter = new ControllerFilterExporter(relevantTasksFile,
+                relevantTasksControllerFile)
         controllerFilterExporter.save()
-        controllerFilterExporter = new ControllerFilterExporter(validTasksFile)
+        controllerFilterExporter = new ControllerFilterExporter(validTasksFile, validTasksControllerFile)
         controllerFilterExporter.save()
     }
 

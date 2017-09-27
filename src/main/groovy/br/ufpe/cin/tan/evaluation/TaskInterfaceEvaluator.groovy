@@ -54,6 +54,7 @@ class TaskInterfaceEvaluator {
     }
 
     static Double calculateCorrelation(double[] independent, double[] dependent) {
+        if (!independent || !dependent || independent.length == 0 || dependent.length == 0) return null
         PearsonsCorrelation pearsonsCorrelation = new PearsonsCorrelation()
         Double value = pearsonsCorrelation.correlation(independent, dependent)
         if (Double.isNaN(value)) null

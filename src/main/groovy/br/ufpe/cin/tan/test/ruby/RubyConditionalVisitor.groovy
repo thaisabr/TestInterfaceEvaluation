@@ -126,7 +126,7 @@ class RubyConditionalVisitor extends NoopVisitor {
         if (condition) {
             def expression
             def result = iVisited?.thenBody?.childNodes()?.collect { extractIfResult(it) }?.findAll { it != null }
-            if (!result.empty) {
+            if (result && !result.empty) {
                 expression = result.last()
                 def exp = new ConditionalExpression(line: iVisited.position.startLine, expression: condition.exp,
                         result: expression.name, resultIsMethod: expression.isMethod)

@@ -54,22 +54,18 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
      * @param path path of interest file
      * @return the root node of the AST
      */
-    Node generateAst(reader, String path) {
-        def result1 = parseFile(reader, path, CompatVersion.RUBY2_3)
-        if (result1.errors.size() == 0) {
+    Node generateAstForFile(String path) {
+        def result1 = parseFile(new FileReader(path), path, CompatVersion.RUBY2_3)
+        if (result1.errors.empty && result1.node) {
             return result1.node
         } else {
-            def result2 = parseFile(reader, path, CompatVersion.RUBY2_0)
-            if (result2.errors.size() == 0) {
+            def result2 = parseFile(new FileReader(path), path, CompatVersion.RUBY2_0)
+            if (result2.errors.empty && result2.node) {
                 return result2.node
             } else {
-                if (result1.errors.size() <= result2.errors.size()) {
-                    compilationErrors += result1.errors
-                    return result1.node
-                } else {
-                    compilationErrors += result2.errors
-                    return result2.node
-                }
+                def mininum = [result1, result2].find { it.errors.min() }
+                compilationErrors += mininum.errors
+                return mininum.node
             }
         }
     }
@@ -82,13 +78,23 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     Node generateAst(String path) {
         def index = path.indexOf(repositoryPath)
         def filename = index >= 0 ? path : repositoryPath + File.separator + path
-        FileReader reader = new FileReader(filename)
-        this.generateAst(reader, filename)
+        this.generateAstForFile(filename)
     }
 
     Node generateAst(String path, String content) {
-        StringReader reader = new StringReader(content)
-        this.generateAst(reader, path)
+        def result1 = parseFile(new StringReader(content), path, CompatVersion.RUBY2_3)
+        if (result1.errors.empty && result1.node) {
+            return result1.node
+        } else {
+            def result2 = parseFile(new StringReader(content), path, CompatVersion.RUBY2_0)
+            if (result2.errors.empty && result2.node) {
+                return result2.node
+            } else {
+                def mininum = [result1, result2].find { it.errors.min() }
+                compilationErrors += mininum.errors
+                return mininum.node
+            }
+        }
     }
 
     private static parseFile(reader, String path, CompatVersion version) {

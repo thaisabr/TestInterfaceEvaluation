@@ -3,7 +3,9 @@ package br.ufpe.cin.tan.analysis
 import br.ufpe.cin.tan.analysis.data.TaskImporter
 import br.ufpe.cin.tan.analysis.data.csvExporter.*
 import br.ufpe.cin.tan.analysis.task.DoneTask
+import br.ufpe.cin.tan.test.AcceptanceTest
 import br.ufpe.cin.tan.util.ConstantData
+import br.ufpe.cin.tan.util.CsvUtil
 import br.ufpe.cin.tan.util.Util
 import groovy.util.logging.Slf4j
 
@@ -54,9 +56,26 @@ class TaskAnalyser {
         relevantTasks = []
         log.info "<  Restrict gherkin changes: '${Util.RESTRICT_GHERKIN_CHANGES}'  >"
         log.info "<  Generate random result: '${Util.RANDOM_BASELINE}'  >"
+        log.info "<  Analyse views: '${Util.VIEW_ANALYSIS}'  >"
+    }
+
+    TaskAnalyser(TaskImporter taskImporter, String tasksFile, int taskLimit) {
+        this.taskLimit = taskLimit
+        file = new File(tasksFile)
+        log.info "<  Analysing tasks from '${file.path}'  >"
+        this.taskImporter = taskImporter
+        this.taskImporter.printInfo()
+        decideAnalysisStrategy()
+        configureOutputFiles()
+        validTasks = []
+        invalidTasks = []
+        relevantTasks = []
+        log.info "<  Restrict gherkin changes: '${Util.RESTRICT_GHERKIN_CHANGES}'  >"
+        log.info "<  Generate random result: '${Util.RANDOM_BASELINE}'  >"
     }
 
     def generateRandomResult() {
+        log.info "<  Generating random result... >"
         if (validTasks.empty) {
             taskImporter.extractPtTasks()
             log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${taskImporter.candidateTasks.size()}"
@@ -89,6 +108,54 @@ class TaskAnalyser {
         exportTasks()
         exportAllDetailedInfo()
         filterResult() //TEMPORARY CODE
+    }
+
+    def getIrrelevantImportedTasksId() {
+        taskImporter.bigTasks?.collect { it[1] as int } + taskImporter.notPtImportedTasks?.collect { it[1] as int }
+        +taskImporter.falsePtTasks?.collect { it.id }
+    }
+
+    def getInvalidTasksId() {
+        invalidTasks?.collect { it.doneTask.id }
+    }
+
+    def filterRelevantTasksByTestsAndEmptyItest() {
+        def entries = organizeTests()
+        def selected = entries.unique { it.tests }.collect { it.task }
+        relevantTasks?.findAll { (it.doneTask.id in selected) && !it.itestIsEmpty() }?.sort { it.doneTask.id }
+    }
+
+    def backupOutputCsv(int index) {
+        CsvUtil.copy(invalidTasksFile,
+                invalidTasksFile - ConstantData.CSV_FILE_EXTENSION + index + ConstantData.CSV_FILE_EXTENSION)
+    }
+
+    private exportInvalidTasks() {
+        if (invalidTasks.empty) log.info "There is no invalid tasks to save!"
+        else {
+            EvaluationExporter evaluationExporter = new EvaluationExporter(invalidTasksFile, invalidTasks, false)
+            evaluationExporter.save()
+            log.info "Invalid tasks were saved in ${invalidTasksFile}."
+        }
+    }
+
+    private organizeTests() {
+        def result = []
+        relevantTasks.each { task ->
+            def tests = extractTests(task)
+            result += [task: task.doneTask.id, tests: tests]
+        }
+        result
+    }
+
+    private static extractTests(AnalysedTask task) {
+        def scenarios = []
+        Set<AcceptanceTest> tests = task.itest.foundAcceptanceTests
+        tests.each { test ->
+            def lines = test.scenarioDefinition*.location.line
+            scenarios += [file: test.gherkinFilePath, lines: lines.sort()]
+        }
+        scenarios
     }
 
     private configureOutputFiles() {
@@ -202,15 +269,6 @@ class TaskAnalyser {
 
         if (taskLimit > 0) analyseLimitedTasks()
         else analyseAllTasks()
-    }
-
-    private exportInvalidTasks() {
-        if (invalidTasks.empty) log.info "There is no invalid tasks to save!"
-        else {
-            EvaluationExporter evaluationExporter = new EvaluationExporter(invalidTasksFile, invalidTasks, false)
-            evaluationExporter.save()
-            log.info "Invalid tasks were saved in ${invalidTasksFile}."
-        }
     }
 
     private exportValidAndRelevantTasks() {

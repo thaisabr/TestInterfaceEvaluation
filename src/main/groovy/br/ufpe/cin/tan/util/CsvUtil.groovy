@@ -38,4 +38,9 @@ class CsvUtil {
     static append(String filename, List<String[]> content) {
         writeCsv(filename, content, true)
     }
+
+    static copy(String input, String output) {
+        def entries = read(input)
+        write(output, entries)
+    }
 }

@@ -1,14 +1,13 @@
 package br.ufpe.cin.tan.analysis.data.csvExporter
 
-import br.ufpe.cin.tan.analysis.TaskAnalyser
 import br.ufpe.cin.tan.analysis.data.ExporterUtil
 import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
 import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.CsvUtil
+import br.ufpe.cin.tan.util.Util
 
 class AggregatedStatisticsExporter {
 
-    List<TaskAnalyser> analysers
     String aggregatedStatisticsFile
     def relevantSimilarityFiles
     def validSimilarityFiles
@@ -21,35 +20,30 @@ class AggregatedStatisticsExporter {
     def correlationITestPrecision
     def correlationITestRecall
 
-    AggregatedStatisticsExporter(List<TaskAnalyser> analysers) {
-        this.analysers = analysers
-        aggregatedStatisticsFile = "${ConstantData.DEFAULT_EVALUATION_FOLDER}${File.separator}aggregated.csv"
+    AggregatedStatisticsExporter(String folder) {
+        aggregatedStatisticsFile = "${folder}${File.separator}aggregated.csv"
+        def output = Util.findFilesFromDirectory(folder)
+        relevantSimilarityFiles = output.findAll { it.endsWith("-relevant" + ConstantData.SIMILARITY_FILE_SUFIX) }
+        validSimilarityFiles = output.findAll { it.endsWith("-valid" + ConstantData.SIMILARITY_FILE_SUFIX) }
+        relevantTasksFiles = output.findAll { it.endsWith(ConstantData.RELEVANT_TASKS_FILE_SUFIX) }
+        relevantTasksControllerFiles = output.findAll { it.endsWith("-relevant" + ConstantData.CONTROLLER_FILE_SUFIX) }
+        validTasksFiles = output.findAll { it.endsWith(ConstantData.VALID_TASKS_FILE_SUFIX) }
+        validTasksControllerFiles = output.findAll { it.endsWith("-valid" + ConstantData.CONTROLLER_FILE_SUFIX) }
     }
 
     def generateAggregatedStatistics() {
         List<String[]> content = []
         content += ["Relevant similarity files"] as String[]
-        relevantSimilarityFiles = analysers.collect { it.similarityRelevantFile }
         content += aggregatedCorrelationTextReal(relevantSimilarityFiles)
-
         content += ["Valid similarity files"] as String[]
-        validSimilarityFiles = analysers.collect { it.similarityValidFile }
         content += aggregatedCorrelationTextReal(validSimilarityFiles)
-
         content += ["Relevant tasks files"] as String[]
-        relevantTasksFiles = analysers.collect { it.relevantTasksFile }
         content += aggregatedCorrelationTestsPrecisionRecall(relevantTasksFiles)
-
         content += ["Relevant controller tasks files"] as String[]
-        relevantTasksControllerFiles = analysers.collect { it.relevantTasksControllerFile }
         content += aggregatedCorrelationTestsPrecisionRecall(relevantTasksControllerFiles)
-
         content += ["Valid tasks files"] as String[]
-        validTasksFiles = analysers.collect { it.validTasksFile }
         content += aggregatedCorrelationTestsPrecisionRecall(validTasksFiles)
-
         content += ["Valid controller tasks files"] as String[]
-        validTasksControllerFiles = analysers.collect { it.validTasksControllerFile }
         content += aggregatedCorrelationTestsPrecisionRecall(validTasksControllerFiles)
         CsvUtil.write(aggregatedStatisticsFile, content)
     }

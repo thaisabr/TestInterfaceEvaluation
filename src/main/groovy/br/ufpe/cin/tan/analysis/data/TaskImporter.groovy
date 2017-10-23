@@ -9,13 +9,13 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class TaskImporter {
 
-    int URL_INDEX = 0
-    int TASK_INDEX = 1
-    int COMMITS_INDEX = 2
-    int HASHES_INDEX = 3
-    int PROD_FILES_INDEX = 4
-    int TEST_FILES_INDEX = 5
-    int LAST_COMMIT = 6
+    final int URL_INDEX = 0
+    final int TASK_INDEX = 1
+    final int COMMITS_INDEX = 2
+    final int HASHES_INDEX = 3
+    final int PROD_FILES_INDEX = 4
+    final int TEST_FILES_INDEX = 5
+    final int LAST_COMMIT = 6
 
     File file
     String url
@@ -38,6 +38,10 @@ class TaskImporter {
         updateTasks()
         if (importedTasks.size() > 0) url = importedTasks.first()[URL_INDEX]
         else url = ""
+        printInfo()
+    }
+
+    def printInfo() {
         log.info "All tasks imported from '${file.path}': ${importedTasks.size()}"
         log.info "Big tasks (more than ${Util.TASK_MAX_SIZE} commits): ${bigTasks.size()}"
         log.info "Invalid imported tasks (do not have production and test code or big tasks): ${notPtImportedTasks.size()}"
@@ -74,7 +78,7 @@ class TaskImporter {
     private importTasksFromCsv() {
         List<String[]> entries = CsvUtil.read(file.path)?.unique { it[TASK_INDEX] }
         entries.remove(0)
-        importedTasks = entries
+        importedTasks = entries.sort { it[TASK_INDEX] as int }
     }
 
     private updateTasks() {

@@ -58,16 +58,16 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         def result1 = parseFile(new FileReader(path), path, CompatVersion.RUBY2_3)
         if (result1.errors.empty && result1.node) {
             return result1.node
-        } else {
-            def result2 = parseFile(new FileReader(path), path, CompatVersion.RUBY2_0)
-            if (result2.errors.empty && result2.node) {
-                return result2.node
-            } else {
-                def mininum = [result1, result2].find { it.errors.min() }
-                compilationErrors += mininum.errors
-                return mininum.node
-            }
         }
+
+        def result2 = parseFile(new FileReader(path), path, CompatVersion.RUBY2_0)
+        if (result2.errors.empty && result2.node) {
+            return result2.node
+        }
+
+        def mininum = [result1, result2].find { it.errors.min() }
+        compilationErrors += mininum.errors
+        mininum.node
     }
 
     static List<String> recoverFileContent(String path) {
@@ -85,16 +85,16 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         def result1 = parseFile(new StringReader(content), path, CompatVersion.RUBY2_3)
         if (result1.errors.empty && result1.node) {
             return result1.node
-        } else {
-            def result2 = parseFile(new StringReader(content), path, CompatVersion.RUBY2_0)
-            if (result2.errors.empty && result2.node) {
-                return result2.node
-            } else {
-                def mininum = [result1, result2].find { it.errors.min() }
-                compilationErrors += mininum.errors
-                return mininum.node
-            }
         }
+
+        def result2 = parseFile(new StringReader(content), path, CompatVersion.RUBY2_0)
+        if (result2.errors.empty && result2.node) {
+            return result2.node
+        }
+
+        def mininum = [result1, result2].find { it.errors.min() }
+        compilationErrors += mininum.errors
+        mininum.node
     }
 
     private static parseFile(reader, String path, CompatVersion version) {

@@ -15,6 +15,7 @@ class RubyStepsFileVisitor extends NoopVisitor {
     RubyTestCodeVisitor methodCallVisitor
     List<String> fileContent
     List<String> body
+    List analysedLines
 
     RubyStepsFileVisitor(List<MethodToAnalyse> methodsToAnalyse, RubyTestCodeVisitor methodCallVisitor, List<String> fileContent) {
         this.lines = methodsToAnalyse*.line
@@ -22,6 +23,7 @@ class RubyStepsFileVisitor extends NoopVisitor {
         this.methodCallVisitor = methodCallVisitor
         this.fileContent = fileContent
         this.body = []
+        this.analysedLines = []
     }
 
     /**
@@ -60,8 +62,11 @@ class RubyStepsFileVisitor extends NoopVisitor {
     }
 
     private extractMethodBody(FCallNode iVisited) {
-        def methodBody = fileContent.getAt([iVisited.position.startLine..iVisited.position.endLine])
-        body += methodBody
+        if (!(iVisited.position.startLine in analysedLines)) {
+            def methodBody = fileContent.getAt([iVisited.position.startLine..iVisited.position.endLine])
+            body += methodBody
+            analysedLines += iVisited.position.startLine
+        }
     }
 
 }

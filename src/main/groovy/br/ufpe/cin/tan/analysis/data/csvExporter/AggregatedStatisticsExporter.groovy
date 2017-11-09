@@ -17,6 +17,8 @@ class AggregatedStatisticsExporter {
     def validTasksControllerFiles
     def correlationJaccard
     def correlationCosine
+    def correlationTestsPrecision
+    def correlationTestsRecall
     def correlationITestPrecision
     def correlationITestRecall
 
@@ -80,23 +82,30 @@ class AggregatedStatisticsExporter {
         def tests = []
         def precisionValues = []
         def recallValues = []
+        def itestSize = []
 
         files?.each { file ->
             List<String[]> entries = CsvUtil.read(file)
             if (entries.size() > ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER) {
                 def data = entries.subList(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER, entries.size())
                 tests += data.collect { it[ExporterUtil.IMPLEMENTED_GHERKIN_TESTS] as double }
+                itestSize += data.collect { it[ExporterUtil.ITEST_SIZE_INDEX_SHORT_HEADER] as double }
                 precisionValues += data.collect { it[ExporterUtil.PRECISION_INDEX_SHORT_HEADER] as double }
                 recallValues += data.collect { it[ExporterUtil.RECALL_INDEX_SHORT_HEADER] as double }
             }
         }
 
         tests = tests.flatten()
+        itestSize = itestSize.flatten()
         precisionValues = precisionValues.flatten()
         recallValues = recallValues.flatten()
 
-        correlationITestPrecision = TaskInterfaceEvaluator.calculateCorrelation(tests as double[], precisionValues as double[])
-        correlationITestRecall = TaskInterfaceEvaluator.calculateCorrelation(tests as double[], recallValues as double[])
+        correlationTestsPrecision = TaskInterfaceEvaluator.calculateCorrelation(tests as double[], precisionValues as double[])
+        correlationTestsRecall = TaskInterfaceEvaluator.calculateCorrelation(tests as double[], recallValues as double[])
+        content += ["Correlation #Test-Precision", correlationTestsPrecision.toString()] as String[]
+        content += ["Correlation #Test-Recall", correlationTestsRecall.toString()] as String[]
+        correlationITestPrecision = TaskInterfaceEvaluator.calculateCorrelation(itestSize as double[], precisionValues as double[])
+        correlationITestRecall = TaskInterfaceEvaluator.calculateCorrelation(itestSize as double[], recallValues as double[])
         content += ["Correlation #ITest-Precision", correlationITestPrecision.toString()] as String[]
         content += ["Correlation #ITest-Recall", correlationITestRecall.toString()] as String[]
         content

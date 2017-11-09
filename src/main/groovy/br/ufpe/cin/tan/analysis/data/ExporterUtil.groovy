@@ -40,10 +40,10 @@ class ExporterUtil {
         content += ["Recall mean (RT)", recallStats.mean] as String[]
         content += ["Recall median (RT)", recallStats.getPercentile(50.0)] as String[]
         content += ["Recall standard deviation (RT)", recallStats.standardDeviation] as String[]
-        def correlationITestPrecision = TaskInterfaceEvaluator.calculateCorrelation(tests, precisionValues)
-        def correlationITestRecall = TaskInterfaceEvaluator.calculateCorrelation(tests, recallValues)
-        content += ["Correlation #Test-Precision", correlationITestPrecision.toString()] as String[]
-        content += ["Correlation #Test-Recall", correlationITestRecall.toString()] as String[]
+        def correlationTestsPrecision = TaskInterfaceEvaluator.calculateCorrelation(tests, precisionValues)
+        def correlationTestsRecall = TaskInterfaceEvaluator.calculateCorrelation(tests, recallValues)
+        content += ["Correlation #Test-Precision", correlationTestsPrecision.toString()] as String[]
+        content += ["Correlation #Test-Recall", correlationTestsRecall.toString()] as String[]
         content
     }
 

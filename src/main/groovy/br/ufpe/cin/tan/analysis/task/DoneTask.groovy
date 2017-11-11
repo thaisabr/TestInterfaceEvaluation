@@ -28,6 +28,7 @@ import org.eclipse.jgit.revwalk.RevCommit
 @Slf4j
 class DoneTask extends Task {
 
+    static Random random = new Random()
     RevCommit lastCommit
     String lastHash
     List<Commit> commits
@@ -159,15 +160,13 @@ class DoneTask extends Task {
 
             //decide interface size
             def maxSize = currentFiles.size()
-            Random random1 = new Random()
             def low = 1
             int high = maxSize + 1
-            def randomSize = random1.nextInt(high - low) + low
+            def randomSize = random.nextInt(high - low) + low
 
             //decide interface content
-            Random random2 = new Random()
             while (randomInterface.size() < randomSize) {
-                def index = random2.nextInt(maxSize)
+                def index = random.nextInt(maxSize) //random.nextInt(maxSize - 0) + 0
                 randomInterface += currentFiles.getAt(index)
             }
         } catch (Exception ex) {

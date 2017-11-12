@@ -63,8 +63,6 @@ class GitRepository {
         logs
     }
 
-    /* Commits are sorted by the sequence they are search. For security reason, entry hashes considering the*/
-
     Iterable<RevCommit> searchAllRevCommitsBySha(String... hash) {
         def commits = searchAllRevCommits()
         def logs = []
@@ -239,16 +237,18 @@ class GitRepository {
 
         //searches for changed or removed step definitions
         List<StepDefinition> changedStepDefinitions = []
-        oldDefs?.each { stepDef ->
-            def foundStepDef = newDefs?.find { it.value == stepDef.value }
-            if (foundStepDef && foundStepDef.value && !foundStepDef.value.empty) {
-                if (stepDef.size() == foundStepDef.size()) { //step definition might be changed
-                    def stepDefEquals = GherkinManager.equals(foundStepDef, stepDef)
-                    if (!stepDefEquals) changedStepDefinitions += foundStepDef
-                } else {//step definition was changed
-                    changedStepDefinitions += foundStepDef
-                }
-            } //if a step definition was removed, it was not relevant for the task
+        if (!Util.RESTRICT_GHERKIN_CHANGES) {
+            oldDefs?.each { stepDef ->
+                def foundStepDef = newDefs?.find { it.value == stepDef.value }
+                if (foundStepDef && foundStepDef.value && !foundStepDef.value.empty) {
+                    if (stepDef.size() == foundStepDef.size()) { //step definition might be changed
+                        def stepDefEquals = GherkinManager.equals(foundStepDef, stepDef)
+                        if (!stepDefEquals) changedStepDefinitions += foundStepDef
+                    } else {//step definition was changed
+                        changedStepDefinitions += foundStepDef
+                    }
+                } //if a step definition was removed, it was not relevant for the task
+            }
         }
 
         //searches for added step definitions

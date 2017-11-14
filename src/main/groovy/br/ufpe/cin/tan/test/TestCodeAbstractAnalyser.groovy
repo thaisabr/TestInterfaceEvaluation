@@ -130,7 +130,7 @@ abstract class TestCodeAbstractAnalyser {
         List<AcceptanceTest> acceptanceTests = extractAcceptanceTest(gherkinFiles)
         List<StepCode> stepCodes1 = acceptanceTests*.stepCodes?.flatten()?.unique()
         List<FileToAnalyse> files1 = identifyMethodsPerFileToVisit(stepCodes1)
-        List<FileToAnalyse> files2 = findCodeForStepsIndependentFromAcceptanceTest(stepFiles)
+        List<FileToAnalyse> files2 = findCodeForStepsIndependentFromAcceptanceTest(stepFiles, acceptanceTests)
         List<FileToAnalyse> filesToAnalyse = collapseFilesToVisit(files1, files2)
         computeInterface(filesToAnalyse, removedSteps)
     }
@@ -223,7 +223,7 @@ abstract class TestCodeAbstractAnalyser {
         codes
     }
 
-    List findCodeForStepIndependentFromAcceptanceTest(StepDefinition step) {
+    List findCodeForStepIndependentFromAcceptanceTest(StepDefinition step, List<AcceptanceTest> acceptanceTests) {
         def result = []
         def stepCodeMatch = regexList?.findAll { step.regex == it.value }
         def match = null
@@ -232,7 +232,8 @@ abstract class TestCodeAbstractAnalyser {
             log.warn "There are many implementations for step code: ${step.value}; ${step.path} (${step.line})"
         }
         if (match) { //step code was found
-            result += [path: match.path, line: match.line]
+            def type = findStepType(step, acceptanceTests)
+            result += [path: match.path, line: match.line, keyword: type, text: match.value]
         } else {
             log.warn "Step code was not found: ${step.value}; ${step.path} (${step.line})"
             def text = step.value.replaceAll(/".+"/,"\"\"").replaceAll(/'.+'/,"\'\'")
@@ -241,24 +242,30 @@ abstract class TestCodeAbstractAnalyser {
         result
     }
 
-    List findCodeForStepsIndependentFromAcceptanceTest(List<ChangedStepdefFile> stepFiles) {
+    List findCodeForStepsIndependentFromAcceptanceTest(List<ChangedStepdefFile> stepFiles, List<AcceptanceTest> acceptanceTests) {
+        def values = []
         List<FileToAnalyse> result = []
         stepFiles?.each { file ->
             def partialResult = []
             file.changedStepDefinitions?.each { step ->
-                def code = findCodeForStepIndependentFromAcceptanceTest(step) //path, line
+                def code = findCodeForStepIndependentFromAcceptanceTest(step, acceptanceTests) //path, line, keyword, text
                 if (code && !code.empty) partialResult += code
             }
             if (!partialResult.empty) {
-                def resumedResult = [path: partialResult?.first()?.path, lines: partialResult*.line?.unique()?.sort()]
                 def methodsToAnalyse = []
-                //we consider when as default because we always analyse it
-                resumedResult.lines.each {
-                    methodsToAnalyse += new MethodToAnalyse(line: it, args: [], type: ConstantData.WHEN_STEP_EN)
+                partialResult?.each {
+                    methodsToAnalyse += new MethodToAnalyse(line: it.line, args: [], type: it.keyword)
                 }
-                result += new FileToAnalyse(path: resumedResult.path, methods: methodsToAnalyse)
+                result += new FileToAnalyse(path: partialResult?.first()?.path, methods: methodsToAnalyse)
             }
+            values += partialResult.collect { "${it.text} (${it.path}: ${it.line})" }
         }
+
+        log.info "Number of implemented step definitions: ${values.size()}"
+        def info = ""
+        values?.each { info += "$it\n" }
+        log.info info.toString()
+
         result
     }
 
@@ -366,6 +373,16 @@ abstract class TestCodeAbstractAnalyser {
 
     def updateTrace(List<FileToAnalyse> files){
         files.each{ updateTrace(it) }
+    }
+
+    private static findStepType(StepDefinition stepDefinition, List<AcceptanceTest> acceptanceTests) {
+        def result = stepDefinition.keyword
+        def stepCodeList = (acceptanceTests*.stepCodes.flatten())
+        def match = stepCodeList.find { it.step.text ==~ stepDefinition.regex }
+        if (match) {
+            result = match.type
+        }
+        result
     }
 
     private updateTraceMethod(List files){

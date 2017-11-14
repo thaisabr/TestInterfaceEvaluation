@@ -3,6 +3,7 @@ package br.ufpe.cin.tan.commit.change.gherkin
 
 class StepDefinition {
 
+    String keyword
     String path
     String value
     String regex

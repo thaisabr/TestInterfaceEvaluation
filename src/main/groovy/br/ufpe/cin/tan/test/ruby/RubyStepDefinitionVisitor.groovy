@@ -106,7 +106,8 @@ class RubyStepDefinitionVisitor extends NoopVisitor {
 
                 if (!body.empty) {
                     stepDefinitions += new StepDefinition(path: path, value: value, regex: regex.value,
-                            line: iVisited.position.startLine, end: iVisited.position.endLine, body: body)
+                            line: iVisited.position.startLine, end: iVisited.position.endLine, body: body,
+                            keyword: iVisited.name.trim())
                 }
             }
         }

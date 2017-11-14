@@ -55,6 +55,7 @@ class TaskAnalyser {
         invalidTasks = []
         relevantTasks = []
         log.info "<  Restrict gherkin changes: '${Util.RESTRICT_GHERKIN_CHANGES}'  >"
+        log.info "<  Filter when steps: '${Util.WHEN_FILTER}'  >"
         log.info "<  Generate random result: '${Util.RANDOM_BASELINE}'  >"
         log.info "<  Analyse views: '${Util.VIEW_ANALYSIS}'  >"
     }

@@ -62,11 +62,6 @@ class RubyNonResourcefulPropertiesVisitor extends NoopVisitor {
             if (indexAction > -1) actionValue = values.get(indexAction + 1).value
 
             //there is explicit pathMethodName
-            println "values: $values"
-            println "indexAs: ${indexAs}"
-            println "indexController: ${indexController}"
-            println "indexAction: ${indexAction}"
-            println "indexPath: ${indexPath}"
             if ((indexAs > -1) && ((indexAs + 1) < values.size())) pathMethodName = values.get(indexAs + 1).value
 
             //there is explicit path value

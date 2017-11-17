@@ -319,9 +319,9 @@ class GitRepository {
                         changedScenarioDefinitions += foundDefinition
                     }
                 } else { //if a scenario definition was removed, it was not relevant for the task
-                    log.info "commit ${commit.name} removed scenario from ${entry.newPath}:\n ${definition.name}"
+                    //log.info "commit ${commit.name} removed scenario from ${entry.newPath}:\n ${definition.name}"
                     definition.steps.each {
-                        log.info "${it.text}; ${entry.newPath} (${it.location.line})"
+                        //log.info "${it.text}; ${entry.newPath} (${it.location.line})"
                         removedSteps += [path: entry.newPath, text: it.text]
                     }
                 }

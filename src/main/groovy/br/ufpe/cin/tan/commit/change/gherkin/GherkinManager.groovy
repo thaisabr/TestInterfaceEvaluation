@@ -3,10 +3,7 @@ package br.ufpe.cin.tan.commit.change.gherkin
 import gherkin.AstBuilder
 import gherkin.Parser
 import gherkin.ParserException
-import gherkin.ast.Background
-import gherkin.ast.Feature
-import gherkin.ast.GherkinDocument
-import gherkin.ast.ScenarioDefinition
+import gherkin.ast.*
 import groovy.util.logging.Slf4j
 import org.eclipse.jgit.revwalk.RevCommit
 
@@ -93,7 +90,12 @@ class GherkinManager {
         Background background = (Background) feature?.children?.find { it instanceof Background }
         if (background && !background.steps.empty) {
             def init = background.location.line
-            def endLine = background.steps?.last()?.location?.line
+            def endLine
+            def dataTables = background.steps.findAll { it.argument instanceof DataTable }*.argument
+            if (dataTables && !dataTables.empty) {
+                def dataTableEndLine = dataTables?.collect { it.rows*.location.line }?.flatten()?.sort()?.last()
+                endLine = dataTableEndLine
+            } else endLine = background.steps?.last()?.location?.line
             for (int i = init - 1; i < endLine; i++) {
                 text += lines.get(i).trim() + "\n"
             }

@@ -258,12 +258,13 @@ abstract class TestCodeAbstractAnalyser {
                 }
                 result += new FileToAnalyse(path: partialResult?.first()?.path, methods: methodsToAnalyse)
             }
-            values += partialResult.collect { "${it.text} (${it.path}: ${it.line})" }
+            values += partialResult
         }
 
+        analysisData.foundStepDefs = values
         log.info "Number of implemented step definitions: ${values.size()}"
         def info = ""
-        values?.each { info += "$it\n" }
+        values?.each { info += "${it.text} (${it.path}: ${it.line})\n" }
         log.info info.toString()
 
         result
@@ -481,6 +482,7 @@ abstract class TestCodeAbstractAnalyser {
         itest.codeFromViewAnalysis = this.getCodeFromViewAnalysis()
         itest.notFoundViews = notFoundViews.sort()
         itest.foundAcceptanceTests = analysisData.foundAcceptanceTests
+        itest.foundStepDefs = analysisData.foundStepDefs
         itest.visitCallCounter = analysisData.visitCallCounter
         itest.lostVisitCall = analysisData.lostVisitCall
         itest.code += analysisData.testCode

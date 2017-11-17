@@ -6,6 +6,7 @@ class AnalysisData {
 
     Set matchStepErrors
     Set<AcceptanceTest> foundAcceptanceTests
+    Set foundStepDefs
     Set codeFromViewAnalysis
     int visitCallCounter
     Set lostVisitCall //keys: path, line
@@ -14,7 +15,8 @@ class AnalysisData {
 
     AnalysisData() {
         matchStepErrors = [] as Set
-        foundAcceptanceTests = []
+        foundAcceptanceTests = [] as Set
+        foundStepDefs = [] as Set
         codeFromViewAnalysis = [] as Set
         lostVisitCall = [] as Set
         trace = [] as Set

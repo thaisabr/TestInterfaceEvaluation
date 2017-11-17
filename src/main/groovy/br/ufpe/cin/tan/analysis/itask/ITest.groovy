@@ -20,6 +20,7 @@ class ITest extends TaskInterface {
     Set compilationErrors //[path: String, msgs: List<String>]
     Set notFoundViews
     Set foundAcceptanceTests
+    Set foundStepDefs
     Set codeFromViewAnalysis
     int visitCallCounter
     Set lostVisitCall
@@ -39,6 +40,7 @@ class ITest extends TaskInterface {
         this.compilationErrors = [] as Set
         this.notFoundViews = [] as Set
         this.foundAcceptanceTests = [] as Set
+        this.foundStepDefs = [] as Set
         this.codeFromViewAnalysis = [] as Set
         this.lostVisitCall = [] as Set
         this.trace = [] as Set
@@ -99,6 +101,7 @@ class ITest extends TaskInterface {
         this.compilationErrors += task.compilationErrors
         this.notFoundViews += task.notFoundViews
         this.foundAcceptanceTests += task.foundAcceptanceTests
+        this.foundStepDefs += task.foundStepDefs
         this.codeFromViewAnalysis += task.codeFromViewAnalysis
         this.visitCallCounter += task.visitCallCounter
         this.timestamp += task.timestamp
@@ -124,6 +127,7 @@ class ITest extends TaskInterface {
         taskInterface.compilationErrors = compilationErrors - task.compilationErrors
         taskInterface.notFoundViews = notFoundViews - task.notFoundViews
         taskInterface.foundAcceptanceTests = foundAcceptanceTests - task.foundAcceptanceTests
+        taskInterface.foundStepDefs = foundStepDefs - task.foundStepDefs
         taskInterface.codeFromViewAnalysis = codeFromViewAnalysis - task.codeFromViewAnalysis
         taskInterface.visitCallCounter = visitCallCounter - task.visitCallCounter
         taskInterface.timestamp = timestamp - task.timestamp

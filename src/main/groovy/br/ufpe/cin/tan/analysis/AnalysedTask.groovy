@@ -202,12 +202,12 @@ class AnalysedTask {
     /**
      * Represents an analysed task as an array in order to export content to CSV files.
      * Task information is organized as follows: id, dates, #days, #commits, commit message, #developers,
-     * #(gherkin tests), #(implemented gherkin tests), #(step definitions), unknown methods, #(step calls),
-     * step match errors, #(step match errors), AST errors, #(AST errors), gherkin AST errors, #(gherkin AST errors),
-     * step AST errors, #(step AST errors), renamed files, deleted files, not found views, #views, #ITest, #IReal,
-     * ITest, IReal, precision, recall, hashes, timestamp, rails version, gems, #(calls to visit), #(views in ITest),
-     * #(files accessed by view analysis), files accessed by view analysis.
-     * Complete version with 37 fields.
+     * #(gherkin tests), #(implemented gherkin tests), #(stepdefs), #(implemented stepdefs), unknown methods,
+     * #(step calls), step match errors, #(step match errors), AST errors, #(AST errors), gherkin AST errors,
+     * #(gherkin AST errors), step AST errors, #(step AST errors), renamed files, deleted files, not found views,
+     * #views, #ITest, #IReal, ITest, IReal, precision, recall, hashes, timestamp, rails version, gems,
+     * #(calls to visit), #(views in ITest), #(files accessed by view analysis), files accessed by view analysis.
+     * Complete version with 38 fields.
      * */
     def parseAllToArray() {
         def itestFiles = this.itestFiles()
@@ -222,8 +222,8 @@ class AnalysedTask {
         def viewFileFromITest = itestViewFiles().size()
         String[] array = [doneTask.id, dates, doneTask.days, doneTask.commitsQuantity, commitMsg, developers,
                           doneTask.gherkinTestQuantity, itest.foundAcceptanceTests.size(), doneTask.stepDefQuantity,
-                          methods, stepCalls, stepMatchErrorsText, stepMatchErrors, compilationErrorsText,
-                          compilationErrors, gherkinCompilationErrorsText, gherkinCompilationErrors,
+                          itest.foundStepDefs.size(), methods, stepCalls, stepMatchErrorsText, stepMatchErrors,
+                          compilationErrorsText, compilationErrors, gherkinCompilationErrorsText, gherkinCompilationErrors,
                           stepDefCompilationErrorsText, stepDefCompilationErrors, renames, removedFiles, views,
                           views.size(), itestSize, irealSize, itestFiles, irealFiles, precision(), recall(),
                           doneTask.hashes, itest.timestamp, rails, gems, itest.visitCallCounter, itest.lostVisitCall,
@@ -234,10 +234,10 @@ class AnalysedTask {
     /**
      * Represents an analysed task as an array in order to export content to CSV files.
      * Task information is organized as follows: id, dates, #days, #developers, #commits, hashes,
-     * #(implemented gherkin tests), #ITest, #IReal, ITest, IReal, precision, recall, rails version, #(calls to visit),
-     * #(views in ITest), #(files accessed by view analysis), files accessed by view analysis, unknown methods,
-     * renamed files, deleted files, views, #views, timestamp.
-     * Partial version with 23 fields.
+     * #(implemented gherkin tests), #(implemented stepdefs), #ITest, #IReal, ITest, IReal, precision, recall,
+     * rails version, #(calls to visit), #(views in ITest), #(files accessed by view analysis), files accessed by view
+     * analysis, unknown methods, renamed files, deleted files, views, #views, timestamp.
+     * Partial version with 24 fields.
      * */
     def parseToArray() {
         def itestFiles = this.itestFiles()
@@ -254,11 +254,11 @@ class AnalysedTask {
         def diff2 = irealFiles - itestFiles
         def hits = itestFiles.intersect(irealFiles)
         String[] line = [doneTask.id, doneTask.days, developers, doneTask.commitsQuantity, doneTask.hashes,
-                         itest.foundAcceptanceTests.size(), itestSize, irealSize, itestFiles, irealFiles, precision(),
-                         recall(), rails, itest.visitCallCounter, itest.lostVisitCall, viewFileFromITest,
-                         filesFromViewAnalysis.size(), filesFromViewAnalysis, methods, renames, removedFiles, views,
-                         views.size(), itest.timestamp, hasMergeCommit(), diff1.size(), diff2.size(), diff1, diff2,
-                         hits.size(), hits]
+                         itest.foundAcceptanceTests.size(), itest.foundStepDefs.size(), itestSize, irealSize, itestFiles,
+                         irealFiles, precision(), recall(), rails, itest.visitCallCounter, itest.lostVisitCall,
+                         viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, methods, renames,
+                         removedFiles, views, views.size(), itest.timestamp, hasMergeCommit(), diff1.size(), diff2.size(),
+                         diff1, diff2, hits.size(), hits]
         line
     }
 

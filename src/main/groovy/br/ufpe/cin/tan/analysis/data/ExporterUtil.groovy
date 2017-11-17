@@ -9,11 +9,11 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 class ExporterUtil {
 
     public
-    static String[] SHORT_HEADER = ["TASK", "#DAYS", "#DEVS", "#COMMITS", "HASHES", "#GHERKIN_TESTS", "#ITest", "#IReal",
-                                    "ITest", "IReal", "PRECISION", "RECALL", "RAILS", "#visit_call", "lost_visit_call",
-                                    "#ITest_views", "#view_analysis_code", "view_analysis_code", "methods_no_origin",
-                                    "renamed_files", "deleted_files", "noFound_views", "#noFound_views", "TIMESTAMP",
-                                    "has_merge"]
+    static String[] SHORT_HEADER = ["TASK", "#DAYS", "#DEVS", "#COMMITS", "HASHES", "#GHERKIN_TESTS", "#STEP_DEFS",
+                                    "#ITest", "#IReal", "ITest", "IReal", "PRECISION", "RECALL", "RAILS", "#visit_call",
+                                    "lost_visit_call", "#ITest_views", "#view_analysis_code", "view_analysis_code",
+                                    "methods_no_origin", "renamed_files", "deleted_files", "noFound_views",
+                                    "#noFound_views", "TIMESTAMP", "has_merge"]
     static String[] SHORT_HEADER_PLUS = SHORT_HEADER + ["#ITest-IReal", "#IReal-ITest", "ITest-IReal", "IReal-ITest",
                                                         "#Hits", "Hits"]
 
@@ -26,7 +26,7 @@ class ExporterUtil {
     public static final int IMPLEMENTED_GHERKIN_TESTS = 5
     public static final int INITIAL_TEXT_SIZE_SHORT_HEADER = 10
     public static final int INITIAL_TEXT_SIZE_NO_CORRELATION_SHORT_HEADER = INITIAL_TEXT_SIZE_SHORT_HEADER - 2
-    public static final int ITEST_VIEWS_SIZE_INDEX_SHORT_HEADER = 15
+    public static final int ITEST_VIEWS_SIZE_INDEX_SHORT_HEADER = 16
 
     static generateStatistics(double[] precisionValues, double[] recallValues, double[] tests) {
         int zero = 0

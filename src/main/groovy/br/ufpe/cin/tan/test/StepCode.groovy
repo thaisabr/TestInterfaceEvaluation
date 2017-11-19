@@ -38,4 +38,10 @@ class StepCode {
         def location = codePath - Util.getRepositoriesCanonicalPath()
         "${type}: ${step.text}; location: $location ($line); args: $args"
     }
+
+    void setType(String type) {
+        if (type.endsWith(" ")) this.type = type
+        else this.type = type + " "
+    }
+
 }

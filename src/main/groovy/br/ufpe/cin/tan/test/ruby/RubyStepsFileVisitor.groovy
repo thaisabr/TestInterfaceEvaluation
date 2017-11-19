@@ -1,6 +1,7 @@
 package br.ufpe.cin.tan.test.ruby
 
 import br.ufpe.cin.tan.test.MethodToAnalyse
+import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.Util
 import org.jrubyparser.ast.FCallNode
 import org.jrubyparser.util.NoopVisitor
@@ -45,11 +46,11 @@ class RubyStepsFileVisitor extends NoopVisitor {
 
     private filteredAnalysis(FCallNode iVisited, MethodToAnalyse method) {
         switch (method.type) {
-            case "Given ":
+            case ConstantData.GIVEN_STEP_EN:
                 RubyGivenStepAnalyser givenStepAnalyser = new RubyGivenStepAnalyser(methodCallVisitor)
                 givenStepAnalyser.analyse(iVisited, method)
                 break
-            case "When ": //common analysis
+            case ConstantData.WHEN_STEP_EN: //common analysis
                 noFilteredAnalysis(iVisited, method)
         //we do not analyse "then" step
         }

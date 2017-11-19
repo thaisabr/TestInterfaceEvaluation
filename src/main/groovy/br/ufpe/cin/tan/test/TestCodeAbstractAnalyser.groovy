@@ -253,10 +253,13 @@ abstract class TestCodeAbstractAnalyser {
             }
             if (!partialResult.empty) {
                 def methodsToAnalyse = []
+                if (Util.WHEN_FILTER) partialResult = partialResult?.findAll { it.keyword != ConstantData.THEN_STEP_EN }
                 partialResult?.each {
                     methodsToAnalyse += new MethodToAnalyse(line: it.line, args: [], type: it.keyword)
                 }
-                result += new FileToAnalyse(path: partialResult?.first()?.path, methods: methodsToAnalyse)
+                if (!partialResult.empty) {
+                    result += new FileToAnalyse(path: partialResult?.first()?.path, methods: methodsToAnalyse)
+                }
             }
             values += partialResult
         }
@@ -380,7 +383,7 @@ abstract class TestCodeAbstractAnalyser {
         def result = stepDefinition.keyword
         def stepCodeList = (acceptanceTests*.stepCodes.flatten())
         def match = stepCodeList.find { it.step.text ==~ stepDefinition.regex }
-        if (match) {
+        if (match) { //Step (gherkin) and step definition (ruby) were both changed
             result = match.type
         }
         result

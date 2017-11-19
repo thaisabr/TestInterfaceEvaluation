@@ -22,4 +22,9 @@ class StepDefinition {
         return end - line
     }
 
+    void setKeyword(String keyword) {
+        if (keyword.endsWith(" ")) this.keyword = keyword
+        else this.keyword = keyword + " "
+    }
+
 }

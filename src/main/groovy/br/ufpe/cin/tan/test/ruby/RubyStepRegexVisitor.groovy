@@ -37,8 +37,9 @@ class RubyStepRegexVisitor extends NoopVisitor {
     Object visitRegexpNode(RegexpNode iVisited) {
         super.visitRegexpNode(iVisited)
         if (isStepDefinitionNode(iVisited)) {
+            def stepdefType = iVisited.grandParent?.name
             regexs += new StepRegex(path: path, value: new String(iVisited.value.getBytes(), StandardCharsets.UTF_8),
-                    line: iVisited.position.startLine)
+                    line: iVisited.position.startLine, keyword: stepdefType)
         }
         return iVisited
     }
@@ -52,7 +53,10 @@ class RubyStepRegexVisitor extends NoopVisitor {
                 if (it instanceof StrNode) value += "${it.value}"
                 else if (it instanceof EvStrNode) value += ".+"
             }
-            if (!value.empty) regexs += new StepRegex(path: path, value: value, line: iVisited.position.startLine)
+            if (!value.empty) {
+                def stepdefType = iVisited.grandParent?.name
+                regexs += new StepRegex(path: path, value: value, line: iVisited.position.startLine, keyword: stepdefType)
+            }
         }
         return iVisited
     }

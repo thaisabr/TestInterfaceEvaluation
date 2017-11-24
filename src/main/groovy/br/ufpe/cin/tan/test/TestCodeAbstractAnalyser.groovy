@@ -197,7 +197,7 @@ abstract class TestCodeAbstractAnalyser {
             def args = []
             if (extractArgs) args = extractArgsFromStepText(step.text, match.value)
             def keyword = step.keyword
-            if (keyword == ConstantData.GENERIC_STEP) keyword = ConstantData.WHEN_STEP_EN
+            if (keyword == ConstantData.GENERIC_STEP) keyword = match.keyword
             if (last && (keyword in [ConstantData.AND_STEP_EN, ConstantData.BUT_STEP_EN])) keyword = last.type
             code += new StepCode(step: step, codePath: match.path, line: match.line, args: args, type: keyword)
         } else {

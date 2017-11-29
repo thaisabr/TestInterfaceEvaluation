@@ -12,7 +12,7 @@ class Route {
 
     void setName(String name) {
         this.name = name.replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*/", "/.*/")
-                .replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*[^/()]", "/.*")
+                .replaceAll("/:(\\w|\\.|:|#|&|=|\\+|\\?)*[^/()]", "/.*").replaceAll("/", "_")
     }
 
     @Override

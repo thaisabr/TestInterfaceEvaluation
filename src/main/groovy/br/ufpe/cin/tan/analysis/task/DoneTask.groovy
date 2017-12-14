@@ -11,6 +11,7 @@ import br.ufpe.cin.tan.commit.change.stepdef.ChangedStepdefFile
 import br.ufpe.cin.tan.commit.change.stepdef.StepdefManager
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
 import br.ufpe.cin.tan.exception.CloningRepositoryException
+import br.ufpe.cin.tan.test.ruby.routes.RoutesManager
 import br.ufpe.cin.tan.util.Util
 import gherkin.ast.Background
 import gherkin.ast.Feature
@@ -28,6 +29,7 @@ import org.eclipse.jgit.revwalk.RevCommit
 @Slf4j
 class DoneTask extends Task {
 
+    RoutesManager routesManager
     static Random random = new Random()
     RevCommit lastCommit
     String lastHash
@@ -288,6 +290,8 @@ class DoneTask extends Task {
         commitsChangedGherkinFile = []
         commitsStepsChange = []
         configureLastCommit()
+        routesManager = new RoutesManager(testCodeAnalyser.repositoryPath, lastHash)
+        testCodeAnalyser.routesManager = routesManager
         hashes = commits*.hash
         developers = commits*.author?.flatten()?.unique()?.size()
         extractCommitMessages()

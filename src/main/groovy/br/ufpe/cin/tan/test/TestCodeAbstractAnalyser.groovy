@@ -6,6 +6,7 @@ import br.ufpe.cin.tan.commit.change.gherkin.GherkinManager
 import br.ufpe.cin.tan.commit.change.gherkin.StepDefinition
 import br.ufpe.cin.tan.commit.change.stepdef.ChangedStepdefFile
 import br.ufpe.cin.tan.commit.change.unit.ChangedUnitTestFile
+import br.ufpe.cin.tan.test.ruby.routes.RoutesManager
 import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.Util
 import gherkin.ast.Background
@@ -21,6 +22,7 @@ import groovy.util.logging.Slf4j
 @Slf4j
 abstract class TestCodeAbstractAnalyser {
 
+    RoutesManager routesManager
     String repositoryPath
     String stepsFilePath
 

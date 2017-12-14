@@ -2,6 +2,7 @@ package br.ufpe.cin.tan.analysis.data.csvExporter
 
 import br.ufpe.cin.tan.analysis.AnalysedTask
 import br.ufpe.cin.tan.util.CsvUtil
+import br.ufpe.cin.tan.util.Util
 import groovy.util.logging.Slf4j
 
 @Slf4j
@@ -31,19 +32,28 @@ class EvaluationExporter {
     int stepCounter
     int gherkinCounter
 
-    String[] MAIN_HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests",
-                            "#Impl_Gherkin_Tests", "#StepDef", "#Impl_StepDef", "Methods_Unknown_Type", "#Step_Call",
-                            "Step_Match_Errors", "#Step_Match_Error", "AST_Errors", "#AST_Errors", "Gherkin_AST_Errors",
-                            "#Gherkin_AST_Errors", "Steps_AST_Errors", "#Steps_AST_Errors", "Renamed_Files",
-                            "Deleted_Files", "NotFound_Views", "#Views", "#ITest", "#IReal", "ITest", "IReal",
-                            "Precision", "Recall", "Hashes", "Timestamp", "Rails", "Gems", "#Visit_Call",
-                            "Lost_visit_call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis", "Has_Merge"]
+    String[] MAIN_HEADER
 
     EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks) {
         this(evaluationFile, tasks, true)
     }
 
     EvaluationExporter(String evaluationFile, List<AnalysedTask> tasks, boolean toFilter) {
+        def measure1, measure2
+        if (Util.SIMILARITY_ANALYSIS) {
+            measure1 = "Jaccard"
+            measure2 = "Cosine"
+        } else {
+            measure1 = "Precision"
+            measure2 = "Recall"
+        }
+        MAIN_HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests",
+                       "#Impl_Gherkin_Tests", "#StepDef", "#Impl_StepDef", "Methods_Unknown_Type", "#Step_Call",
+                       "Step_Match_Errors", "#Step_Match_Error", "AST_Errors", "#AST_Errors", "Gherkin_AST_Errors",
+                       "#Gherkin_AST_Errors", "Steps_AST_Errors", "#Steps_AST_Errors", "Renamed_Files",
+                       "Deleted_Files", "NotFound_Views", "#Views", "#ITest", "#IReal", "ITest", "IReal",
+                       measure1, measure2, "Hashes", "Timestamp", "Rails", "Gems", "#Visit_Call",
+                       "Lost_visit_call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis", "Has_Merge"]
         file = new File(evaluationFile)
         this.tasks = tasks
         filterEmptyIReal = toFilter
@@ -106,8 +116,16 @@ class EvaluationExporter {
         initialData += ["All invalid tasks", invalidTasks.size()] as String[]
         initialData += ["All valid tasks (Gherkin scenario, no empty IReal, no error)", validTasks.size()] as String[]
         initialData += ["Valid tasks, but empty ITest", emptyITest.size()] as String[]
-        initialData += ["Valid tasks, no empty ITest, but zero precision-recall", zeroPrecisionAndRecall.size()] as String[]
-        initialData += ["Valid tasks, no empty ITest, no zero precision-recall", others.size()] as String[]
+
+        def measure
+        if (Util.SIMILARITY_ANALYSIS) {
+            measure = "similarity"
+        } else {
+            measure = "precision-recall"
+        }
+
+        initialData += ["Valid tasks, no empty ITest, but zero $measure", zeroPrecisionAndRecall.size()] as String[]
+        initialData += ["Valid tasks, no empty ITest, no zero $measure", others.size()] as String[]
         initialData += MAIN_HEADER
     }
 

@@ -4,6 +4,7 @@ import br.ufpe.cin.tan.analysis.itask.IReal
 import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.analysis.task.DoneTask
 import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
+import br.ufpe.cin.tan.similarity.test.TestSimilarityAnalyser
 import br.ufpe.cin.tan.test.AcceptanceTest
 import br.ufpe.cin.tan.util.Util
 import br.ufpe.cin.tan.util.ruby.RubyUtil
@@ -135,19 +136,39 @@ class AnalysedTask {
     }
 
     double precision() {
-        TaskInterfaceEvaluator.calculateFilesPrecision(itest, ireal)
+        if (Util.SIMILARITY_ANALYSIS) {
+            def similarityAnalyser = new TestSimilarityAnalyser(itest.findFilteredFiles(), ireal.findFilteredFiles())
+            similarityAnalyser.calculateSimilarityByJaccard()
+        } else {
+            TaskInterfaceEvaluator.calculateFilesPrecision(itest, ireal)
+        }
     }
 
     double recall() {
-        TaskInterfaceEvaluator.calculateFilesRecall(itest, ireal)
+        if (Util.SIMILARITY_ANALYSIS) {
+            def similarityAnalyser = new TestSimilarityAnalyser(itest.findFilteredFiles(), ireal.findFilteredFiles())
+            similarityAnalyser.calculateSimilarityByCosine()
+        } else {
+            TaskInterfaceEvaluator.calculateFilesRecall(itest, ireal)
+        }
     }
 
     double randomPrecision() {
-        TaskInterfaceEvaluator.calculateFilesPrecision(irandom, ireal)
+        if (Util.SIMILARITY_ANALYSIS) {
+            def similarityAnalyser = new TestSimilarityAnalyser(irandom.findFilteredFiles(), ireal.findFilteredFiles())
+            similarityAnalyser.calculateSimilarityByJaccard()
+        } else {
+            TaskInterfaceEvaluator.calculateFilesPrecision(irandom, ireal)
+        }
     }
 
     double randomRecall() {
-        TaskInterfaceEvaluator.calculateFilesRecall(irandom, ireal)
+        if (Util.SIMILARITY_ANALYSIS) {
+            def similarityAnalyser = new TestSimilarityAnalyser(irandom.findFilteredFiles(), ireal.findFilteredFiles())
+            similarityAnalyser.calculateSimilarityByCosine()
+        } else {
+            TaskInterfaceEvaluator.calculateFilesRecall(irandom, ireal)
+        }
     }
 
     def getDates() {
@@ -250,15 +271,15 @@ class AnalysedTask {
         if (views.empty) views = ""
         def filesFromViewAnalysis = filesFromViewAnalysis()
         def viewFileFromITest = itestViewFiles().size()
-        def diff1 = itestFiles - irealFiles
-        def diff2 = irealFiles - itestFiles
+        def falsePositives = itestFiles - irealFiles
+        def falseNegatives = irealFiles - itestFiles
         def hits = itestFiles.intersect(irealFiles)
         String[] line = [doneTask.id, doneTask.days, developers, doneTask.commitsQuantity, doneTask.hashes,
                          itest.foundAcceptanceTests.size(), itest.foundStepDefs.size(), itestSize, irealSize, itestFiles,
                          irealFiles, precision(), recall(), rails, itest.visitCallCounter, itest.lostVisitCall,
                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, methods, renames,
-                         removedFiles, views, views.size(), itest.timestamp, hasMergeCommit(), diff1.size(), diff2.size(),
-                         diff1, diff2, hits.size(), hits]
+                         removedFiles, views, views.size(), itest.timestamp, hasMergeCommit(), falsePositives.size(),
+                         falseNegatives.size(), falsePositives, falseNegatives, hits.size(), hits]
         line
     }
 

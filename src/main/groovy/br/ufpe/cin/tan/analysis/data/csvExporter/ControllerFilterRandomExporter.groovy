@@ -2,8 +2,10 @@ package br.ufpe.cin.tan.analysis.data.csvExporter
 
 import br.ufpe.cin.tan.analysis.data.ExporterUtil
 import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
+import br.ufpe.cin.tan.similarity.test.TestSimilarityAnalyser
 import br.ufpe.cin.tan.util.ConstantData
 import br.ufpe.cin.tan.util.CsvUtil
+import br.ufpe.cin.tan.util.Util
 
 class ControllerFilterRandomExporter {
 
@@ -49,10 +51,19 @@ class ControllerFilterRandomExporter {
         def irandom = ExporterUtil.findControllers(originalIRandom)
         def originalIReal = ExporterUtil.configureITask(value, 4)
         def ireal = ExporterUtil.findControllers(originalIReal)
-        def precision = TaskInterfaceEvaluator.calculateFilesPrecision(irandom, ireal)
-        def recall = TaskInterfaceEvaluator.calculateFilesRecall(irandom, ireal)
-        def diff1 = irandom - ireal
-        def diff2 = ireal - irandom
+        def precision, recall
+
+        if (Util.SIMILARITY_ANALYSIS) {
+            def similarityAnalyser = new TestSimilarityAnalyser(irandom, ireal)
+            precision = similarityAnalyser.calculateSimilarityByJaccard()
+            recall = similarityAnalyser.calculateSimilarityByCosine()
+        } else {
+            precision = TaskInterfaceEvaluator.calculateFilesPrecision(irandom, ireal)
+            recall = TaskInterfaceEvaluator.calculateFilesRecall(irandom, ireal)
+        }
+
+        def falsePositives = irandom - ireal
+        def falseNegatives = ireal - irandom
         def hits = irandom.intersect(ireal)
 
         String[] line = value
@@ -62,10 +73,10 @@ class ControllerFilterRandomExporter {
         line[4] = ireal
         line[5] = precision
         line[6] = recall
-        line[7] = diff1.size()
-        line[8] = diff2.size()
-        line[9] = diff1
-        line[10] = diff2
+        line[7] = falsePositives.size()
+        line[8] = falseNegatives.size()
+        line[9] = falsePositives
+        line[10] = falseNegatives
         line[11] = hits.size()
         line[12] = hits
         line

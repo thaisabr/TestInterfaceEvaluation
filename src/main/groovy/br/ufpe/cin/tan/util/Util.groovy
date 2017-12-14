@@ -41,6 +41,7 @@ abstract class Util {
     public static boolean RESTRICT_GHERKIN_CHANGES
     public static final boolean RUNNING_ALL_CONFIGURATIONS
     public static final boolean RANDOM_BASELINE
+    public static final boolean SIMILARITY_ANALYSIS
 
     static {
         properties = new Properties()
@@ -100,6 +101,7 @@ abstract class Util {
         RESTRICT_GHERKIN_CHANGES = configureGherkinAdds()
         RUNNING_ALL_CONFIGURATIONS = configureRunningConfigurations()
         RANDOM_BASELINE = configureRandomBaseline()
+        SIMILARITY_ANALYSIS = configureSimilarityAnalysis()
     }
 
     private static loadProperties() {
@@ -208,7 +210,10 @@ abstract class Util {
     private static boolean configureRandomBaseline() {
         configureBooleanProperties(properties.(ConstantData.PROP_RANDOM_BASELINE), ConstantData.DEFAULT_RANDOM_BASELINE)
     }
-    //
+
+    private static boolean configureSimilarityAnalysis() {
+        configureBooleanProperties(properties.(ConstantData.PROP_SIMILARITY), ConstantData.DEFAULT_SIMILARITY)
+    }
 
     private static createFolder(String folder) {
         File zipFolder = new File(folder)

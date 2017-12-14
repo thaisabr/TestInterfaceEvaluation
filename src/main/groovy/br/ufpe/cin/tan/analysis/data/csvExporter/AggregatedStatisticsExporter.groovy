@@ -100,14 +100,27 @@ class AggregatedStatisticsExporter {
         precisionValues = precisionValues.flatten()
         recallValues = recallValues.flatten()
 
+        def measure1, measure2
+        if (Util.SIMILARITY_ANALYSIS) {
+            measure1 = "Jaccard"
+            measure2 = "Cosine"
+        } else {
+            measure1 = "Precision"
+            measure2 = "Recall"
+        }
+        def text1 = "Correlation #Test-$measure1"
+        def text2 = "Correlation #Test-$measure2"
+        def text3 = "Correlation #ITest-$measure1"
+        def text4 = "Correlation #ITest-$measure2"
+
         correlationTestsPrecision = TaskInterfaceEvaluator.calculateCorrelation(tests as double[], precisionValues as double[])
         correlationTestsRecall = TaskInterfaceEvaluator.calculateCorrelation(tests as double[], recallValues as double[])
-        content += ["Correlation #Test-Precision", correlationTestsPrecision.toString()] as String[]
-        content += ["Correlation #Test-Recall", correlationTestsRecall.toString()] as String[]
+        content += [text1, correlationTestsPrecision.toString()] as String[]
+        content += [text2, correlationTestsRecall.toString()] as String[]
         correlationITestPrecision = TaskInterfaceEvaluator.calculateCorrelation(itestSize as double[], precisionValues as double[])
         correlationITestRecall = TaskInterfaceEvaluator.calculateCorrelation(itestSize as double[], recallValues as double[])
-        content += ["Correlation #ITest-Precision", correlationITestPrecision.toString()] as String[]
-        content += ["Correlation #ITest-Recall", correlationITestRecall.toString()] as String[]
+        content += [text3, correlationITestPrecision.toString()] as String[]
+        content += [text4, correlationITestRecall.toString()] as String[]
         content
     }
 

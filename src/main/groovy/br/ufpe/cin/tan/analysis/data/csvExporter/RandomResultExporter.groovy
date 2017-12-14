@@ -3,6 +3,7 @@ package br.ufpe.cin.tan.analysis.data.csvExporter
 import br.ufpe.cin.tan.analysis.AnalysedTask
 import br.ufpe.cin.tan.analysis.data.ExporterUtil
 import br.ufpe.cin.tan.util.CsvUtil
+import br.ufpe.cin.tan.util.Util
 
 class RandomResultExporter {
 
@@ -29,8 +30,18 @@ class RandomResultExporter {
         List<String[]> content = []
         content += ["Repository", url] as String[]
         content += generateNumeralData()
-        content += ["TASK", "#IRandom", "#IReal", "IRandom", "IReal", "PRECISION", "RECALL", "#IRandom-IReal",
-                    "#IReal-IRandom", "IRandom-IReal", "IReal-IRandom", "#Hits", "Hits"] as String[]
+
+        def measure1, measure2
+        if (Util.SIMILARITY_ANALYSIS) {
+            measure1 = "Jaccard"
+            measure2 = "Cosine"
+        } else {
+            measure1 = "Precision"
+            measure2 = "Recall"
+        }
+
+        content += ["TASK", "#IRandom", "#IReal", "IRandom", "IReal", measure1, measure2, "#FP",
+                    "#FN", "FP", "FN", "#Hits", "Hits"] as String[]
         tasks?.each { content += it.parseRandomResultToArray() }
         CsvUtil.write(filename, content)
     }

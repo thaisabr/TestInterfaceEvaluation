@@ -108,9 +108,6 @@ abstract class ConstantData {
     public static final String PROP_RUN_ALL_CONFIGURATIONS = "spgroup.itest.all.configurations"
     public static final boolean DEFAULT_RUN_ALL_CONFIGURATIONS = false
 
-    public static final String PROP_RANDOM_BASELINE = "spgroup.itest.random.baseline"
-    public static final boolean DEFAULT_RANDOM_BASELINE = false
-
     public static final String PROP_SIMILARITY = "spgroup.itest.similarity"
     public static final boolean DEFAULT_SIMILARITY = false
 

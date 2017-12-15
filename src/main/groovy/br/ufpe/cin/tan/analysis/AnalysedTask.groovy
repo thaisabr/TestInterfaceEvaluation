@@ -14,7 +14,6 @@ class AnalysedTask {
     DoneTask doneTask
     ITest itest
     IReal ireal
-    IReal irandom
     List<String> methods
     int stepCalls
     String itext
@@ -38,7 +37,6 @@ class AnalysedTask {
         this.itest = new ITest()
         this.ireal = new IReal()
         this.itext = ""
-        this.irandom = new IReal()
         this.gems = []
         this.coverageGems = []
         this.rails = ""
@@ -111,12 +109,13 @@ class AnalysedTask {
         ireal.findFilteredFiles()
     }
 
-    def irealIsEmpty() {
-        ireal.findFilteredFiles().empty
+    def irealHasControllers() {
+        def controllers = irealFiles().findAll { Util.isControllerFile(it) }
+        !controllers.empty
     }
 
-    def irandomFiles() {
-        irandom.findFilteredFiles()
+    def irealIsEmpty() {
+        ireal.findFilteredFiles().empty
     }
 
     def itestFiles() {
@@ -150,24 +149,6 @@ class AnalysedTask {
             similarityAnalyser.calculateSimilarityByCosine()
         } else {
             TaskInterfaceEvaluator.calculateFilesRecall(itest, ireal)
-        }
-    }
-
-    double randomPrecision() {
-        if (Util.SIMILARITY_ANALYSIS) {
-            def similarityAnalyser = new TestSimilarityAnalyser(irandom.findFilteredFiles(), ireal.findFilteredFiles())
-            similarityAnalyser.calculateSimilarityByJaccard()
-        } else {
-            TaskInterfaceEvaluator.calculateFilesPrecision(irandom, ireal)
-        }
-    }
-
-    double randomRecall() {
-        if (Util.SIMILARITY_ANALYSIS) {
-            def similarityAnalyser = new TestSimilarityAnalyser(irandom.findFilteredFiles(), ireal.findFilteredFiles())
-            similarityAnalyser.calculateSimilarityByCosine()
-        } else {
-            TaskInterfaceEvaluator.calculateFilesRecall(irandom, ireal)
         }
     }
 
@@ -280,19 +261,6 @@ class AnalysedTask {
                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, methods, renames,
                          removedFiles, views, views.size(), itest.timestamp, hasMergeCommit(), falsePositives.size(),
                          falseNegatives.size(), falsePositives, falseNegatives, hits.size(), hits]
-        line
-    }
-
-    def parseRandomResultToArray() {
-        def irandomFiles = this.irandomFiles()
-        def irandomSize = irandomFiles.size()
-        def irealFiles = this.irealFiles()
-        def irealSize = irealFiles.size()
-        def diff1 = irandomFiles - irealFiles
-        def diff2 = irealFiles - irandomFiles
-        def hits = irandomFiles.intersect(irealFiles)
-        String[] line = [doneTask.id, irandomSize, irealSize, irandomFiles, irealFiles, randomPrecision(), randomRecall(),
-                         diff1.size(), diff2.size(), diff1, diff2, hits.size(), hits]
         line
     }
 

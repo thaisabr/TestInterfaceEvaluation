@@ -37,8 +37,6 @@ class TaskAnalyser {
     String validTasksDetailsFile
     String validTasksControllerFile
     String invalidTasksFile
-    String randomRelevantTasksFile
-    String randomValidTasksFile
 
     TaskAnalyser(String tasksFile) {
         this(tasksFile, 0)
@@ -56,7 +54,6 @@ class TaskAnalyser {
         relevantTasks = []
         log.info "<  Restrict gherkin changes: '${Util.RESTRICT_GHERKIN_CHANGES}'  >"
         log.info "<  Filter when steps: '${Util.WHEN_FILTER}'  >"
-        log.info "<  Generate random result: '${Util.RANDOM_BASELINE}'  >"
         log.info "<  Analyse views: '${Util.VIEW_ANALYSIS}'  >"
     }
 
@@ -72,30 +69,6 @@ class TaskAnalyser {
         invalidTasks = []
         relevantTasks = []
         log.info "<  Restrict gherkin changes: '${Util.RESTRICT_GHERKIN_CHANGES}'  >"
-        log.info "<  Generate random result: '${Util.RANDOM_BASELINE}'  >"
-    }
-
-    def generateRandomResult() {
-        log.info "<  Generating random result... >"
-        if (validTasks.empty) {
-            taskImporter.extractPtTasks()
-            log.info "Candidate tasks (have production code and candidate gherkin scenarios): ${taskImporter.candidateTasks.size()}"
-            log.info "Seem to have test but actually do not (do not have candidate gherkin scenarios): ${taskImporter.falsePtTasks.size()}"
-            taskImporter.candidateTasks.each { task ->
-                def analysedTask = new AnalysedTask(task)
-                analysedTask.ireal = task.computeRealInterface()
-                analysedTask.irandom = task.computeRandomInterface()
-                validTasks += analysedTask
-                if (analysedTask.isRelevant()) relevantTasks += analysedTask
-            }
-        } else {
-            validTasks.each { task ->
-                task.irandom = task.doneTask.computeRandomInterface()
-            }
-        }
-        log.info "Random task interfaces were computed for ${taskImporter.candidateTasks.size()} tasks!"
-        exportRandomResult()
-        filterRandomResult() //temporary code
     }
 
     def analyseAll() {
@@ -123,7 +96,9 @@ class TaskAnalyser {
     def filterRelevantTasksByTestsAndEmptyItest() {
         def entries = organizeTests()
         def selected = entries.unique { it.tests }.collect { it.task }
-        relevantTasks?.findAll { (it.doneTask.id in selected) && !it.itestIsEmpty() }?.sort { it.doneTask.id }
+        relevantTasks?.findAll {
+            (it.doneTask.id in selected) && !it.itestIsEmpty() /*&& it.irealHasControllers()*/
+        }?.sort { it.doneTask.id }
     }
 
     def backupOutputCsv(int index) {
@@ -179,8 +154,6 @@ class TaskAnalyser {
         validTasksFile = name + ConstantData.VALID_TASKS_FILE_SUFIX
         validTasksControllerFile = validTasksFile - ConstantData.CSV_FILE_EXTENSION + ConstantData.CONTROLLER_FILE_SUFIX
         invalidTasksFile = name + ConstantData.INVALID_TASKS_FILE_SUFIX
-        randomRelevantTasksFile = name + "-relevant" + ConstantData.RANDOM_RESULTS_FILE_SUFIX
-        randomValidTasksFile = name + "-valid" + ConstantData.RANDOM_RESULTS_FILE_SUFIX
     }
 
     private configureDefaultTaskLimit() {
@@ -293,17 +266,6 @@ class TaskAnalyser {
         }
     }
 
-    private exportRandomResult() {
-        if (!relevantTasksFile.empty) {
-            def randomResultExporter = new RandomResultExporter(randomRelevantTasksFile, relevantTasks)
-            randomResultExporter.save()
-        }
-        if (!validTasks.empty) {
-            def randomResultExporter = new RandomResultExporter(randomValidTasksFile, validTasks)
-            randomResultExporter.save()
-        }
-    }
-
     private exportTasks() {
         exportValidAndRelevantTasks()
         exportInvalidTasks()
@@ -340,13 +302,6 @@ class TaskAnalyser {
         controllerFilterExporter.save()
         controllerFilterExporter = new ControllerFilterExporter(validTasksFile, validTasksControllerFile)
         controllerFilterExporter.save()
-    }
-
-    private filterRandomResult() {
-        ControllerFilterRandomExporter filterRandomExporter = new ControllerFilterRandomExporter(randomRelevantTasksFile)
-        filterRandomExporter.save()
-        filterRandomExporter = new ControllerFilterRandomExporter(randomValidTasksFile)
-        filterRandomExporter.save()
     }
 
     private organizeResultForTestExecution() {

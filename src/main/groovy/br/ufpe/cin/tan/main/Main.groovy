@@ -29,8 +29,7 @@ class Main {
         } else {
             if (Util.MULTIPLE_TASK_FILES) mainObj.runAnalysisForMultipleFiles()
             else {
-                def analyser = mainObj.runAnalysis(Util.TASKS_FILE)
-                if (Util.RANDOM_BASELINE) analyser.generateRandomResult()
+                mainObj.runAnalysis(Util.TASKS_FILE)
             }
         }
     }
@@ -44,8 +43,7 @@ class Main {
     private runAnalysisForMultipleFiles() {
         def cvsFiles = Util.findTaskFiles()
         cvsFiles?.each {
-            def analyser = runAnalysis(it)
-            if (Util.RANDOM_BASELINE) analyser.generateRandomResult()
+            runAnalysis(it)
         }
         AggregatedStatisticsExporter statisticsExporter = new AggregatedStatisticsExporter(ConstantData.DEFAULT_EVALUATION_FOLDER)
         statisticsExporter.generateAggregatedStatistics()
@@ -81,7 +79,6 @@ class Main {
         int i = 1
         def found = false
         def invalid = false
-        def randomAnalyser = null
         while (!found && !invalid) {
             //added_when
             Util.setRunningConfiguration(true, true, "output_added_when")
@@ -94,7 +91,7 @@ class Main {
             def discarded = (addedWhenAnalyser.irrelevantImportedTasksId + relevantButNotSelected +
                     addedWhenAnalyser.invalidTasksId)?.unique()?.sort()
             log.info "Relevant tasks: ${addedWhenAnalyser.relevantTasks.size()}"
-            log.info "Relevant tasks (different tests and no empty ITest: ${addedWhenTasks.size()}"
+            log.info "Relevant tasks (different tests, no empty ITest, controllers): ${addedWhenTasks.size()}"
             if (addedWhenTasks.empty) {
                 invalid = true
                 log.info "There is no tasks that satisfy added_when configuration."
@@ -121,6 +118,8 @@ class Main {
                     (addedAnalyser.relevantTasks - addedTasks)).collect { it.doneTask.id }
             discarded = (addedAnalyser.irrelevantImportedTasksId + relevantButNotSelected +
                     addedAnalyser.invalidTasksId)?.unique()?.sort()
+            log.info "Relevant tasks: ${addedAnalyser.relevantTasks.size()}"
+            log.info "Relevant tasks (different tests, no empty ITest, controllers): ${addedTasks.size()}"
             if (addedTasks.empty) {
                 invalid = true
                 log.info "There is no tasks that satisfy added configuration."
@@ -147,6 +146,8 @@ class Main {
                     (allWhenAnalyser.relevantTasks - allWhenTasks)).collect { it.doneTask.id }
             discarded = (allWhenAnalyser.irrelevantImportedTasksId + relevantButNotSelected +
                     allWhenAnalyser.invalidTasksId)?.unique()?.sort()
+            log.info "Relevant tasks: ${allWhenAnalyser.relevantTasks.size()}"
+            log.info "Relevant tasks (different tests, no empty ITest, controllers): ${allWhenTasks.size()}"
             if (allWhenTasks.empty) {
                 invalid = true
                 log.info "There is no tasks that satisfy all_when configuration."
@@ -173,6 +174,8 @@ class Main {
                     (allAnalyser.relevantTasks - allTasks)).collect { it.doneTask.id }
             discarded = (allAnalyser.irrelevantImportedTasksId + relevantButNotSelected +
                     allAnalyser.invalidTasksId)?.unique()?.sort()
+            log.info "Relevant tasks: ${allAnalyser.relevantTasks.size()}"
+            log.info "Relevant tasks (different tests, no empty ITest, controllers): ${allTasks.size()}"
             if (allTasks.empty) {
                 invalid = true
                 log.info "There is no tasks that satisfy all configuration."
@@ -196,10 +199,6 @@ class Main {
                 if (intersection3.size() > 0) found = true
                 else invalid = true
             }
-            randomAnalyser = allAnalyser
-        }
-        if (found && Util.RANDOM_BASELINE && randomAnalyser) {
-            randomAnalyser.generateRandomResult()
         }
     }
 

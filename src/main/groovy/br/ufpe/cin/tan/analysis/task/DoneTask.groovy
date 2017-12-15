@@ -147,9 +147,8 @@ class DoneTask extends Task {
         taskInterface
     }
 
-    IReal computeRandomInterface() {
-        def randomInterface = [] as Set
-
+    List computeRandomInterface() {
+        def randomInterfaces = []
         try {
             // resets repository to the state of the last commit to extract changes
             gitRepository.reset(lastHash)
@@ -160,22 +159,28 @@ class DoneTask extends Task {
             // resets repository to last version
             gitRepository.reset()
 
-            //decide interface size
-            def maxSize = currentFiles.size()
-            def low = 1
-            int high = maxSize + 1
-            def randomSize = random.nextInt(high - low) + low
+            (1..10000).each {
+                def randomInterface = [] as Set
 
-            //decide interface content
-            while (randomInterface.size() < randomSize) {
-                def index = random.nextInt(maxSize) //random.nextInt(maxSize - 0) + 0
-                randomInterface += currentFiles.getAt(index)
+                //decide interface size
+                def maxSize = currentFiles.size()
+                def low = 1
+                int high = maxSize + 1
+                def randomSize = random.nextInt(high - low) + low
+
+                //decide interface content
+                while (randomInterface.size() < randomSize) {
+                    def index = random.nextInt(maxSize)
+                    randomInterface += currentFiles.getAt(index)
+                }
+
+                randomInterfaces.add(Util.filterFiles(randomInterface))
             }
         } catch (Exception ex) {
             log.error "Error while computing random interface."
             registryErrorMessage(ex)
         }
-        organizeProductionFiles(randomInterface)
+        randomInterfaces
     }
 
     AnalysedTask computeInterfaces() {

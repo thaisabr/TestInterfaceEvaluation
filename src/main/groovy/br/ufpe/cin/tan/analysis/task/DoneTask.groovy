@@ -183,6 +183,36 @@ class DoneTask extends Task {
         randomInterfaces
     }
 
+    List computeRandomInterfaceSortingEachFile() {
+        def randomInterfaces = []
+        try {
+            // resets repository to the state of the last commit to extract changes
+            gitRepository.reset(lastHash)
+
+            //candidate files
+            def currentFiles = Util.findAllProductionFiles(identifyAllProjectFiles())
+
+            // resets repository to last version
+            gitRepository.reset()
+
+            (1..10000).each {
+                def randomInterface = [] as Set
+                //decide if a file will be included or not: 0 - no, 1 - yes
+                currentFiles.each { file ->
+                    def low = 0
+                    int high = 1 + 1
+                    def randomDecision = random.nextInt(high - low) + low
+                    if (randomDecision == 1) randomInterface += file
+                }
+                randomInterfaces.add(Util.filterFiles(randomInterface))
+            }
+        } catch (Exception ex) {
+            log.error "Error while computing random interface."
+            registryErrorMessage(ex)
+        }
+        randomInterfaces
+    }
+
     AnalysedTask computeInterfaces() {
         def analysedTask = new AnalysedTask(this)
         if (hasNoCommits() || !hasTest()) return analysedTask

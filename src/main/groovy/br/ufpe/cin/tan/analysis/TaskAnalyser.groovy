@@ -97,7 +97,7 @@ class TaskAnalyser {
         def entries = organizeTests()
         def selected = entries.unique { it.tests }.collect { it.task }
         relevantTasks?.findAll {
-            (it.doneTask.id in selected) && !it.itestIsEmpty() /*&& it.irealHasControllers()*/
+            (it.doneTask.id in selected) && !it.itestIsEmpty() && it.irealHasControllers()
         }?.sort { it.doneTask.id }
     }
 

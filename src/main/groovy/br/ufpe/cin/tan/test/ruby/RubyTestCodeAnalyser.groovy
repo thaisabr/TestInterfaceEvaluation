@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import org.jrubyparser.CompatVersion
 import org.jrubyparser.Parser
 import org.jrubyparser.ast.Node
-import org.jrubyparser.lexer.SyntaxException
 import org.jrubyparser.parser.ParserConfiguration
 
 import java.util.regex.Matcher
@@ -66,6 +65,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         }
 
         def mininum = [result1, result2].find { it.errors.min() }
+        if (mininum == null) return null
         compilationErrors += mininum.errors
         mininum.node
     }
@@ -76,9 +76,12 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     }
 
     Node generateAst(String path) {
-        def index = path.indexOf(repositoryPath)
-        def filename = index >= 0 ? path : repositoryPath + File.separator + path
-        this.generateAstForFile(filename)
+        if (path.contains(Util.FRAMEWORK_PATH)) this.generateAstForFile(path)
+        else {
+            def index = path.indexOf(repositoryPath)
+            def filename = index >= 0 ? path : repositoryPath + File.separator + path
+            this.generateAstForFile(filename)
+        }
     }
 
     Node generateAst(String path, String content) {
@@ -105,19 +108,19 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
 
         try {
             result = rubyParser.parse("<code>", reader, config)
-        } catch (SyntaxException ex) {
-            log.error "Problem to visit file $path (parser ${version.name()}): ${ex.message}"
+        } catch (Exception ex) {
+            //log.error "Problem to visit file $path (parser ${version.name()}): ${ex.message}"
             def msg = ""
             if (ex.message && !ex.message.empty) {
                 def index = ex.message.indexOf(",")
                 msg = index >= 0 ? ex.message.substring(index + 1).trim() : ex.message.trim()
             }
             errors += [path: path, msg: msg]
-        }
-        finally {
+        } finally {
             reader?.close()
         }
-        [node: result, errors: errors]
+        def finalErrors = errors.findAll { !it.path.contains(Util.FRAMEWORK_PATH) }
+        [node: result, errors: finalErrors]
     }
 
     private generateProjectRoutes() {

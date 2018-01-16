@@ -6,9 +6,12 @@ import br.ufpe.cin.tan.analysis.task.DoneTask
 import br.ufpe.cin.tan.evaluation.TaskInterfaceEvaluator
 import br.ufpe.cin.tan.similarity.test.TestSimilarityAnalyser
 import br.ufpe.cin.tan.test.AcceptanceTest
+import br.ufpe.cin.tan.test.TestCodeAbstractAnalyser
 import br.ufpe.cin.tan.util.Util
 import br.ufpe.cin.tan.util.ruby.RubyUtil
+import groovy.util.logging.Slf4j
 
+@Slf4j
 class AnalysedTask {
 
     DoneTask doneTask
@@ -224,7 +227,7 @@ class AnalysedTask {
         def viewFileFromITest = itestViewFiles().size()
         String[] array = [doneTask.id, dates, doneTask.days, doneTask.commitsQuantity, commitMsg, developers,
                           doneTask.gherkinTestQuantity, itest.foundAcceptanceTests.size(), doneTask.stepDefQuantity,
-                          itest.foundStepDefs.size(), methods, stepCalls, stepMatchErrorsText, stepMatchErrors,
+                          itest.foundStepDefs.size(), configureUnknownMethods(), stepCalls, stepMatchErrorsText, stepMatchErrors,
                           compilationErrorsText, compilationErrors, gherkinCompilationErrorsText, gherkinCompilationErrors,
                           stepDefCompilationErrorsText, stepDefCompilationErrors, renames, removedFiles, views,
                           views.size(), itestSize, irealSize, itestFiles, irealFiles, precision(), recall(),
@@ -258,7 +261,7 @@ class AnalysedTask {
         String[] line = [doneTask.id, doneTask.days, developers, doneTask.commitsQuantity, doneTask.hashes,
                          itest.foundAcceptanceTests.size(), itest.foundStepDefs.size(), itestSize, irealSize, itestFiles,
                          irealFiles, precision(), recall(), rails, itest.visitCallCounter, itest.lostVisitCall,
-                         viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, methods, renames,
+                         viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, configureUnknownMethods(), renames,
                          removedFiles, views, views.size(), itest.timestamp, hasMergeCommit(), falsePositives.size(),
                          falseNegatives.size(), falsePositives, falseNegatives, hits.size(), hits]
         line
@@ -319,6 +322,16 @@ class AnalysedTask {
         this.stepDefCompilationErrors = stepsQuantity
         this.unitCompilationErrorsText = unit
         this.unitCompilationErrors = unitQuantity
+    }
+
+    private configureUnknownMethods() {
+        if (TestCodeAbstractAnalyser.apiMethods == null || TestCodeAbstractAnalyser.apiMethods.empty) return methods
+        def unknownMethods = []
+        methods.each { m ->
+            def obj = TestCodeAbstractAnalyser.apiMethods.find { it.name == m }
+            if (!obj) unknownMethods += m
+        }
+        return unknownMethods
     }
 
 }

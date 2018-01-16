@@ -1,9 +1,11 @@
 package br.ufpe.cin.tan.util
 
 import br.ufpe.cin.tan.exception.InvalidLanguageException
+import groovy.util.logging.Slf4j
 
 import java.util.regex.Matcher
 
+@Slf4j
 abstract class Util {
 
     static final String GEM_SUFFIX = Matcher.quoteReplacement(File.separator) + "lib"
@@ -21,6 +23,7 @@ abstract class Util {
     public static final String MODEL_FILES_RELATIVE_PATH
     public static final String LIB_RELATIVE_PATH
     public static final String FRAMEWORK_PATH
+    public static final String FRAMEWORK_LIB_PATH
     public static final List<String> FRAMEWORK_FILES
     public static final List<String> VALID_FOLDERS
     public static final String VALID_EXTENSION
@@ -59,6 +62,8 @@ abstract class Util {
         MODEL_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}models"
         FRAMEWORK_PATH = configureFramework()
         FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
+        FRAMEWORK_LIB_PATH = configureLib()
+        log.info "FRAMEWORK_FILES: ${FRAMEWORK_FILES.size()}"
 
         //configure language dependents
         switch (CODE_LANGUAGE) {
@@ -158,6 +163,10 @@ abstract class Util {
 
     private static configureFramework() {
         configureMandatoryProperties(properties.(ConstantData.PROP_FRAMEWORK), "")
+    }
+
+    private static configureLib() {
+        configureMandatoryProperties(properties.(ConstantData.PROP_LIB), "")
     }
 
     private static configureGem(String value, String defaultValue) {
@@ -386,6 +395,11 @@ abstract class Util {
         findFilesFromDirectory(ConstantData.DEFAULT_TASKS_FOLDER).findAll {
             it.endsWith(ConstantData.CSV_FILE_EXTENSION)
         }
+    }
+
+    static List<String> findFrameworkClassFiles() {
+        if (FRAMEWORK_LIB_PATH.empty) return []
+        findFilesFromDirectoryByLanguage(FRAMEWORK_LIB_PATH)
     }
 
     static List<String> findFilesFromDirectory(String directory) {

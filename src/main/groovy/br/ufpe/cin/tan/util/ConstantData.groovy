@@ -19,6 +19,7 @@ abstract class ConstantData {
     public static final String PROP_GEM_I18N = "spgroup.gems.i18n.folder"
     public static final String PROP_GEM_PARSER = "spgroup.gems.parser"
     public static final String PROP_GEM_AST = "spgroup.gems.ast"
+    public static final String PROP_LIB = "spgroup.lib.path"
 
     public static final String DEFAULT_TASKS_FOLDER = "tasks"
     public static final int DEFAULT_TASK_SIZE = 80

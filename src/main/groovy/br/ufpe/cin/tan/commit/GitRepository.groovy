@@ -130,7 +130,6 @@ class GitRepository {
             this.localPath = Util.REPOSITORY_FOLDER_PATH + name
             if (isCloned()) {
                 this.lastCommit = searchAllRevCommits()?.last()?.name
-                log.info "Already cloned from " + url + " to " + localPath
             } else cloneRepository()
         } else {
             this.localPath = path
@@ -160,7 +159,6 @@ class GitRepository {
             def result = Git.cloneRepository().setURI(url).setDirectory(new File(localPath)).call()
             lastCommit = result?.log()?.all()?.call()?.sort { it.commitTime }?.last()?.name
             result.close()
-            log.info "Cloned from " + url + " to " + localPath
         } catch (Exception ex) {
             Util.deleteFolder(localPath)
             throw new CloningRepositoryException(ex.message)

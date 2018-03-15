@@ -147,7 +147,7 @@ class DoneTask extends Task {
         taskInterface
     }
 
-    List computeRandomInterface() {
+    List computeRandomInterface(int repetitions) {
         def randomInterfaces = []
         try {
             // resets repository to the state of the last commit to extract changes
@@ -159,7 +159,7 @@ class DoneTask extends Task {
             // resets repository to last version
             gitRepository.reset()
 
-            (1..10000).each {
+            (1..repetitions).each {
                 def randomInterface = [] as Set
 
                 //decide interface size
@@ -183,7 +183,7 @@ class DoneTask extends Task {
         randomInterfaces
     }
 
-    List computeRandomInterfaceSortingEachFile() {
+    List computeRandomInterfaceSortingEachFile(int repetitions) {
         def randomInterfaces = []
         try {
             // resets repository to the state of the last commit to extract changes
@@ -195,7 +195,7 @@ class DoneTask extends Task {
             // resets repository to last version
             gitRepository.reset()
 
-            (1..10000).each {
+            (1..repetitions).each {
                 def randomInterface = [] as Set
                 //decide if a file will be included or not: 0 - no, 1 - yes
                 currentFiles.each { file ->

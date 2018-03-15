@@ -63,7 +63,7 @@ class ITest extends TaskInterface {
     }
 
     boolean isEmpty() {
-        def files = findAllProdFiles()
+        def files = getFiles()
         if (files.empty) true
         else false
     }
@@ -74,14 +74,14 @@ class ITest extends TaskInterface {
      *
      * @return a list of files
      */
-    Set<String> findAllProdFiles() {
+    Set<String> getFiles() {
         def files = getAllProdFiles()
         Util.organizePathsForInterfaces(files) as Set
     }
 
     //filtering result to only identify view and/or controller files
     Set<String> findFilteredFiles() {
-        Util.filterFiles(this.findAllProdFiles())
+        Util.filterFiles(this.getFiles())
     }
 
     Set<String> getViewFilesForFurtherAnalysis() {

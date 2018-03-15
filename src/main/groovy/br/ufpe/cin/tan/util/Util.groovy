@@ -63,7 +63,7 @@ abstract class Util {
         FRAMEWORK_PATH = configureFramework()
         FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
         FRAMEWORK_LIB_PATH = configureLib()
-        log.info "FRAMEWORK_FILES: ${FRAMEWORK_FILES.size()}"
+        //log.info "FRAMEWORK_FILES: ${FRAMEWORK_FILES.size()}"
 
         //configure language dependents
         switch (CODE_LANGUAGE) {

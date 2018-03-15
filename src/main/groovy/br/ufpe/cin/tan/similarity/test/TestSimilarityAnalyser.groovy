@@ -17,8 +17,8 @@ class TestSimilarityAnalyser {
     }
 
     TestSimilarityAnalyser(ITest interface1, ITest interface2) {
-        this.c1 = interface1.findAllProdFiles()
-        this.c2 = interface2.findAllProdFiles()
+        this.c1 = interface1.getFiles()
+        this.c2 = interface2.getFiles()
         terms = (c1 + c2).sort()
     }
 

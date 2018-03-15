@@ -779,7 +779,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
 
     @Override
     Set<String> getCodeFromViewAnalysis() {
-        interfaceFromViews.findAllProdFiles().sort()
+        interfaceFromViews.getFiles().sort()
     }
 
     @Override

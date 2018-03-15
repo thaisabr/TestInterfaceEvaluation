@@ -37,6 +37,7 @@ abstract class ConstantData {
 
     public static String DEFAULT_EVALUATION_FOLDER = "output"
     public static final String DEFAULT_TEXT_FOLDER = "text"
+    public static final String SELECTED_TASKS_BY_CONFIGS_FOLDER = "selected"
     public static
     final String DEFAULT_EVALUATION_FILE = "$DEFAULT_EVALUATION_FOLDER${File.separator}evaluation_result.csv"
     public static final String ORGANIZED_FILE_SUFIX = "-org.csv"

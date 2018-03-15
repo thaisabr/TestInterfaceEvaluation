@@ -56,7 +56,7 @@ abstract class TestCodeAbstractAnalyser {
         codeFromViewAnalysis = [] as Set
         analysisData = new AnalysisData()
         configureApiMethodsList()
-        log.info "apiMethods: ${apiMethods.size()}"
+        //log.info "apiMethods: ${apiMethods.size()}"
     }
 
     /***
@@ -154,7 +154,6 @@ abstract class TestCodeAbstractAnalyser {
     }
 
     List<FileToAnalyse> findCodeForStepOrganizedByFile(StepCall call, boolean extractArgs) {
-        //new StepCall(text: step, path: lastVisitedFile, line: iVisited.position.startLine, parentType: configureStep())
         def calledSteps = []  //path, line, args, parentType
         List<FileToAnalyse> result = []
 

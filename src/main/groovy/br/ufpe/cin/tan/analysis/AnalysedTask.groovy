@@ -155,6 +155,14 @@ class AnalysedTask {
         }
     }
 
+    double f2Measure() {
+        def p = precision()
+        def r = recall()
+        def denominator = 4 * p + r
+        if (denominator == 0) 0
+        else 5 * ((p * r) / denominator)
+    }
+
     def getDates() {
         doneTask.dates
     }
@@ -232,7 +240,7 @@ class AnalysedTask {
                           stepDefCompilationErrorsText, stepDefCompilationErrors, renames, removedFiles, views,
                           views.size(), itestSize, irealSize, itestFiles, irealFiles, precision(), recall(),
                           doneTask.hashes, itest.timestamp, rails, gems, itest.visitCallCounter, itest.lostVisitCall,
-                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, hasMergeCommit()]
+                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, hasMergeCommit(), f2Measure()]
         array
     }
 
@@ -263,7 +271,7 @@ class AnalysedTask {
                          irealFiles, precision(), recall(), rails, itest.visitCallCounter, itest.lostVisitCall,
                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, configureUnknownMethods(), renames,
                          removedFiles, views, views.size(), itest.timestamp, hasMergeCommit(), falsePositives.size(),
-                         falseNegatives.size(), falsePositives, falseNegatives, hits.size(), hits]
+                         falseNegatives.size(), falsePositives, falseNegatives, hits.size(), hits, f2Measure()]
         line
     }
 

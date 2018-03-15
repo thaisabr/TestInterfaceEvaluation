@@ -20,8 +20,9 @@ class ControllerFilterExporter {
         double[] tests = values.collect { it[ExporterUtil.IMPLEMENTED_GHERKIN_TESTS] as double }
         double[] precisionValues = values.collect { it[ExporterUtil.PRECISION_INDEX_SHORT_HEADER] as double }
         double[] recallValues = values.collect { it[ExporterUtil.RECALL_INDEX_SHORT_HEADER] as double }
+        double[] f2Values = values.collect { it[ExporterUtil.F2_INDEX] as double }
         List<String[]> content = []
-        content += ExporterUtil.generateStatistics(precisionValues, recallValues, tests)
+        content += ExporterUtil.generateStatistics(precisionValues, recallValues, tests, f2Values)
         content += entries.get(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER - 1)
         content
     }

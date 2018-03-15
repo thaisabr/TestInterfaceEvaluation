@@ -53,7 +53,7 @@ class EvaluationExporter {
                        "#Gherkin_AST_Errors", "Steps_AST_Errors", "#Steps_AST_Errors", "Renamed_Files",
                        "Deleted_Files", "NotFound_Views", "#Views", "#ITest", "#IReal", "ITest", "IReal",
                        measure1, measure2, "Hashes", "Timestamp", "Rails", "Gems", "#Visit_Call",
-                       "Lost_visit_call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis", "Has_Merge"]
+                       "Lost_visit_call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis", "Has_Merge", "F2"]
         file = new File(evaluationFile)
         this.tasks = tasks
         filterEmptyIReal = toFilter

@@ -11,6 +11,7 @@ class ExporterUtil {
 
     public static String[] SHORT_HEADER
     public static String[] SHORT_HEADER_PLUS
+    public static String[] PLUS_HEADER
     public static final int RECALL_INDEX_SHORT_HEADER
     public static final int PRECISION_INDEX_SHORT_HEADER
     public static final int IREAL_INDEX_SHORT_HEADER
@@ -21,6 +22,14 @@ class ExporterUtil {
     public static final int INITIAL_TEXT_SIZE_SHORT_HEADER
     public static final int INITIAL_TEXT_SIZE_NO_CORRELATION_SHORT_HEADER
     public static final int ITEST_VIEWS_SIZE_INDEX_SHORT_HEADER
+
+    public static final int FP_NUMBER_INDEX
+    public static final int FN_NUMBER_INDEX
+    public static final int FP_INDEX
+    public static final int FN_INDEX
+    public static final int HITS_NUMBER_INDEX
+    public static final int HITS_INDEX
+    public static final int F2_INDEX
 
     static final String measure1, measure2
 
@@ -37,20 +46,28 @@ class ExporterUtil {
                         "lost_visit_call", "#ITest_views", "#view_analysis_code", "view_analysis_code",
                         "methods_no_origin", "renamed_files", "deleted_files", "noFound_views",
                         "#noFound_views", "TIMESTAMP", "has_merge"]
-        SHORT_HEADER_PLUS = SHORT_HEADER + ["#FP", "#FN", "FP", "FN", "#Hits", "Hits"]
-        RECALL_INDEX_SHORT_HEADER = SHORT_HEADER_PLUS.size() - 20
+        PLUS_HEADER = ["#FP", "#FN", "FP", "FN", "#Hits", "Hits", "f2"]
+        SHORT_HEADER_PLUS = SHORT_HEADER + PLUS_HEADER
+        RECALL_INDEX_SHORT_HEADER = SHORT_HEADER_PLUS.size() - 21
         PRECISION_INDEX_SHORT_HEADER = RECALL_INDEX_SHORT_HEADER - 1
         IREAL_INDEX_SHORT_HEADER = PRECISION_INDEX_SHORT_HEADER - 1
         ITEST_INDEX_SHORT_HEADER = IREAL_INDEX_SHORT_HEADER - 1
         ITEST_SIZE_INDEX_SHORT_HEADER = ITEST_INDEX_SHORT_HEADER - 2
         IREAL_SIZE_INDEX_SHORT_HEADER = IREAL_INDEX_SHORT_HEADER - 2
         IMPLEMENTED_GHERKIN_TESTS = 5
-        INITIAL_TEXT_SIZE_SHORT_HEADER = 10
+        INITIAL_TEXT_SIZE_SHORT_HEADER = 13
         INITIAL_TEXT_SIZE_NO_CORRELATION_SHORT_HEADER = INITIAL_TEXT_SIZE_SHORT_HEADER - 2
         ITEST_VIEWS_SIZE_INDEX_SHORT_HEADER = 16
+        FP_NUMBER_INDEX = SHORT_HEADER_PLUS.size() - PLUS_HEADER.size()
+        FN_NUMBER_INDEX = FP_NUMBER_INDEX + 1
+        FP_INDEX = FN_NUMBER_INDEX + 1
+        FN_INDEX = FP_INDEX + 1
+        HITS_NUMBER_INDEX = FN_INDEX + 1
+        HITS_INDEX = HITS_NUMBER_INDEX + 1
+        F2_INDEX = HITS_INDEX + 1
     }
 
-    static generateStatistics(double[] precisionValues, double[] recallValues, double[] tests) {
+    static generateStatistics(double[] precisionValues, double[] recallValues, double[] tests, double[] f2Values) {
         int zero = 0
         if (!precisionValues || precisionValues.size() == zero || !recallValues || recallValues.size() == zero) return []
         List<String[]> content = []
@@ -62,6 +79,10 @@ class ExporterUtil {
         content += ["$measure2 mean (RT)", recallStats.mean] as String[]
         content += ["$measure2 median (RT)", recallStats.getPercentile(50.0)] as String[]
         content += ["$measure2 standard deviation (RT)", recallStats.standardDeviation] as String[]
+        def f2Stats = new DescriptiveStatistics(f2Values)
+        content += ["F2 mean (RT)", f2Stats.mean] as String[]
+        content += ["F2 median (RT)", f2Stats.getPercentile(50.0)] as String[]
+        content += ["F2 standard deviation (RT)", f2Stats.standardDeviation] as String[]
         def correlationTestsPrecision = TaskInterfaceEvaluator.calculateCorrelation(tests, precisionValues)
         def correlationTestsRecall = TaskInterfaceEvaluator.calculateCorrelation(tests, recallValues)
         content += ["Correlation #Test-$measure1", correlationTestsPrecision.toString()] as String[]
@@ -69,7 +90,7 @@ class ExporterUtil {
         content
     }
 
-    static generateStatistics(double[] precisionValues, double[] recallValues) {
+    static generateStatistics(double[] precisionValues, double[] recallValues, double[] f2Values) {
         int zero = 0
         if (!precisionValues || precisionValues.size() == zero || !recallValues || recallValues.size() == zero) return []
         List<String[]> content = []
@@ -81,6 +102,10 @@ class ExporterUtil {
         content += ["$measure2 mean (RT)", recallStats.mean] as String[]
         content += ["$measure2 median (RT)", recallStats.getPercentile(50.0)] as String[]
         content += ["$measure2 standard deviation (RT)", recallStats.standardDeviation] as String[]
+        def f2Stats = new DescriptiveStatistics(f2Values)
+        content += ["F2 mean (RT)", f2Stats.mean] as String[]
+        content += ["F2 median (RT)", f2Stats.getPercentile(50.0)] as String[]
+        content += ["F2 standard deviation (RT)", f2Stats.standardDeviation] as String[]
         content
     }
 
@@ -109,6 +134,10 @@ class ExporterUtil {
             recall = TaskInterfaceEvaluator.calculateFilesRecall(itest, ireal)
         }
 
+        def denominator = 4 * precision + recall
+        def f2 = 0
+        if (denominator != 0) f2 = 5 * ((precision * recall) / denominator)
+
         def falsePositives = itest - ireal
         def falseNegatives = ireal - itest
         def hits = itest.intersect(ireal)
@@ -121,12 +150,13 @@ class ExporterUtil {
         line[PRECISION_INDEX_SHORT_HEADER] = precision
         line[RECALL_INDEX_SHORT_HEADER] = recall
         line[ITEST_VIEWS_SIZE_INDEX_SHORT_HEADER] = 0
-        line[SHORT_HEADER_PLUS.size() - 6] = falsePositives.size()
-        line[SHORT_HEADER_PLUS.size() - 5] = falseNegatives.size()
-        line[SHORT_HEADER_PLUS.size() - 4] = falsePositives
-        line[SHORT_HEADER_PLUS.size() - 3] = falseNegatives
-        line[SHORT_HEADER_PLUS.size() - 2] = hits.size()
-        line[SHORT_HEADER_PLUS.size() - 1] = hits
+        line[FP_NUMBER_INDEX] = falsePositives.size()
+        line[FN_NUMBER_INDEX] = falseNegatives.size()
+        line[FP_INDEX] = falsePositives
+        line[FN_INDEX] = falseNegatives
+        line[HITS_NUMBER_INDEX] = hits.size()
+        line[HITS_INDEX] = hits
+        line[F2_INDEX] = f2
         line
     }
 

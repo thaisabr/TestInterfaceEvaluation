@@ -55,7 +55,8 @@ class ValidTaskExporter {
         double[] tests = tasks.collect { it.itest.foundAcceptanceTests.size() }
         double[] precisionValues = tasks.collect { it.precision() }
         double[] recallValues = tasks.collect { it.recall() }
-        def content = ExporterUtil.generateStatistics(precisionValues, recallValues, tests)
+        double[] f2Values = tasks.collect { it.f2Measure() }
+        def content = ExporterUtil.generateStatistics(precisionValues, recallValues, tests, f2Values)
         content
     }
 

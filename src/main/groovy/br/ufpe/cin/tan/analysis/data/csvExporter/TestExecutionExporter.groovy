@@ -8,6 +8,7 @@ class TestExecutionExporter {
 
     String testFile
     List<AnalysedTask> tasks
+    public static final int INITIAL_TEXT_SIZE = 2
 
     TestExecutionExporter(String testFile, List<AnalysedTask> tasks) {
         this.testFile = testFile

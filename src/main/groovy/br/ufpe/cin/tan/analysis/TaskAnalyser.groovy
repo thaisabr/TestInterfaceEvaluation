@@ -93,12 +93,19 @@ class TaskAnalyser {
         invalidTasks?.collect { it.doneTask.id }
     }
 
+    def getAnalyzedTasks() {
+        (validTasks + invalidTasks + relevantTasks).unique().collect { it.doneTask.id }.sort()
+    }
+
     def filterRelevantTasksByTestsAndEmptyItest() {
         def entries = organizeTests()
-        def selected = entries.unique { it.tests }.collect { it.task }
-        relevantTasks?.findAll {
+        def selected = entries/*.unique { it.tests }*/.collect { it.task }
+        def filtered = relevantTasks?.findAll {
             (it.doneTask.id in selected) && !it.itestIsEmpty() && it.irealHasControllers()
         }?.sort { it.doneTask.id }
+        def excluded = relevantTasks - filtered
+        log.info "Relevant tasks that do not satisfy all selection criteria (${excluded.size()}): ${excluded*.doneTask.id}"
+        filtered
     }
 
     def backupOutputCsv(int index) {
@@ -220,6 +227,9 @@ class TaskAnalyser {
             analyse(candidate)
         }
         log.info "(analyseLimitedTasks) Task interfaces were computed for ${counter} tasks!"
+        log.info "(analyseLimitedTasks) (From candidates) Invalid tasks: ${invalidTasks.size()}"
+        log.info "(analyseLimitedTasks) (From candidates) Valid tasks: ${validTasks.size()}"
+        log.info "(analyseLimitedTasks) (From candidates) Relevant tasks (valid but with no empty ITest): ${relevantTasks.size()}"
     }
 
     private analyse(DoneTask task) {
@@ -234,6 +244,9 @@ class TaskAnalyser {
     private analyseAllTasks() {
         taskImporter.candidateTasks.each { analyse(it) }
         log.info "Task interfaces were computed for ${taskImporter.candidateTasks.size()} tasks!"
+        log.info "(From candidates) Invalid tasks: ${invalidTasks.size()}"
+        log.info "(From candidates) Valid tasks: ${validTasks.size()}"
+        log.info "(From candidates) Relevant tasks (valid but with no empty ITest): ${relevantTasks.size()}"
     }
 
     private generateResult() {

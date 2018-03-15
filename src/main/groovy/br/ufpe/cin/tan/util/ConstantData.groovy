@@ -90,7 +90,7 @@ abstract class ConstantData {
     public static final String INFLECTOR_FILE = "inflector.rb"
 
     public static final String PROP_VIEW_ANALYSIS = "spgroup.itest.views"
-    public static final boolean DEFAULT_VIEW_ANALYSIS = false
+    public static final boolean DEFAULT_VIEW_ANALYSIS = true
     public static final String DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER = "error"
 
     public static final String PROP_CONTROLLER_FILTER = "spgroup.itest.filter.controller"

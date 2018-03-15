@@ -46,7 +46,7 @@ abstract class TestCodeAbstractAnalyser {
     TestCodeAbstractAnalyser(String repositoryPath, GherkinManager gherkinManager) {
         this.repositoryPath = repositoryPath
         this.gherkinManager = gherkinManager
-        stepsFilePath = repositoryPath + File.separator + Util.STEPS_FILES_RELATIVE_PATH
+        configureStepsFilePath()
         regexList = []
         methods = [] as Set
         projectFiles = []
@@ -164,6 +164,7 @@ abstract class TestCodeAbstractAnalyser {
         if (!stepCodeMatch.empty) match = stepCodeMatch.first() //we consider only the first match
         if (stepCodeMatch.size() > 1) {
             log.warn "There are many implementations for step code: ${call.text}; ${call.path} (${call.line})"
+            stepCodeMatch.each { log.info it.toString() }
         }
         if (match) { //step code was found
             def args = []
@@ -197,6 +198,7 @@ abstract class TestCodeAbstractAnalyser {
         if (!stepCodeMatch.empty) match = stepCodeMatch.first() //we consider only the first match
         if (stepCodeMatch.size() > 1) {
             log.warn "There are many implementations for step code: ${step.text}; $path (${step.location.line})"
+            stepCodeMatch.each { log.info it.toString() }
         }
         if (match) { //step code was found
             def args = []
@@ -432,7 +434,6 @@ abstract class TestCodeAbstractAnalyser {
                 it.methods.each { m ->
                     log.info m.toString()
                 }
-                log.info ""
             }
 
             while (!filesToParse.empty) {
@@ -659,6 +660,30 @@ abstract class TestCodeAbstractAnalyser {
             }
         }
         args
+    }
+
+    private configureStepsFilePath() {
+        stepsFilePath = repositoryPath + File.separator + Util.STEPS_FILES_RELATIVE_PATH
+        def directory = new File(stepsFilePath)
+        def files = []
+        if (directory.exists()) {
+            files = Util.findFilesFromDirectoryByLanguage(stepsFilePath)
+        }
+        if (files.empty) {
+            log.warn "Default folder of step definitions does not exists or it is empty: '${stepsFilePath}'"
+            def subfolders = Util.findFoldersFromDirectory(repositoryPath + File.separator + ConstantData.DEFAULT_GHERKIN_FOLDER)
+            def stepDefsFolder = subfolders.find { it.endsWith("step_definitions") }
+            if (stepDefsFolder && !stepDefsFolder.equals(stepsFilePath)) {
+                log.warn "Default folder of step definitions is empty."
+                def stepDefFiles = Util.findFilesFromDirectoryByLanguage(stepDefsFolder)
+                if (!stepDefFiles.empty) {
+                    def index = stepDefsFolder.indexOf(repositoryPath)
+                    stepsFilePath = stepDefsFolder.substring(index)
+                    log.warn "We fix the folder of step definitions. The right one is: '${stepsFilePath}'"
+                }
+            }
+
+        }
     }
 
 }

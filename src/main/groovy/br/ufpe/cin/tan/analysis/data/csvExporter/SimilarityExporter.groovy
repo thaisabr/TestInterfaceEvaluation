@@ -33,7 +33,6 @@ class SimilarityExporter {
         List<String[]> content = []
         content += entries.get(0)
         String[] resultHeader = ["Task_A", "Task_B", "Text", "Test_Jaccard", "Real_Jaccard", "Test_Cosine", "Real_Cosine"]
-        content += resultHeader
 
         def allTasks = entries.subList(ExporterUtil.INITIAL_TEXT_SIZE_SHORT_HEADER, entries.size())
         if (allTasks.size() <= 1) return
@@ -78,6 +77,7 @@ class SimilarityExporter {
         def correlationCosine = TaskInterfaceEvaluator.calculateCorrelation(textSimilarity, dataRealCosine)
         content += ["Correlation Jaccard Text-Real", correlationJaccard.toString()] as String[]
         content += ["Correlation Cosine Text-Real", correlationCosine.toString()] as String[]
+        content += resultHeader
         content += data
         CsvUtil.write(similarityFile, content)
     }

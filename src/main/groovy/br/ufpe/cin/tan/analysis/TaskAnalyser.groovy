@@ -101,7 +101,7 @@ class TaskAnalyser {
         def entries = organizeTests()
         def selected = entries/*.unique { it.tests }*/.collect { it.task }
         def filtered = relevantTasks?.findAll {
-            (it.doneTask.id in selected) && !it.itestIsEmpty() && it.irealHasControllers()
+            (it.doneTask.id in selected) && !it.itestIsEmpty() && it.irealHasControllers() && it.itestHasControllers()
         }?.sort { it.doneTask.id }
         def excluded = relevantTasks - filtered
         log.info "Relevant tasks that do not satisfy all selection criteria (${excluded.size()}): ${excluded*.doneTask.id}"

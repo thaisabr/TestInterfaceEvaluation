@@ -125,6 +125,11 @@ class AnalysedTask {
         itest.findFilteredFiles()
     }
 
+    def itestHasControllers() {
+        def controllers = itestFiles().findAll { Util.isControllerFile(it) }
+        !controllers.empty
+    }
+
     def itestIsEmpty() {
         itestFiles().empty
     }

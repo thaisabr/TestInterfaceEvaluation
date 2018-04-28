@@ -1,7 +1,7 @@
 package br.ufpe.cin.tan.evaluation
 
 import br.ufpe.cin.tan.analysis.itask.TaskInterface
-import org.apache.commons.math3.stat.correlation.PearsonsCorrelation
+import org.apache.commons.math3.stat.correlation.SpearmansCorrelation
 
 class TaskInterfaceEvaluator {
 
@@ -56,8 +56,8 @@ class TaskInterfaceEvaluator {
     static Double calculateCorrelation(double[] independent, double[] dependent) {
         if (!independent || !dependent || independent.length < 2 || dependent.length < 2) return null
 
-        PearsonsCorrelation pearsonsCorrelation = new PearsonsCorrelation()
-        Double value = pearsonsCorrelation.correlation(independent, dependent)
+        SpearmansCorrelation spearmansCorrelation = new SpearmansCorrelation()
+        Double value = spearmansCorrelation.correlation(independent, dependent)
         if (Double.isNaN(value)) null
         else Math.round(value * 100) / 100
     }

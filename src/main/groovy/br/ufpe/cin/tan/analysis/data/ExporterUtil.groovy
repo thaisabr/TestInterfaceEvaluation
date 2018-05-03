@@ -111,7 +111,7 @@ class ExporterUtil {
 
     static computeTaskPairs(set) {
         def result = [] as Set
-        if (!set || set.empty || set.size() == 1) return set
+        if (!set || set.empty || set.size() == 1) return result
         set.eachWithIndex { v, k ->
             def next = set.drop(k + 1)
             result.add([task: v, pairs: next])

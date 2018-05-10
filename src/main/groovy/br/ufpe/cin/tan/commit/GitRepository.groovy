@@ -130,7 +130,10 @@ class GitRepository {
             this.localPath = Util.REPOSITORY_FOLDER_PATH + name
             if (isCloned()) {
                 this.lastCommit = searchAllRevCommits()?.last()?.name
-            } else cloneRepository()
+            } else {
+                cloneRepository()
+                this.lastCommit = searchAllRevCommits()?.last()?.name
+            }
         } else {
             this.localPath = path
             this.lastCommit = searchAllRevCommits()?.last()?.name
@@ -156,9 +159,13 @@ class GitRepository {
      */
     private cloneRepository() throws CloningRepositoryException {
         try {
-            def result = Git.cloneRepository().setURI(url).setDirectory(new File(localPath)).call()
-            lastCommit = result?.log()?.all()?.call()?.sort { it.commitTime }?.last()?.name
-            result.close()
+            def folder = new File(localPath)
+            if (!folder.exists()) {
+                folder.mkdir()
+            }
+            String command = "git clone $url $name"
+            Process p = Runtime.getRuntime().exec(command, null, new File(Util.REPOSITORY_FOLDER_PATH))
+            p.waitFor()
         } catch (Exception ex) {
             Util.deleteFolder(localPath)
             throw new CloningRepositoryException(ex.message)

@@ -353,7 +353,7 @@ class DoneTask extends Task {
 
             // identifies changed step definitions
             commitsStepsChange = this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }
-            extractStepDefinitionChanges()
+            //extractStepDefinitionChanges()
         } else {
             log.error "The task has no commits! Searched commits: "
             shas.each { log.error it.toString() }

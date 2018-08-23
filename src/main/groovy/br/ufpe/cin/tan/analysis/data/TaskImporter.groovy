@@ -85,6 +85,7 @@ class TaskImporter {
             doneTasks = []
         }
         candidateTasks = doneTasks.sort { it.id }
+        //filterSelfContainedTasks()
         exportCandidateTasks()
     }
 
@@ -104,7 +105,50 @@ class TaskImporter {
             doneTasks = []
         }
         candidateTasks = doneTasks.sort { it.id }
+        //filterSelfContainedTasks()
         exportCandidateTasks()
+    }
+
+    private filterSelfContainedTasks() {
+        //["task_a", "hashes_a", "task_b", "hashes_b" , "intersection", "%_a", "%_b"]
+        def hashesSimilarity = computeHashSimilarity()
+        if (hashesSimilarity.empty) return
+        List<DoneTask> maxSimResult = []
+        def pairsMaxSimilarity = hashesSimilarity.findAll { (it[5] == 1) || (it[6] == 1) }
+        def ids = candidateTasks.collect { it.id }
+        ids.each { id ->
+            def n = pairsMaxSimilarity.findAll { it[0] == id || it[2] == id }
+            if (n.size() > 0) {
+                List<DoneTask> temp = []
+                n.each { pair ->
+                    if (pair[0] == id && pair[1] < pair[3]) {
+                        temp += candidateTasks.find { it.id == id }
+                    } else if (pair[2] == id && pair[3] < pair[1]) {
+                        temp += candidateTasks.find { it.id == id }
+                    }
+                }
+                maxSimResult += temp.unique()
+            }
+        }
+        maxSimResult = maxSimResult.unique()
+        candidateTasks = (candidateTasks - maxSimResult).sort { it.id }
+    }
+
+    private computeHashSimilarity() {
+        def hashesSimilarity = []
+        def taskPairs = ExporterUtil.computeTaskPairs(candidateTasks)
+        if (taskPairs.empty) return hashesSimilarity
+        taskPairs?.each { item ->
+            def task = item.task
+            def hashes1 = task.hashes
+            item.pairs?.each { other ->
+                def hashes2 = other.hashes
+                def intersection = hashes1.intersect(hashes2).size()
+                hashesSimilarity.add([task.id, hashes1.size(), other.id, hashes2.size(), intersection,
+                                      intersection / hashes1.size(), intersection / hashes2.size()])
+            }
+        }
+        hashesSimilarity
     }
 
     private exportCandidateTasks() {
@@ -132,7 +176,7 @@ class TaskImporter {
     }
 
     private importTasksFromCsv() {
-        List<String[]> entries = CsvUtil.read(file.path)?.unique { it[TASK_INDEX] }
+        List<String[]> entries = CsvUtil.read(file.path)?.unique { [it[URL_INDEX], it[TASK_INDEX]] }
         entries.remove(0)
         importedTasks = entries.sort { it[TASK_INDEX] as int }
     }

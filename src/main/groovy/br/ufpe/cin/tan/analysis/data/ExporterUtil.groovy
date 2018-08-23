@@ -41,11 +41,11 @@ class ExporterUtil {
             measure1 = "Precision"
             measure2 = "Recall"
         }
-        SHORT_HEADER = ["TASK", "#DAYS", "#DEVS", "#COMMITS", "HASHES", "#GHERKIN_TESTS", "#STEP_DEFS",
-                        "#ITest", "#IReal", "ITest", "IReal", measure1, measure2, "RAILS", "#visit_call",
-                        "lost_visit_call", "#ITest_views", "#view_analysis_code", "view_analysis_code",
-                        "methods_no_origin", "renamed_files", "deleted_files", "noFound_views",
-                        "#noFound_views", "TIMESTAMP", "has_merge"]
+        SHORT_HEADER = ["Task", "Dates", "#Devs", "#Commits", "Hashes", "#Gherkin_Tests", "#Sted_defs",
+                        "#TestI", "#TaskI", "TestI", "TaskI", measure1, measure2, "Rails", "#visit_call",
+                        "Lost_visit_call", "#Views_TestI", "#Code_View_Analysis", "Code_View_Analysis",
+                        "Methods_Unknown_Type", "Renamed_Files", "Deleted_Files", "NotFound_Views",
+                        "#NotFound_Views", "Timestamp", "Has_Merge"]
         PLUS_HEADER = ["#FP", "#FN", "FP", "FN", "#Hits", "Hits", "f2"]
         SHORT_HEADER_PLUS = SHORT_HEADER + PLUS_HEADER
         RECALL_INDEX_SHORT_HEADER = SHORT_HEADER_PLUS.size() - 21

@@ -79,6 +79,8 @@ class TaskAnalyser {
     def analysePrecisionAndRecall() {
         if (incrementalAnalysis) generateResultPartially()
         else generateResult()
+        //we wanna tasks that are valid for controller filtering
+        relevantTasks = filterRelevantTasksByTestsAndEmptyItest()
         exportTasks()
         exportAllDetailedInfo()
         filterResult() //TEMPORARY CODE

@@ -368,6 +368,13 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
         node.properties.each { k, v -> log.warn "$k: $v" }
     }
 
+    /*
+    * CHECAR PORQUE EU TRATO DE MANEIRA SEPARADA EM RELAÇÃO À OUTRAS CHAMADAS DE MÉTODO.
+    * EM TERMOS PRÁTICOS, PARA QUALQUER CHAMADA DE MÉTODO, EU DEVO CHECAR OS PARAMETROS QUE SÃO PASSADOS
+    * E TENTAR CHUTAR O TIPO DELES COM BASE EM CONVENÇÃO DE NOMES, NÃO SEI PORQUE EU DISSE QUE SÓ FAZIA ISSO PARA
+    * CHAMADA DE EXPECT
+    *
+    * */
     private analyseExpectCall(FCallNode iVisited) {
         def argClass = iVisited?.args?.last?.class
         if (argClass && argClass == InstVarNode) {

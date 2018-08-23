@@ -251,7 +251,7 @@ class AnalysedTask {
 
     /**
      * Represents an analysed task as an array in order to export content to CSV files.
-     * Task information is organized as follows: id, dates, #days, #developers, #commits, hashes,
+     * Task information is organized as follows: id, dates, dates, #developers, #commits, hashes,
      * #(implemented gherkin tests), #(implemented stepdefs), #ITest, #IReal, ITest, IReal, precision, recall,
      * rails version, #(calls to visit), #(views in ITest), #(files accessed by view analysis), files accessed by view
      * analysis, unknown methods, renamed files, deleted files, views, #views, timestamp.
@@ -271,7 +271,7 @@ class AnalysedTask {
         def falsePositives = itestFiles - irealFiles
         def falseNegatives = irealFiles - itestFiles
         def hits = itestFiles.intersect(irealFiles)
-        String[] line = [doneTask.id, doneTask.days, developers, doneTask.commitsQuantity, doneTask.hashes,
+        String[] line = [doneTask.id, dates, developers, doneTask.commitsQuantity, doneTask.hashes,
                          itest.foundAcceptanceTests.size(), itest.foundStepDefs.size(), itestSize, irealSize, itestFiles,
                          irealFiles, precision(), recall(), rails, itest.visitCallCounter, itest.lostVisitCall,
                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, configureUnknownMethods(), renames,

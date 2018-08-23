@@ -113,5 +113,5 @@ abstract class ConstantData {
     public static final String PROP_SIMILARITY = "spgroup.itest.similarity"
     public static final boolean DEFAULT_SIMILARITY = false
 
-    public static final int DEFAULT_TASK_LIMIT = 10
+    public static final int DEFAULT_TASK_LIMIT = 10000//10
 }

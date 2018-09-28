@@ -343,6 +343,9 @@ abstract class Util {
             def projectFolder = temp.substring(0, i2)
             root = begin + REPOSITORY_FOLDER_PATH + projectFolder + File.separator
             root = root.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+        } else if (p?.contains("${File.separator}app${File.separator}")) {
+            def index = p.indexOf("${File.separator}app${File.separator}")
+            root = p.substring(0, index + 1)
         }
         root
     }

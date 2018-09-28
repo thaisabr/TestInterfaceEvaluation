@@ -342,8 +342,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
         files.each { file ->
             def founds = this.viewFiles.findAll { it.endsWith(file) }
             founds.each {
-                int index1 = it.indexOf(Util.REPOSITORY_FOLDER_PATH)
-                views += it.substring(index1 + Util.REPOSITORY_FOLDER_PATH.size())
+                views += it
                 def index2 = it.indexOf(this.repositoryPath)
                 found += it.substring(index2 + this.repositoryPath.size() + 1)
             }
@@ -454,6 +453,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
                 }
             }
             foundViews += views
+            registryView(visitor, foundViews)
             log.info "Found route related to rails path method '${method}': ${registryMethodCall || foundView}"
         }
 

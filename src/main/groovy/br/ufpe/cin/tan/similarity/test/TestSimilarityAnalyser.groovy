@@ -13,7 +13,7 @@ class TestSimilarityAnalyser {
     TestSimilarityAnalyser(Collection c1, Collection c2) {
         this.c1 = c1
         this.c2 = c2
-        terms = (c1 + c2).sort()
+        terms = (c1 + c2).unique().sort()
     }
 
     TestSimilarityAnalyser(ITest interface1, ITest interface2) {
@@ -35,6 +35,11 @@ class TestSimilarityAnalyser {
         RealVector v1 = toRealVector(c1.sort())
         RealVector v2 = toRealVector(c2.sort())
         getCosineSimilarity(v1, v2)
+    }
+
+    double calculateSimilarityBySorensen() {
+        def jaccard = calculateSimilarityByJaccard()
+        (2 * jaccard) / (1 + jaccard)
     }
 
     private RealVector toRealVector(Collection set) {

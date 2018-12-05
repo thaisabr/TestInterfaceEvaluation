@@ -309,6 +309,7 @@ class DoneTask extends Task {
             if (revcommits) lastCommit = revcommits.first()
             else throw new Exception("Error while configuring last commit '$lastHash'")
         } else if (!commits.empty) {
+            //the commits list is sorted by date, so the last commit is the newest one
             lastCommit = gitRepository.searchAllRevCommitsBySha(commits?.last()?.hash)?.first()
             lastHash = lastCommit.name
         }
@@ -353,7 +354,7 @@ class DoneTask extends Task {
 
             // identifies changed step definitions
             commitsStepsChange = this.commits?.findAll { it.stepChanges && !it.stepChanges.isEmpty() }
-            //extractStepDefinitionChanges()
+            extractStepDefinitionChanges()
         } else {
             log.error "The task has no commits! Searched commits: "
             shas.each { log.error it.toString() }
@@ -602,7 +603,7 @@ class DoneTask extends Task {
 
         def gherkinErrors = errors.findAll { Util.isGherkinFile(it.path) }
         gherkinErrors?.each { error ->
-            def result = gitRepository.parseGherkinFile(error.path, commits?.last()?.hash)
+            def result = gitRepository.parseGherkinFile(error.path, lastHash)
             if (!result.feature) finalErrorSet += error
         }
 

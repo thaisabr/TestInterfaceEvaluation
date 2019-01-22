@@ -361,8 +361,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
                 def newName = mainName + type
                 def founds = this.viewFiles.findAll { it.endsWith(newName) }
                 founds.each {
-                    int index1 = it.indexOf(Util.REPOSITORY_FOLDER_PATH)
-                    views += it.substring(index1 + Util.REPOSITORY_FOLDER_PATH.size())
+                    views += it
                     def index2 = it.indexOf(this.repositoryPath)
                     found += it.substring(index2 + this.repositoryPath.size() + 1)
                 }
@@ -481,8 +480,10 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
                 calls += r
             } catch (Exception ex) {
                 def src = new File(path)
-                def dst = new File(ConstantData.DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER + File.separator + src.name + counter)
-                dst << src.text
+                if (src.exists()) {
+                    def dst = new File(ConstantData.DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER + File.separator + src.name + counter)
+                    dst << src.text
+                }
                 log.error "Error to extract code from view file: $path (${ex.message})"
                 counter++
             }

@@ -111,7 +111,6 @@ class GitRepository {
     }
 
     def parseGherkinFile(String filename) {
-        println "filename: ${filename}"
         def content = new File(filename).text
         def feature = gherkinManager.parseGherkinFile(content, filename, lastCommit)
         [feature: feature, content: content]

@@ -16,6 +16,8 @@ class ITest extends TaskInterface {
     Set<String> referencedPages
     /** ****************************************************************************************************************/
 
+    Set genericStepKeyword
+    Set multipleStepMatches //[path, line, text]
     Set matchStepErrors
     Set compilationErrors //[path: String, msgs: List<String>]
     Set notFoundViews
@@ -37,6 +39,8 @@ class ITest extends TaskInterface {
         this.calledPageMethods = [] as Set
         this.referencedPages = [] as Set
         this.matchStepErrors = [] as Set
+        this.genericStepKeyword = [] as Set
+        this.multipleStepMatches = [] as Set
         this.compilationErrors = [] as Set
         this.notFoundViews = [] as Set
         this.foundAcceptanceTests = [] as Set
@@ -98,6 +102,8 @@ class ITest extends TaskInterface {
         this.calledPageMethods += task.calledPageMethods
         this.referencedPages += task.referencedPages
         this.matchStepErrors += task.matchStepErrors
+        this.genericStepKeyword += task.genericStepKeyword
+        this.multipleStepMatches += task.multipleStepMatches
         this.compilationErrors += task.compilationErrors
         this.notFoundViews += task.notFoundViews
         this.foundAcceptanceTests += task.foundAcceptanceTests
@@ -124,6 +130,8 @@ class ITest extends TaskInterface {
         taskInterface.calledPageMethods = calledPageMethods - task.calledPageMethods
         taskInterface.referencedPages = referencedPages - task.referencedPages
         taskInterface.matchStepErrors = matchStepErrors - task.matchStepErrors
+        taskInterface.genericStepKeyword = genericStepKeyword - task.genericStepKeyword
+        taskInterface.multipleStepMatches = multipleStepMatches - task.multipleStepMatches
         taskInterface.compilationErrors = compilationErrors - task.compilationErrors
         taskInterface.notFoundViews = notFoundViews - task.notFoundViews
         taskInterface.foundAcceptanceTests = foundAcceptanceTests - task.foundAcceptanceTests

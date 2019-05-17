@@ -22,6 +22,10 @@ class AnalysedTask {
     String itext
     String stepMatchErrorsText
     int stepMatchErrors
+    int multipleStepMatchesCounter
+    String multipleStepMatchesText
+    int genericStepKeywordCounter
+    String genericStepKeywordText
     String compilationErrorsText
     int compilationErrors
     String gherkinCompilationErrorsText
@@ -52,6 +56,8 @@ class AnalysedTask {
         this.methods = itest?.methods?.findAll { it.type == "Object" }?.unique()*.name
         this.extractStepMatchErrorText()
         this.extractCompilationErrorText()
+        this.extractMultipleStepMatches()
+        this.extractGenericStepKeyword()
     }
 
     Set getTrace() {
@@ -238,15 +244,31 @@ class AnalysedTask {
         if (views.empty) views = ""
         def filesFromViewAnalysis = filesFromViewAnalysis()
         def viewFileFromITest = itestViewFiles().size()
-        String[] array = [doneTask.id, dates, doneTask.days, doneTask.commitsQuantity, commitMsg, developers,
+        def project = formatProjectName(doneTask.gitRepository.name)
+        String[] array = [project, doneTask.id, dates, doneTask.days, doneTask.commitsQuantity, commitMsg, developers,
                           doneTask.gherkinTestQuantity, itest.foundAcceptanceTests.size(), doneTask.stepDefQuantity,
                           itest.foundStepDefs.size(), configureUnknownMethods(), stepCalls, stepMatchErrorsText, stepMatchErrors,
                           compilationErrorsText, compilationErrors, gherkinCompilationErrorsText, gherkinCompilationErrors,
                           stepDefCompilationErrorsText, stepDefCompilationErrors, renames, removedFiles, views,
                           views.size(), itestSize, irealSize, itestFiles, irealFiles, precision(), recall(),
                           doneTask.hashes, itest.timestamp, rails, gems, itest.visitCallCounter, itest.lostVisitCall,
-                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, hasMergeCommit(), f2Measure()]
+                          viewFileFromITest, filesFromViewAnalysis.size(), filesFromViewAnalysis, hasMergeCommit(),
+                          f2Measure(), multipleStepMatchesCounter, multipleStepMatchesText,
+                          genericStepKeywordCounter, genericStepKeywordText]
         array
+    }
+
+    private static formatProjectName(String project) {
+        def name = project.toLowerCase()
+        if (name ==~ /.+_\d+/) {
+            def index = name.lastIndexOf("_")
+            name = name.substring(0, index)
+        }
+        if (name.contains("_")) {
+            def index = name.indexOf("_")
+            name = name.substring(index + 1)
+        }
+        name
     }
 
     /**
@@ -300,6 +322,28 @@ class AnalysedTask {
         }
         this.stepMatchErrorsText = text
         this.stepMatchErrors = stepErrorsQuantity
+    }
+
+    private void extractMultipleStepMatches() {
+        this.multipleStepMatchesCounter = itest.multipleStepMatches.size()
+        this.multipleStepMatchesText = ""
+        itest.multipleStepMatches?.each { msm ->
+            this.multipleStepMatchesText += "[path:${msm.path}, text:${msm.text}], "
+        }
+        if (!this.multipleStepMatchesText.empty) {
+            this.multipleStepMatchesText = this.multipleStepMatchesText.substring(0, this.multipleStepMatchesText.size() - 2)
+        }
+    }
+
+    private void extractGenericStepKeyword() {
+        this.genericStepKeywordCounter = itest.genericStepKeyword.size()
+        this.genericStepKeywordText = ""
+        itest.genericStepKeyword?.each { gsk ->
+            this.genericStepKeywordText += "[path:${gsk.path}, text:${gsk.text}], "
+        }
+        if (!this.genericStepKeywordText.empty) {
+            this.genericStepKeywordText = this.genericStepKeywordText.substring(0, this.genericStepKeywordText.size() - 2)
+        }
     }
 
     private void extractCompilationErrorText() {

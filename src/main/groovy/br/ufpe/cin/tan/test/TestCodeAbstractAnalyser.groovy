@@ -164,6 +164,7 @@ abstract class TestCodeAbstractAnalyser {
         if (stepCodeMatch.size() > 1) {
             log.warn "There are many implementations for step code: ${call.text}; ${call.path} (${call.line})"
             stepCodeMatch.each { log.info it.toString() }
+            analysisData.multipleStepMatches += [path: call.path, text: call.text]
         }
         if (match) { //step code was found
             def args = []
@@ -198,12 +199,16 @@ abstract class TestCodeAbstractAnalyser {
         if (stepCodeMatch.size() > 1) {
             log.warn "There are many implementations for step code: ${step.text}; $path (${step.location.line})"
             stepCodeMatch.each { log.info it.toString() }
+            analysisData.multipleStepMatches += [path: path, text: step.text]
         }
         if (match) { //step code was found
             def args = []
             if (extractArgs) args = extractArgsFromStepText(step.text, match.value)
             def keyword = step.keyword
-            if (keyword == ConstantData.GENERIC_STEP) keyword = match.keyword
+            if (keyword == ConstantData.GENERIC_STEP) {
+                keyword = match.keyword
+                analysisData.genericStepKeyword += [path: path, text: step.text]
+            }
             if (last && (keyword in [ConstantData.AND_STEP_EN, ConstantData.BUT_STEP_EN])) keyword = last.type
             code += new StepCode(step: step, codePath: match.path, line: match.line, args: args, type: keyword)
         } else {
@@ -236,6 +241,7 @@ abstract class TestCodeAbstractAnalyser {
         if (!stepCodeMatch.empty) match = stepCodeMatch.first() //we consider only the first match
         if (stepCodeMatch.size() > 1) {
             log.warn "There are many implementations for step code: ${step.value}; ${step.path} (${step.line})"
+            analysisData.multipleStepMatches += [path: step.path, text: step.value]
         }
         if (match) { //step code was found
             def type = findStepType(step, acceptanceTests)
@@ -486,6 +492,8 @@ abstract class TestCodeAbstractAnalyser {
     private fillITest(List<ITest> interfaces, Set removedSteps) {
         def itest = ITest.collapseInterfaces(interfaces)
         itest.matchStepErrors = organizeMatchStepErrors(removedSteps)
+        itest.multipleStepMatches = organizeMultipleStepMatches(removedSteps)
+        itest.genericStepKeyword = analysisData.genericStepKeyword
         itest.compilationErrors = organizeCompilationErrors()
         itest.codeFromViewAnalysis = this.getCodeFromViewAnalysis()
         itest.notFoundViews = notFoundViews.sort()
@@ -509,6 +517,11 @@ abstract class TestCodeAbstractAnalyser {
             result += [path:name, text:texts, size:texts.size()]
         }
         result
+    }
+
+    private organizeMultipleStepMatches(Set removedSteps) {
+        def intersection = analysisData.multipleStepMatches.findAll { it in removedSteps }
+        analysisData.multipleStepMatches - intersection
     }
 
     private organizeCompilationErrors() {

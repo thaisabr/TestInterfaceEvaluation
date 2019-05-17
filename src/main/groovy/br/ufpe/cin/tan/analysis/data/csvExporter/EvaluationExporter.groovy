@@ -47,13 +47,14 @@ class EvaluationExporter {
             measure1 = "Precision"
             measure2 = "Recall"
         }
-        MAIN_HEADER = ["Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests",
+        MAIN_HEADER = ["Project", "Task", "Date", "#Days", "#Commits", "Commit_Message", "#Devs", "#Gherkin_Tests",
                        "#Impl_Gherkin_Tests", "#StepDef", "#Impl_StepDef", "Methods_Unknown_Type", "#Step_Call",
                        "Step_Match_Errors", "#Step_Match_Error", "AST_Errors", "#AST_Errors", "Gherkin_AST_Errors",
                        "#Gherkin_AST_Errors", "Steps_AST_Errors", "#Steps_AST_Errors", "Renamed_Files",
                        "Deleted_Files", "NotFound_Views", "#Views", "#TestI", "#TaskI", "TestI", "TaskI",
                        measure1, measure2, "Hashes", "Timestamp", "Rails", "Gems", "#Visit_Call",
-                       "Lost_visit_call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis", "Has_Merge", "F2"]
+                       "Lost_visit_call", "#Views_ITest", "#Code_View_Analysis", "Code_View_Analysis", "Has_Merge", "F2",
+                       "#Multiple_Step_Matches", "Multiple_Step_Matches", "#Generic_Step_Keyword", "Generic_Step_Keyword"]
         file = new File(evaluationFile)
         this.tasks = tasks
         filterEmptyIReal = toFilter

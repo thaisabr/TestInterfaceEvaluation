@@ -73,7 +73,7 @@ class TaskAnalyser {
 
     def analyseAll() {
         analysePrecisionAndRecall()
-        analyseSimilarity()
+        //analyseSimilarity()
     }
 
     def analysePrecisionAndRecall() {

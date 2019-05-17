@@ -5,6 +5,8 @@ import br.ufpe.cin.tan.test.ruby.MethodBody
 class AnalysisData {
 
     Set matchStepErrors
+    Set multipleStepMatches //keys: path, text
+    Set genericStepKeyword
     Set<AcceptanceTest> foundAcceptanceTests
     Set foundStepDefs
     Set codeFromViewAnalysis
@@ -15,6 +17,8 @@ class AnalysisData {
 
     AnalysisData() {
         matchStepErrors = [] as Set
+        multipleStepMatches = [] as Set
+        genericStepKeyword = [] as Set
         foundAcceptanceTests = [] as Set
         foundStepDefs = [] as Set
         codeFromViewAnalysis = [] as Set

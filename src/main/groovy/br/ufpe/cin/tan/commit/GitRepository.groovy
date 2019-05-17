@@ -110,6 +110,13 @@ class GitRepository {
         [feature: feature, content: content]
     }
 
+    def parseGherkinFile(String filename) {
+        println "filename: ${filename}"
+        def content = new File(filename).text
+        def feature = gherkinManager.parseGherkinFile(content, filename, lastCommit)
+        [feature: feature, content: content]
+    }
+
     static GitRepository getRepository(String url) throws CloningRepositoryException {
         def repository = repositories.find { ((it.url - ConstantData.GIT_EXTENSION) == url) }
         if (repository) repository.gherkinManager = new GherkinManager()

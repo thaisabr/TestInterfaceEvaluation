@@ -22,7 +22,7 @@ abstract class ConstantData {
     public static final String PROP_LIB = "spgroup.lib.path"
 
     public static final String DEFAULT_TASKS_FOLDER = "tasks"
-    public static final int DEFAULT_TASK_SIZE = 80
+    public static final int DEFAULT_TASK_SIZE = 5000 //that is, we want to disable task size filter
     public static final String DEFAULT_REPOSITORY_FOLDER = "spg_repos"
     public static final String DEFAULT_LANGUAGE = "ruby"
     public static final String DEFAULT_GHERKIN_FOLDER = "features"
@@ -113,5 +113,5 @@ abstract class ConstantData {
     public static final String PROP_SIMILARITY = "spgroup.itest.similarity"
     public static final boolean DEFAULT_SIMILARITY = false
 
-    public static final int DEFAULT_TASK_LIMIT = 10000//10
+    public static final int DEFAULT_TASK_LIMIT = 10000
 }

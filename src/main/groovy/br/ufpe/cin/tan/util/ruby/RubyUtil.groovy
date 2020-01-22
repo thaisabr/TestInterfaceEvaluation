@@ -23,7 +23,7 @@ class RubyUtil extends Util {
         def firstIndex = path.lastIndexOf(File.separator)
         def lastIndex = path.lastIndexOf(".")
         def underscore = ""
-        if (firstIndex >= 0 && lastIndex >= 0) underscore = path.substring(firstIndex + 1, lastIndex)
+        if (firstIndex >= 0 && lastIndex >= 0 && firstIndex + 1 < lastIndex) underscore = path.substring(firstIndex + 1, lastIndex)
         underscoreToCamelCase(underscore)
     }
 

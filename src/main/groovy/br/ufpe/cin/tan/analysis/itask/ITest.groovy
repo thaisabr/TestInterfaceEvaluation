@@ -13,7 +13,7 @@ class ITest extends TaskInterface {
     /******************************************** used by web-based tests *********************************************/
     Set calledPageMethods
     //keys:[file, name, args] //help to identify referenced pages (GSP files); methods "to" and "at";
-    Set<String> referencedPages
+    Set referencedPages //[file, step]
     /** ****************************************************************************************************************/
 
     Set genericStepKeyword
@@ -152,7 +152,8 @@ class ITest extends TaskInterface {
     Set<String> findAllFiles() {
         def classes = classes*.file
         def methodFiles = methods?.findAll { it.type != null && !it.type.empty && it.type != "StepCall" }*.file
-        def files = ((classes + methodFiles + referencedPages) as Set)?.sort()
+        def viewFiles = referencedPages*.file
+        def files = ((classes + methodFiles + viewFiles) as Set)?.sort()
         def canonicalPath = Util.getRepositoriesCanonicalPath()
         files?.findResults { i -> i ? i - canonicalPath : null } as Set
     }
@@ -167,8 +168,10 @@ class ITest extends TaskInterface {
                     it.file && Util.isProductionFile(it.file)
         }*.file
 
+        def viewFiles = referencedPages*.file
+
         //production files
-        ((classes + methodFiles + referencedPages) as Set)?.sort()
+        ((classes + methodFiles + viewFiles) as Set)?.sort()
     }
 
     String toStringDetailed() {
@@ -188,7 +191,11 @@ class ITest extends TaskInterface {
             else text += it.toString() + "\n"
         }
 
-        def pages = referencedPages.collect { it - canonicalPath }?.unique()?.sort()
+        def pages = []
+        referencedPages.each { page ->
+            pages += [file: page.file - canonicalPath, step: page.step]
+        }
+        pages = pages?.unique()?.sort()
         text += "\nReferenced pages: ${pages.size()}\n"
         pages?.each { text += it.toString() + "\n" }
 

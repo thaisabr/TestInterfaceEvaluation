@@ -213,8 +213,10 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
             if (RouteHelper.isViewFile(path)) {
                 def views = viewFiles?.findAll { it.contains(path) }
                 if (views && !views.empty) { //no case execute it yet
-                    visitor?.taskInterface?.referencedPages += views
-                    interfaceFromViews.referencedPages += views
+                    views.each { v ->
+                        visitor?.taskInterface?.referencedPages += [file: v, step: visitor.step]
+                        interfaceFromViews.referencedPages += [file: v, step: visitor.step]
+                    }
                     foundView = true
                     //trying to find controller and action by view seems risky
                     /*def methodCall
@@ -293,7 +295,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
 
         log.info "Used paths with method call (${methodCall.size()}): $methodCall"
         log.info "Used paths with view (${view.size()}): $view"
-        log.info "All found views until the moment: ${visitor?.taskInterface?.referencedPages}"
+        log.info "All found views until the moment: ${visitor?.taskInterface?.referencedPages*.file.unique()}"
         log.info "Invalid used paths (${invalid.size()}): $invalid"
         log.info "Valid used paths with no data (${problematic.size()}): $problematic"
         this.notFoundViews += problematic
@@ -321,8 +323,10 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     private registryView(RubyTestCodeVisitor visitor, List<String> views) {
         def foundView = false
         if (views && !views.empty) {
-            visitor?.taskInterface?.referencedPages += views
-            interfaceFromViews.referencedPages += views
+            views.each { v ->
+                visitor?.taskInterface?.referencedPages += [file: v, step: visitor.step]
+                interfaceFromViews.referencedPages += [file: v, step: visitor.step]
+            }
             foundView = true
         }
         foundView

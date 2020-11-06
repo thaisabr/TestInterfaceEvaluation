@@ -234,7 +234,7 @@ class DoneTask extends Task {
 
             //computes real interface
             initTime = new Date()
-            analysedTask.ireal = identifyProductionChangedFiles()
+            analysedTask.ireal = identifyChangedFiles()
             configureTimestamp(initTime, analysedTask.ireal)
 
             //it is only necessary in the evaluation study
@@ -537,6 +537,15 @@ class DoneTask extends Task {
         organizeProductionFiles(validFiles)
     }
 
+    /* calcula IReal como sendo o conjunto dos arquivos adicionados, alterados ou removidos pela tarefa, sem filtros. */
+
+    private IReal identifyChangedFiles() {
+        def files = commits*.files?.flatten()?.unique()
+
+        /* Constructs task interface object */
+        organizeProductionFiles(files)
+    }
+
     private IReal organizeProductionFiles(productionFiles) {
         def taskInterface = new IReal()
 
@@ -549,7 +558,8 @@ class DoneTask extends Task {
                 def index = path.lastIndexOf(File.separator)
                 taskInterface.classes += [name: path.substring(index + 1), file: path]
             } else {
-                taskInterface.classes += [name: testCodeAnalyser.getClassForFile(path), file: path]
+                def aux = testCodeAnalyser.getClassForFile(path)
+                taskInterface.classes += [name: aux, file: path]
             }
         }
         taskInterface

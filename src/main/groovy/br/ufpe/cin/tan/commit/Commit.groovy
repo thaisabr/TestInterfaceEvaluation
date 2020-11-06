@@ -23,6 +23,8 @@ class Commit {
     List<ChangedUnitTestFile> unitChanges //code changes in unit test files only
     List<RenamingChange> renameChanges
 
+    List<String> files //all changed files
+
     @Override
     String toString() {
         def paths = (coreChanges*.path + unitChanges*.path + gherkinChanges*.path + stepChanges*.path)?.flatten()

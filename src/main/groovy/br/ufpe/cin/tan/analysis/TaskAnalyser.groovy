@@ -83,7 +83,7 @@ class TaskAnalyser {
         relevantTasks = filterRelevantTasksByTestsAndEmptyItest()
         exportTasks()
         exportAllDetailedInfo()
-        filterResult() //TEMPORARY CODE
+        //filterResult() //no novo estudo não filtramos resultados por controller
     }
 
     def getIrrelevantImportedTasksId() {

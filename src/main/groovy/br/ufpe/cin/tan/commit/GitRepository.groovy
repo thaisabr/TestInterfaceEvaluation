@@ -22,6 +22,8 @@ import org.eclipse.jgit.api.BlameCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.blame.BlameResult
 import org.eclipse.jgit.diff.DiffEntry
+import org.eclipse.jgit.diff.DiffFormatter
+import org.eclipse.jgit.diff.RawTextComparator
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.ObjectLoader
 import org.eclipse.jgit.lib.ObjectReader
@@ -89,18 +91,30 @@ class GitRepository {
      * @param sha the commit's identification.
      */
     def reset(String sha) {
-        def git = Git.open(new File(localPath))
+        /*def git = Git.open(new File(localPath))
         git.checkout().setName(sha).setStartPoint(sha).call()
-        git.close()
+        git.close()*/
+        ProcessBuilder builder = new ProcessBuilder("git", "checkout", "-f", sha)
+        builder.directory(new File(localPath))
+        Process process = builder.start()
+        process.waitFor()
+        process.inputStream.readLines()
+        process.inputStream.close()
     }
 
     /***
      * Checkouts the last version of git repository.
      */
     def reset() {
-        def git = Git.open(new File(localPath))
+        /*def git = Git.open(new File(localPath))
         git.checkout().setName(lastCommit).setStartPoint(lastCommit).call()
-        git.close()
+        git.close()*/
+        ProcessBuilder builder = new ProcessBuilder("git", "checkout", "-f", lastCommit)
+        builder.directory(new File(localPath))
+        Process process = builder.start()
+        process.waitFor()
+        process.inputStream.readLines()
+        process.inputStream.close()
     }
 
     def parseGherkinFile(String filename, String sha) {
@@ -549,9 +563,12 @@ class GitRepository {
                 it instanceof RenamingChange
             } as List<RenamingChange>
 
+            def files = getAllChangedFilesFromCommit(c)
+
             commits += new Commit(hash: c.name, message: c.fullMessage.replaceAll(RegexUtil.NEW_LINE_REGEX, " "),
                     author: c.authorIdent.name, date: c.commitTime, coreChanges: prodFiles, gherkinChanges: gherkinChanges,
-                    unitChanges: unitChanges, stepChanges: stepChanges, renameChanges: renameChanges, merge: c.parentCount > 1)
+                    unitChanges: unitChanges, stepChanges: stepChanges, renameChanges: renameChanges, merge: c.parentCount > 1,
+                    files: files)
         }
         commits
     }
@@ -591,5 +608,68 @@ class GitRepository {
         * this type of change; a new strategy should be defined!!!! */
         return changedLines
     }
+
+    /* CÓDIGO COPIADO DO PROJETO MININGIT PARA IDENTIFICAR TODOS OS ARQUIVOS ALTERADOS POR UMA TAREFA, SEM FILTROS */
+
+    private List getAllChangedFilesFromCommit(RevCommit commit) {
+        def files = []
+
+        switch (commit.parentCount) {
+            case 0: //first commit
+                def git = Git.open(new File(localPath))
+                TreeWalk tw = new TreeWalk(git.repository)
+                tw.reset()
+                tw.setRecursive(true)
+                tw.addTree(commit.tree)
+                while (tw.next()) {
+                    files += tw.pathString.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+                }
+                //tw.release()
+                git.close()
+                break
+            case 1: //commit with one parent
+                def diffs = getDiff(commit.tree, commit.parents.first().tree)
+                files = getAllChangedFilesFromDiffs(diffs)
+                break
+            default: //merge commit (commit with more than one parent)
+                commit.parents.each { parent ->
+                    def diffs = getDiff(commit.tree, parent.tree)
+                    files += getAllChangedFilesFromDiffs(diffs)
+                }
+        }
+
+        files?.sort()?.unique()
+    }
+
+    private static List getAllChangedFilesFromDiffs(List<DiffEntry> diffs) {
+        def files = []
+        if (!diffs?.empty) {
+            diffs.each { entry ->
+                if (entry.changeType == DiffEntry.ChangeType.DELETE) files += entry.oldPath
+                else {
+                    files += entry.newPath
+                }
+            }
+        }
+        return files
+    }
+
+    private List<DiffEntry> getDiff(RevTree newTree, RevTree oldTree) {
+        def git = Git.open(new File(localPath))
+        DiffFormatter df = new DiffFormatter(new ByteArrayOutputStream())
+        df.setRepository(git.repository)
+        df.setDiffComparator(RawTextComparator.DEFAULT)
+        df.setDetectRenames(true)
+        List<DiffEntry> diffs = df.scan(oldTree, newTree)
+        List<DiffEntry> result = []
+        diffs.each {
+            it.oldPath = it.oldPath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+            it.newPath = it.newPath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
+            result += it
+        }
+        git.close()
+        result
+    }
+
 
 }

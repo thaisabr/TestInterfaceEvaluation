@@ -12,7 +12,7 @@ class IReal extends TaskInterface {
 
     Set<String> getFiles() {
         def candidates = classes.collect { Util.REPOSITORY_FOLDER_PATH + it.file }
-        def prodFiles = candidates?.findAll { Util.isProductionFile(it) }
+        def prodFiles = candidates//?.findAll { Util.isProductionFile(it) }
         if (prodFiles.empty) return []
         def files = prodFiles
         Util.organizePathsForInterfaces(files) as Set

@@ -10,8 +10,8 @@ import org.apache.lucene.document.FieldType
 import org.apache.lucene.index.IndexOptions
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.store.ByteBuffersDirectory
 import org.apache.lucene.store.Directory
-import org.apache.lucene.store.RAMDirectory
 
 class IndexManager {
 
@@ -25,7 +25,7 @@ class IndexManager {
         configureStopWords(new GherkinDialectProvider().defaultDialect)
         configureFieldType()
         analyzer = new StandardAnalyzer(stopwords)
-        indexDirectory = new RAMDirectory()
+        indexDirectory = new ByteBuffersDirectory()
         //Creates a memory directory; if necessary, it is possible to use an index database
         writer = new IndexWriter(indexDirectory, new IndexWriterConfig(analyzer)) //Create a file
     }

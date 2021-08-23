@@ -56,7 +56,7 @@ abstract class TestCodeAbstractAnalyser {
         codeFromViewAnalysis = [] as Set
         analysisData = new AnalysisData()
         configureApiMethodsList()
-        //log.info "apiMethods: ${apiMethods.size()}"
+        log.info "apiMethods: ${apiMethods.size()}"
     }
 
     /***

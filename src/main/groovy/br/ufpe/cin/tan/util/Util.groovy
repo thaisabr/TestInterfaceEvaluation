@@ -8,64 +8,104 @@ import java.util.regex.Matcher
 @Slf4j
 abstract class Util {
 
+    static boolean USING_PROPERTIES_FILE
     static final String GEM_SUFFIX = Matcher.quoteReplacement(File.separator) + "lib"
-    static final Properties properties
-    public static final String TASKS_FILE
-    public static final int TASK_MAX_SIZE
-    public static final String REPOSITORY_FOLDER_PATH
-    public static final LanguageOption CODE_LANGUAGE
-    public static final String GHERKIN_FILES_RELATIVE_PATH
-    public static final String STEPS_FILES_RELATIVE_PATH
-    public static final String UNIT_TEST_FILES_RELATIVE_PATH
-    public static final String PRODUCTION_FILES_RELATIVE_PATH
-    public static final String VIEWS_FILES_RELATIVE_PATH
-    public static final String CONTROLLER_FILES_RELATIVE_PATH
-    public static final String MODEL_FILES_RELATIVE_PATH
-    public static final String LIB_RELATIVE_PATH
-    public static final String FRAMEWORK_PATH
-    public static final String FRAMEWORK_LIB_PATH
-    public static final List<String> FRAMEWORK_FILES
-    public static final List<String> VALID_FOLDERS
-    public static final String VALID_EXTENSION
-    public static final List<String> VALID_EXTENSIONS
-    public static final List<String> VALID_VIEW_FILES
-    public static final List<String> SPECIAL_VALID_VIEW_FILES
-    public static final String GEMS_PATH
-    public static final String GEM_INFLECTOR
-    public static final String GEM_I18N
-    public static final String GEM_PARSER
-    public static final String GEM_AST
-    public static final boolean VIEW_ANALYSIS
-    public static final boolean CONTROLLER_FILTER
+    static Properties properties
+    public static String TASKS_FILE
+    public static int TASK_MAX_SIZE
+    public static String REPOSITORY_FOLDER_PATH
+    public static LanguageOption CODE_LANGUAGE
+    public static String GHERKIN_FILES_RELATIVE_PATH
+    public static String STEPS_FILES_RELATIVE_PATH
+    public static String UNIT_TEST_FILES_RELATIVE_PATH
+    public static String PRODUCTION_FILES_RELATIVE_PATH
+    public static String VIEWS_FILES_RELATIVE_PATH
+    public static String CONTROLLER_FILES_RELATIVE_PATH
+    public static String MODEL_FILES_RELATIVE_PATH
+    public static String LIB_RELATIVE_PATH
+    public static String FRAMEWORK_PATH
+    public static String FRAMEWORK_LIB_PATH
+    public static List<String> FRAMEWORK_FILES
+    public static List<String> VALID_FOLDERS
+    public static String VALID_EXTENSION
+    public static List<String> VALID_EXTENSIONS
+    public static List<String> VALID_VIEW_FILES
+    public static List<String> SPECIAL_VALID_VIEW_FILES
+    public static String GEMS_PATH
+    public static String GEM_INFLECTOR
+    public static String GEM_I18N
+    public static String GEM_PARSER
+    public static String GEM_AST
+    public static boolean VIEW_ANALYSIS
+    public static boolean CONTROLLER_FILTER
     public static boolean WHEN_FILTER
-    public static final boolean VIEW_FILTER
-    public static final boolean MULTIPLE_TASK_FILES
-    public static final List<String> COVERAGE_GEMS
-    public static boolean RESTRICT_GHERKIN_CHANGES
-    public static final boolean RUNNING_ALL_CONFIGURATIONS
-    public static final boolean SIMILARITY_ANALYSIS
+    public static boolean VIEW_FILTER
+    public static boolean MULTIPLE_TASK_FILES
+    public static List<String> COVERAGE_GEMS
+    public static RESTRICT_GHERKIN_CHANGES
+    public static boolean RUNNING_ALL_CONFIGURATIONS
+    public static boolean SIMILARITY_ANALYSIS
 
-    static {
-        properties = new Properties()
-        loadProperties()
-        TASKS_FILE = configureTasksFilePath()
-        TASK_MAX_SIZE = configureTaskMaxSize()
+    static void configureEnvironment(String taskFile, String taskMaxSize, String language, String gherkinFilesRelativePath,
+                                     String stepFilesRelativePath, String unitFilesRelativePath,
+                                     String productionFilesRelativePath, String gemsPath, String frameworkPath, String libPath,
+                                     String viewAnalysis, String controllerFilter, String whenFilter, String viewFilter,
+                                     String coverageGems, String gherkinAdds, String runningConfiguration,
+                                     String similarityAnalysis) {
+        TASKS_FILE = configureTasksFilePath(taskFile)
+        TASK_MAX_SIZE = configureTaskMaxSize(taskMaxSize)
         MULTIPLE_TASK_FILES = TASKS_FILE.empty
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
-        CODE_LANGUAGE = configureLanguage()
-        GHERKIN_FILES_RELATIVE_PATH = configureGherkin()
-        STEPS_FILES_RELATIVE_PATH = configureSteps()
-        UNIT_TEST_FILES_RELATIVE_PATH = configureUnitTest()
-        PRODUCTION_FILES_RELATIVE_PATH = configureProduction()
+        CODE_LANGUAGE = configureLanguage(language)
+        GHERKIN_FILES_RELATIVE_PATH = configureGherkin(gherkinFilesRelativePath)
+        STEPS_FILES_RELATIVE_PATH = configureSteps(stepFilesRelativePath)
+        UNIT_TEST_FILES_RELATIVE_PATH = configureUnitTest(unitFilesRelativePath)
+        PRODUCTION_FILES_RELATIVE_PATH = configureProduction(productionFilesRelativePath)
         VIEWS_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}views"
         CONTROLLER_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}controllers"
         MODEL_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}models"
-        FRAMEWORK_PATH = configureFramework()
+        FRAMEWORK_PATH = configureFramework(frameworkPath)
         FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
-        FRAMEWORK_LIB_PATH = configureLib()
+        FRAMEWORK_LIB_PATH = configureLib(libPath)
         log.info "FRAMEWORK_FILES: ${FRAMEWORK_FILES.size()}"
 
-        //configure language dependents
+        configurePropertiesRelatedToCodeLanguage()
+
+        VALID_EXTENSIONS = [VALID_EXTENSION] + VALID_VIEW_FILES + [ConstantData.FEATURE_EXTENSION]
+        VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH, LIB_RELATIVE_PATH]
+
+        GEMS_PATH = configureGemPath(gemsPath)
+        GEM_INFLECTOR = configureGemInflector("")
+        GEM_I18N = configureGemI18n("")
+        GEM_PARSER = configureGemParser("")
+        GEM_AST = configureGemAst("")
+
+        VIEW_ANALYSIS = configureViewAnalysis(viewAnalysis)
+        CONTROLLER_FILTER = configureControllerFilter(controllerFilter)
+        WHEN_FILTER = configureWhenFilter(whenFilter)
+        VIEW_FILTER = configureViewFilter(viewFilter)
+        createFolders()
+        COVERAGE_GEMS = configureCoverageGems(coverageGems)
+        RESTRICT_GHERKIN_CHANGES = configureGherkinAdds(gherkinAdds)
+        RUNNING_ALL_CONFIGURATIONS = configureRunningConfigurations(runningConfiguration)
+        SIMILARITY_ANALYSIS = configureSimilarityAnalysis(similarityAnalysis)
+    }
+
+    static void configureEnvironment(String language, String gemsPath, String frameworkPath) {
+        configureEnvironment("", "", language, "", "",
+                "", "", gemsPath, frameworkPath,
+                "$frameworkPath${File.separator}lib", "", "", "", "",
+                "", "", "", "")
+    }
+
+    static void configureEnvironment(String taskFile, String language, String gemsPath, String frameworkPath) {
+        configureEnvironment(taskFile, "", language, "", "",
+                "", "", gemsPath, frameworkPath,
+                "$frameworkPath${File.separator}lib", "", "", "", "",
+                "", "", "", "")
+    }
+
+    private static configurePropertiesRelatedToCodeLanguage() {
         switch (CODE_LANGUAGE) {
             case LanguageOption.RUBY:
                 VALID_EXTENSION = ConstantData.RUBY_EXTENSION
@@ -87,6 +127,29 @@ abstract class Util {
                 LIB_RELATIVE_PATH = ""
                 break
         }
+    }
+
+    static {
+        loadProperties()
+        if (!properties) return
+        TASKS_FILE = configureTasksFilePath()
+        TASK_MAX_SIZE = configureTaskMaxSize()
+        MULTIPLE_TASK_FILES = TASKS_FILE.empty
+        REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
+        CODE_LANGUAGE = configureLanguage()
+        GHERKIN_FILES_RELATIVE_PATH = configureGherkin()
+        STEPS_FILES_RELATIVE_PATH = configureSteps()
+        UNIT_TEST_FILES_RELATIVE_PATH = configureUnitTest()
+        PRODUCTION_FILES_RELATIVE_PATH = configureProduction()
+        VIEWS_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}views"
+        CONTROLLER_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}controllers"
+        MODEL_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}models"
+        FRAMEWORK_PATH = configureFramework()
+        FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH)
+        FRAMEWORK_LIB_PATH = configureLib()
+        log.info "FRAMEWORK_FILES: ${FRAMEWORK_FILES.size()}"
+
+        configurePropertiesRelatedToCodeLanguage()
 
         VALID_EXTENSIONS = [VALID_EXTENSION] + VALID_VIEW_FILES + [ConstantData.FEATURE_EXTENSION]
         VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH, LIB_RELATIVE_PATH]
@@ -108,9 +171,23 @@ abstract class Util {
     }
 
     private static loadProperties() {
-        File configFile = new File(ConstantData.PROPERTIES_FILE_NAME)
-        FileInputStream resourceStream = new FileInputStream(configFile)
-        properties.load(resourceStream)
+        try {
+            properties = new Properties()
+            File configFile = new File("src${File.separator}main${File.separator}resources${File.separator}" +
+                    ConstantData.PROPERTIES_FILE_NAME)
+            if (configFile.exists()) {
+                FileInputStream fileInputStream = new FileInputStream(configFile)
+                properties.load(fileInputStream)
+            } else {
+                InputStream resourceStream = Util.class.getResourceAsStream(File.separator + ConstantData.PROPERTIES_FILE_NAME)
+                properties.load(resourceStream)
+            }
+            USING_PROPERTIES_FILE = true
+        } catch (Exception exception) {
+            log.warn "Properties file not found."
+            properties = null
+            USING_PROPERTIES_FILE = false
+        }
     }
 
     private static configureMandatoryProperties(String value, String defaultValue) {
@@ -127,9 +204,20 @@ abstract class Util {
         configureMandatoryProperties(properties.(ConstantData.PROP_TASK_FILE), "")
     }
 
+    private static configureTasksFilePath(String value) {
+        configureMandatoryProperties(value, "")
+    }
+
     private static int configureTaskMaxSize() {
         def maxSize = ConstantData.DEFAULT_TASK_SIZE
         def value = properties.(ConstantData.PROP_TASK_MAX_SIZE)
+        if (value) maxSize = value as int
+        maxSize
+    }
+
+    private static int configureTaskMaxSize(String v) {
+        def maxSize = ConstantData.DEFAULT_TASK_SIZE
+        def value = v
         if (value) maxSize = value as int
         maxSize
     }
@@ -145,28 +233,57 @@ abstract class Util {
         value.trim().toUpperCase() as LanguageOption
     }
 
+    private static configureLanguage(String v) {
+        def value = configureMandatoryProperties(v, ConstantData.DEFAULT_LANGUAGE)
+        value.trim().toUpperCase() as LanguageOption
+    }
+
     private static configureGherkin() {
         configureMandatoryProperties(properties.(ConstantData.PROP_GHERKIN), ConstantData.DEFAULT_GHERKIN_FOLDER)
+    }
+
+    private static configureGherkin(String v) {
+        configureMandatoryProperties(v, ConstantData.DEFAULT_GHERKIN_FOLDER)
     }
 
     private static configureSteps() {
         configureMandatoryProperties(properties.(ConstantData.PROP_STEPS), ConstantData.DEFAULT_STEPS_FOLDER)
     }
 
+    private static configureSteps(String v) {
+        configureMandatoryProperties(v, ConstantData.DEFAULT_STEPS_FOLDER)
+    }
+
     private static configureUnitTest() {
         configureMandatoryProperties(properties.(ConstantData.PROP_UNIT_TEST), ConstantData.DEFAULT_UNITY_FOLDER)
+    }
+
+    private static configureUnitTest(String v) {
+        configureMandatoryProperties(v, ConstantData.DEFAULT_UNITY_FOLDER)
     }
 
     private static configureProduction() {
         configureMandatoryProperties(properties.(ConstantData.PROP_PRODUCTION), ConstantData.DEFAULT_PRODUCTION_FOLDER)
     }
 
+    private static configureProduction(String v) {
+        configureMandatoryProperties(v, ConstantData.DEFAULT_PRODUCTION_FOLDER)
+    }
+
     private static configureFramework() {
         configureMandatoryProperties(properties.(ConstantData.PROP_FRAMEWORK), "")
     }
 
+    private static configureFramework(String v) {
+        configureMandatoryProperties(v, "")
+    }
+
     private static configureLib() {
         configureMandatoryProperties(properties.(ConstantData.PROP_LIB), "")
+    }
+
+    private static configureLib(String v) {
+        configureMandatoryProperties(v, "")
     }
 
     private static configureGem(String value, String defaultValue) {
@@ -174,48 +291,102 @@ abstract class Util {
         GEMS_PATH + Matcher.quoteReplacement(File.separator) + folder + GEM_SUFFIX
     }
 
+    private static configureGemPath() {
+        String value = (properties.(ConstantData.PROP_GEMS)).replace(File.separator, Matcher.quoteReplacement(File.separator))
+        configureMandatoryProperties(value, "")
+    }
+
+    private static configureGemPath(String v) {
+        String value = v?.replace(File.separator, Matcher.quoteReplacement(File.separator))
+        configureMandatoryProperties(value, "")
+    }
+
     private static configureGemInflector() {
         configureGem(properties.(ConstantData.PROP_GEM_INFLECTOR), ConstantData.DEFAULT_GEM_INFLECTOR)
+    }
+
+    private static configureGemInflector(String v) {
+        configureGem(v, ConstantData.DEFAULT_GEM_INFLECTOR)
     }
 
     private static configureGemI18n() {
         configureGem(properties.(ConstantData.PROP_GEM_I18N), ConstantData.DEFAULT_GEM_I18N_FOLDER)
     }
 
+    private static configureGemI18n(String v) {
+        configureGem(v, ConstantData.DEFAULT_GEM_I18N_FOLDER)
+    }
+
     private static configureGemParser() {
         configureGem(properties.(ConstantData.PROP_GEM_PARSER), ConstantData.DEFAULT_GEM_PARSER_FOLDER)
+    }
+
+    private static configureGemParser(String v) {
+        configureGem(v, ConstantData.DEFAULT_GEM_PARSER_FOLDER)
     }
 
     private static configureGemAst() {
         configureGem(properties.(ConstantData.PROP_GEM_AST), ConstantData.DEFAULT_GEM_AST_FOLDER)
     }
 
+    private static configureGemAst(String v) {
+        configureGem(v, ConstantData.DEFAULT_GEM_AST_FOLDER)
+    }
+
     private static boolean configureViewAnalysis() {
         configureBooleanProperties(properties.(ConstantData.PROP_VIEW_ANALYSIS), ConstantData.DEFAULT_VIEW_ANALYSIS)
+    }
+
+    private static boolean configureViewAnalysis(String v) {
+        configureBooleanProperties(v, ConstantData.DEFAULT_VIEW_ANALYSIS)
     }
 
     private static boolean configureControllerFilter() {
         configureBooleanProperties(properties.(ConstantData.PROP_CONTROLLER_FILTER), ConstantData.DEFAULT_CONTROLLER_FILTER)
     }
 
+    private static boolean configureControllerFilter(String v) {
+        configureBooleanProperties(v, ConstantData.DEFAULT_CONTROLLER_FILTER)
+    }
+
     private static boolean configureWhenFilter() {
         configureBooleanProperties(properties.(ConstantData.PROP_WHEN_FILTER), ConstantData.DEFAULT_WHEN_FILTER)
+    }
+
+    private static boolean configureWhenFilter(String v) {
+        configureBooleanProperties(v, ConstantData.DEFAULT_WHEN_FILTER)
     }
 
     private static boolean configureViewFilter() {
         configureBooleanProperties(properties.(ConstantData.PROP_VIEW_FILTER), ConstantData.DEFAULT_VIEW_FILTER)
     }
 
+    private static boolean configureViewFilter(String v) {
+        configureBooleanProperties(v, ConstantData.DEFAULT_VIEW_FILTER)
+    }
+
     private static boolean configureGherkinAdds() {
         configureBooleanProperties(properties.(ConstantData.PROP_RESTRICT_GHERKIN_CHANGES), ConstantData.DEFAULT_RESTRICT_GHERKIN_CHANGES)
+    }
+
+    private static boolean configureGherkinAdds(String v) {
+        configureBooleanProperties(v, ConstantData.DEFAULT_RESTRICT_GHERKIN_CHANGES)
     }
 
     private static boolean configureRunningConfigurations() {
         configureBooleanProperties(properties.(ConstantData.PROP_RUN_ALL_CONFIGURATIONS), ConstantData.DEFAULT_RUN_ALL_CONFIGURATIONS)
     }
 
+    private static boolean configureRunningConfigurations(String v) {
+        configureBooleanProperties(v, ConstantData.DEFAULT_RUN_ALL_CONFIGURATIONS)
+    }
+
     private static boolean configureSimilarityAnalysis() {
         configureBooleanProperties(properties.(ConstantData.PROP_SIMILARITY), ConstantData.DEFAULT_SIMILARITY)
+    }
+
+    private static boolean configureSimilarityAnalysis(String v) {
+        configureBooleanProperties(v, ConstantData.DEFAULT_SIMILARITY)
     }
 
     private static createFolder(String folder) {
@@ -234,6 +405,15 @@ abstract class Util {
     private static configureCoverageGems() {
         def result = []
         String gems = properties.(ConstantData.PROP_COVERAGE_GEMS)
+        if (gems && !gems.empty) {
+            result = gems.tokenize(',')*.trim()
+        }
+        result
+    }
+
+    private static configureCoverageGems(String value) {
+        def result = []
+        String gems = value
         if (gems && !gems.empty) {
             result = gems.tokenize(',')*.trim()
         }

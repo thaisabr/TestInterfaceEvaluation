@@ -37,6 +37,13 @@ class TodoTask extends Task {
         findAllRelatedGherkinFile(scenarios)
     }
 
+    TodoTask(String language, String gemsPath, String frameworkPath, String rootDirectory, int id, scenarios)
+            throws CloningRepositoryException {
+        super(language, gemsPath, frameworkPath, rootDirectory, id)
+        testCodeAnalyser.configureProperties()
+        findAllRelatedGherkinFile(scenarios)
+    }
+
     @Override
     ITest computeTestBasedInterface() {
         def taskInterface = null

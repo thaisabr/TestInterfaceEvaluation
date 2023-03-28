@@ -21,8 +21,8 @@ abstract class Task {
     GitRepository gitRepository
     TestCodeAbstractAnalyser testCodeAnalyser
 
-    Task(String language, String gemsPath, String frameworkPath, String rootDirectory, int id) throws CloningRepositoryException {
-        if (!Util.USING_PROPERTIES_FILE) Util.configureEnvironment(language, gemsPath, frameworkPath)
+    Task(String gherkinFilesRelativePath, String stepFilesRelativePath, String unitFilesRelativePath, String rootDirectory, int id) throws CloningRepositoryException {
+        Util.configureEnvironment(gherkinFilesRelativePath, stepFilesRelativePath, unitFilesRelativePath)
         log.info "Configuring task '${id}'"
         this.id = id
         this.gitRepository = GitRepository.getRepository(rootDirectory)

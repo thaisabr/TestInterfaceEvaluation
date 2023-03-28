@@ -1,1 +1,0 @@
-Example of tasks file computed by MiningGit (https://github.com/thaisabr/mining_git).

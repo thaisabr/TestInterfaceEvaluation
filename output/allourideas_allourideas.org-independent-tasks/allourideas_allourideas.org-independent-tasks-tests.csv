@@ -1,4 +1,0 @@
-"Repository","https://github.com/allourideas/allourideas.org.git"
-"TASK","HASH","RUBY","RAILS","COVERAGE","TESTS"
-"8","30e624cf953d265b6cb3f8ac6d09aaf3d8ec2626","","2.3.18","","features\admin\add_idea.feature(8);features\admin\add_idea.feature(12);features\admin\add_idea.feature(19);features\admin\add_idea.feature(24);features\admin\cant_decide.feature(8);features\admin\cant_decide.feature(12);features\admin\cant_decide.feature(19);features\admin\cant_decide.feature(24)"
-"11","bb7c51680c8f370558c190d665e8bd3311e17f2e","","2.3.18","","features\voting\add_idea.feature(13);features\voting\add_idea.feature(31);features\voting\add_idea.feature(52)"

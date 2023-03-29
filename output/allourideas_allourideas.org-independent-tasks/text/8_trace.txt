@@ -1,3 +1,0 @@
-[path:\features\step_definitions\clearance_steps.rb, methods:[96]]
-[path:\features\step_definitions\idea_marketplace_steps.rb, methods:[9]]
-[path:\features\step_definitions\web_steps.rb, methods:[26, 103, 22, 85, 30, 124, [name:with_scope, step:When ], [name:with_scope, step:Then ]]]

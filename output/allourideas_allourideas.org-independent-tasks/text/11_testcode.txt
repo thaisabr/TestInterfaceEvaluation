@@ -1,0 +1,183 @@
+Given /^idea marketplace '(.*)' has enabled idea autoactivation$/ do |url|
+ set_active_resource_credentials
+ @earl = Earl.find(url)
+ @question = Question.find(@earl.question_id)
+ @question.it_should_autoactivate_ideas = true
+ @question.save
+end
+Given /^I sign in as the admin for '(.*)'$/ do |url|
+  earl = Earl.find(url)
+  Given "I sign in as \"#{earl.user.email}/password\""
+end
+def set_active_resource_credentials
+   puts "Changing credentials to something"
+    if @photocracy_mode
+       $PHOTOCRACY = true
+       username = APP_CONFIG[:PHOTOCRACY_USERNAME]
+       password = APP_CONFIG[:PHOTOCRACY_PASSWORD]
+    else
+       $PHOTOCRACY = false
+       username = APP_CONFIG[:PAIRWISE_USERNAME]
+       password = APP_CONFIG[:PAIRWISE_PASSWORD]
+    end
+    active_resource_classes = [Choice, Density, Prompt, Question, Session]
+    active_resource_classes.each do |klass|
+      klass.user = username
+      klass.password = password
+    end
+end
+When /^I upload an idea titled '(.*)'$/ do |ideatext|
+  When "I click the add new idea button"
+	And "I fill in \"new_idea_field\" with \"#{ideatext}\" within \"#the_add_box\""
+  has_css?("#submit_btn")
+	find("#submit_btn").click
+end
+When /^I upload an idea titled$/ do |ideatext|
+  When "I click the add new idea button"
+	And "I fill in \"new_idea_field\" with \"#{ideatext}\" within \"#the_add_box\""
+  has_css?("#submit_btn")
+	find("#submit_btn").click
+end
+Then /^the vote count should be (.*)$/ do |num_votes|
+	Then "I should see \"#{num_votes}\" within \"#votes_count\""
+end
+Then /^the idea count should be (.*)$/ do |num_ideas|
+	Then "I should see \"#{num_ideas}\" within \"#item_count\""
+end
+Given /^(?:|I )am on (.+)$/ do |page_name|
+  visit path_to(page_name)
+end
+When /^(?:|I )go to (.+)$/ do |page_name|
+  visit path_to(page_name)
+end
+Then /^(?:|I )should see "([^\"]*)"(?: within "([^\"]*)")?$/ do |text, selector|
+  with_scope(selector) do
+    if defined?(Spec::Rails::Matchers)
+      page.should have_content(text)
+    else
+      assert page.has_content?(text)
+    end
+  end
+end
+Then /^(?:|I )should not see "([^\"]*)"(?: within "([^\"]*)")?$/ do |text, selector|
+  with_scope(selector) do
+    if defined?(Spec::Rails::Matchers)
+      page.should have_no_content(text)
+    else
+      assert page.has_no_content?(text)
+    end
+  end
+end
+  def with_scope(locator)
+    if locator
+      page.should have_css(locator, :visible => true)
+      within(locator) { yield }
+    else
+      yield
+    end
+  end
+  def path_to(page_name)
+    path = case page_name
+
+    when /the homepage/i
+      root_path
+    when /the sign up page/i
+      new_user_path
+    when /the sign in page/i
+      new_session_path
+    when /the password reset request page/i
+      new_password_path
+
+    when /the question show page/i
+      question_path
+    when /the question create page/i
+      new_question_path
+    when /the questions index page/i
+      questions_path
+    
+    when /the Cast Votes page for '([^'].*)'/i
+	"/"+ $1
+    when /the Crossfade Cast Votes page for '([^'].*)'/i
+	"/"+ $1 + "?crossfade=true"
+    when /the Just Created Cast Votes page for '([^'].*)'/i
+	"/"+ $1 + "?just_created=true"
+    when /the View Results page for '([^'].*)'/i
+	"/"+ $1 + "/results"
+    when /the Admin page for '([^'].*)'/i
+	"/"+ $1 + "/admin"
+    when /the Owner Add Photos page for '([^'].*)'/i
+	"/"+ $1 + "/addphotos"
+    when /the Control Panel All page/i
+	 admin_path + "?all=true"
+    when /the Control Panel page/i
+	 admin_path
+    when /the WIDGET Cast Votes page for '([^'].*)'/i
+	"/"+ $1 + '?widget&width=450&height=410'
+    when /the multiple widgets embedded page/
+      "/tests/multiple-widgets-test.html"
+    when /the multiple same widgets embedded page/
+      "/tests/multiple-same-widgets-test.html"
+
+    when /the Deactivate page for the saved (.*) choice/
+	 @earl = Earl.find_by_question_id(@question_id)
+	 choice = ($1 == "left") ? @left_choice : @right_choice
+	 deactivate_question_choice_path(:question_id => @earl, :id => choice.id)
+    
+    when /the Activate page for the saved (.*) choice/
+	 @earl = Earl.find_by_question_id(@question_id)
+	 choice = ($1 == "left") ? @left_choice : @right_choice
+	 activate_question_choice_path(:question_id => @earl, :id => choice.id)
+
+    
+    when /the Idea Detail page for the saved left choice(.*)?/i
+	 @earl = Earl.find_by_question_id(@question_id)
+	 url_opts = {:question_id => @earl, :id => @left_choice.id}
+	 if($1 =~ /with login reminder/i)
+		 url_opts.merge!(:login_reminder => true)
+	 end
+	 question_choice_path(url_opts)
+    when /the Idea Detail page for the saved right choice/i
+	 @earl = Earl.find_by_question_id(@question_id)
+	 question_choice_path(:question_id => @earl, :id => @right_choice.id)
+    # Add more page name => path mappings here
+
+    else
+      raise "Can't find mapping from \"#{page_name}\" to a path."
+    end
+    if @photocracy_mode
+	path += (path.include?("?")) ? "&" : "?"
+        path += "photocracy_mode=true"
+    end 
+    path
+  end
+Given /^(?:a clear email queue|no emails have been sent)$/ do
+  reset_mailer
+end
+Then /^(?:I|they|"([^"]*?)") should receive (an|no|\d+) emails?$/ do |address, amount|
+  unread_emails_for(address).size.should == parse_email_count(amount)
+end
+When /^(?:I|they|"([^"]*?)") opens? the email$/ do |address|
+  open_email(address)
+end
+Then /^(?:I|they) should see "([^"]*?)" in the email subject$/ do |text|
+  current_email.should have_subject(text)
+end
+Then /^(?:I|they) should see "([^"]*?)" in the email body$/ do |text|
+  current_email.body.should include(text)
+end
+When /^(?:I|they) click the first link in the email$/ do
+  click_first_link_in_email
+end
+Given /^an idea marketplace quickly exists with url '([^\']*)' and admin '(.*)\/(.*)'$/ do |url, email, password|
+	u = Factory.create(:email_confirmed_user, :email => email, :password => password, :password_confirmation => password)
+	Given "an idea marketplace quickly exists with url '#{url}'"
+	e = Earl.last
+	e.user = u
+	e.save
+end
+When /^I sign in as "(.*)\/(.*)"$/ do |email, password|
+  When %{I go to the sign in page}
+  And %{I fill in "Email" with "#{email}"}
+  And %{I fill in "Password" with "#{password}"}
+  And %{I press "Log In"}
+end

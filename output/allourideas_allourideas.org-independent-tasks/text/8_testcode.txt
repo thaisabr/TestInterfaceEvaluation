@@ -1,0 +1,132 @@
+Given /^(?:|I )am on (.+)$/ do |page_name|
+  visit path_to(page_name)
+end
+When /^(?:|I )go to (.+)$/ do |page_name|
+  visit path_to(page_name)
+end
+When /^(?:|I )press "([^\"]*)"(?: within "([^\"]*)")?$/ do |button, selector|
+  with_scope(selector) do
+    click_button(button)
+  end
+end
+When /^(?:|I )uncheck "([^\"]*)"(?: within "([^\"]*)")?$/ do |field, selector|
+  with_scope(selector) do
+    uncheck(field)
+  end
+end
+Then /^(?:|I )should see "([^\"]*)"(?: within "([^\"]*)")?$/ do |text, selector|
+  with_scope(selector) do
+    if defined?(Spec::Rails::Matchers)
+      page.should have_content(text)
+    else
+      assert page.has_content?(text)
+    end
+  end
+end
+Then /^(?:|I )should not see "([^\"]*)"(?: within "([^\"]*)")?$/ do |text, selector|
+  with_scope(selector) do
+    if defined?(Spec::Rails::Matchers)
+      page.should have_no_content(text)
+    else
+      assert page.has_no_content?(text)
+    end
+  end
+end
+  def with_scope(locator)
+    if locator
+      page.should have_css(locator, :visible => true)
+      within(locator) { yield }
+    else
+      yield
+    end
+  end
+  def path_to(page_name)
+    path = case page_name
+
+    when /the homepage/i
+      root_path
+    when /the sign up page/i
+      new_user_path
+    when /the sign in page/i
+      new_session_path
+    when /the password reset request page/i
+      new_password_path
+
+    when /the question show page/i
+      question_path
+    when /the question create page/i
+      new_question_path
+    when /the questions index page/i
+      questions_path
+    
+    when /the Cast Votes page for '([^'].*)'/i
+	"/"+ $1
+    when /the Crossfade Cast Votes page for '([^'].*)'/i
+	"/"+ $1 + "?crossfade=true"
+    when /the Just Created Cast Votes page for '([^'].*)'/i
+	"/"+ $1 + "?just_created=true"
+    when /the View Results page for '([^'].*)'/i
+	"/"+ $1 + "/results"
+    when /the Admin page for '([^'].*)'/i
+	"/"+ $1 + "/admin"
+    when /the Owner Add Photos page for '([^'].*)'/i
+	"/"+ $1 + "/addphotos"
+    when /the Control Panel All page/i
+	 admin_path + "?all=true"
+    when /the Control Panel page/i
+	 admin_path
+    when /the WIDGET Cast Votes page for '([^'].*)'/i
+	"/"+ $1 + '?widget&width=450&height=410'
+    when /the multiple widgets embedded page/
+      "/tests/multiple-widgets-test.html"
+    when /the multiple same widgets embedded page/
+      "/tests/multiple-same-widgets-test.html"
+
+    when /the Deactivate page for the saved (.*) choice/
+	 @earl = Earl.find_by_question_id(@question_id)
+	 choice = ($1 == "left") ? @left_choice : @right_choice
+	 deactivate_question_choice_path(:question_id => @earl, :id => choice.id)
+    
+    when /the Activate page for the saved (.*) choice/
+	 @earl = Earl.find_by_question_id(@question_id)
+	 choice = ($1 == "left") ? @left_choice : @right_choice
+	 activate_question_choice_path(:question_id => @earl, :id => choice.id)
+
+    
+    when /the Idea Detail page for the saved left choice(.*)?/i
+	 @earl = Earl.find_by_question_id(@question_id)
+	 url_opts = {:question_id => @earl, :id => @left_choice.id}
+	 if($1 =~ /with login reminder/i)
+		 url_opts.merge!(:login_reminder => true)
+	 end
+	 question_choice_path(url_opts)
+    when /the Idea Detail page for the saved right choice/i
+	 @earl = Earl.find_by_question_id(@question_id)
+	 question_choice_path(:question_id => @earl, :id => @right_choice.id)
+    # Add more page name => path mappings here
+
+    else
+      raise "Can't find mapping from \"#{page_name}\" to a path."
+    end
+    if @photocracy_mode
+	path += (path.include?("?")) ? "&" : "?"
+        path += "photocracy_mode=true"
+    end 
+    path
+  end
+Given /^an idea marketplace exists with admin '(.*)' and password '(.*)' and url '(.*)'$/ do |email, password, url|
+		Given "I am on the question create page"
+		When "I fill in all fields with valid data except \"question_email\""
+		And "I fill in \"question_email\" with \"#{email}\""
+		And "I fill in \"question_password\" with \"#{password}\""
+		And "I fill in \"question_url\" with \"#{url}\""
+		And "I press \"Create\""
+
+		Capybara.reset_sessions!
+end
+When /^I sign in as "(.*)\/(.*)"$/ do |email, password|
+  When %{I go to the sign in page}
+  And %{I fill in "Email" with "#{email}"}
+  And %{I fill in "Password" with "#{password}"}
+  And %{I press "Log In"}
+end

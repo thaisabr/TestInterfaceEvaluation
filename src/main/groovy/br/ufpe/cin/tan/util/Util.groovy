@@ -47,7 +47,8 @@ abstract class Util {
     public static boolean SIMILARITY_ANALYSIS
 
     static {
-        def gemsPathValue = configureFrameworkBySystem()?.first()
+        def gemsPathValue = configureFrameworkBySystem()
+        if(!gemsPathValue.empty) gemsPathValue = gemsPathValue.first()
 
         if(FRAMEWORK_PATH.size()==0) {
             FRAMEWORK_FILES = []
@@ -274,13 +275,16 @@ abstract class Util {
 
     private static ArrayList<String> findGemCommand(){
         def path = System.getenv("Path")
-        def pathValues = path.split(";")
-        def candidates = pathValues.findAll{ it.endsWith("bin") }
+        if(path == null) path = System.getenv("PATH")
+        def pathValues = path?.split(";")
+        def candidates = pathValues?.findAll{ it.endsWith("bin") }
         def match = []
-        candidates.each{candidate ->
+        candidates?.each{candidate ->
             def files = findFilesFromDirectory(candidate)
-            match += files.findAll{ it.contains("${File.separator}gem.")}
+            match += files?.findAll{ it.contains("${File.separator}gem.")}
         }
+        log.info "match in findGemCommand: "
+        match?.each{log.info it.toString() }
         return match
     }
 
@@ -291,6 +295,10 @@ abstract class Util {
         process.waitFor()
         def output = process.inputStream.readLines()
         process.inputStream.close()
+
+        log.info "output in findFrameworkAndGemsPath:"
+        output.each{ log.info it.toString() }
+
 
         def frameworkPath = output.find{ it.contains("EXECUTABLE DIRECTORY:") }
         if(frameworkPath) {
@@ -316,6 +324,7 @@ abstract class Util {
         def gemPath = []
         def commands = findGemCommand()
         commands.each{ command ->
+            log.info "command in configureFrameworkBySystem: ${command.toString()}"
             def result = findFrameworkAndGemsPath(command)
             frameworkPath += result.framework.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
             gemPath += result.gems
@@ -647,7 +656,7 @@ abstract class Util {
         f?.eachFile {
             if (it.isFile()) files += it.absolutePath.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
         }
-        files.sort()
+        files?.sort()
     }
 
     static List<String> findFoldersFromDirectory(String directory) {

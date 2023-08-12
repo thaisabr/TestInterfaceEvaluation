@@ -2,6 +2,7 @@ package br.ufpe.cin.tan.analysis.task
 
 import br.ufpe.cin.tan.analysis.itask.ITest
 import br.ufpe.cin.tan.commit.change.gherkin.ChangedGherkinFile
+import br.ufpe.cin.tan.conflict.PlannedTask
 import br.ufpe.cin.tan.exception.CloningRepositoryException
 import br.ufpe.cin.tan.util.RegexUtil
 import br.ufpe.cin.tan.util.Util
@@ -61,6 +62,24 @@ class TodoTask extends Task {
         }
 
         taskInterface
+    }
+
+    PlannedTask generateTaskForConflictAnalysis(){
+        ITest taskInterface = null
+        TimeDuration timestamp = null
+
+        if (!testDescription.empty) {
+            log.info "Task id: $id"
+            def initTime = new Date()
+            taskInterface = testCodeAnalyser.computeInterfaceForTodoTask(testDescription)
+            def endTime = new Date()
+            use(TimeCategory) {
+                timestamp = endTime - initTime
+            }
+            taskInterface.timestamp = timestamp
+        }
+
+        new PlannedTask(this, taskInterface)
     }
 
     @Override

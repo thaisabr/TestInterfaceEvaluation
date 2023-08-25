@@ -48,7 +48,8 @@ abstract class Util {
 
     static {
         def gemsPathValue = configureFrameworkBySystem()
-        if(!gemsPathValue.empty) gemsPathValue = gemsPathValue.first()
+        if( gemsPathValue.empty || gemsPathValue.size()==0) gemsPathValue = ""
+        else gemsPathValue = gemsPathValue.first()
 
         if(FRAMEWORK_PATH.size()==0) {
             FRAMEWORK_FILES = []
@@ -69,16 +70,21 @@ abstract class Util {
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
 
         GEMS_PATH = configureGemPath(gemsPathValue)
-        log.info "GEMS_PATH: ${GEMS_PATH}"
+        if(GEMS_PATH.empty){
+            log.error "It is not possible to configure gems path. Please, review the dependencies installation."
+            System.exit(-1)
+        } else {
+            log.info "GEMS_PATH: ${GEMS_PATH}"
 
-        loadProperties()
-        log.info "Properties were loaded."
+            loadProperties()
+            log.info "Properties were loaded."
 
-        log.info "FRAMEWORK_LIB_PATH: ${FRAMEWORK_LIB_PATH}"
-        log.info "GEM_INFLECTOR: ${GEM_INFLECTOR}"
-        log.info "GEM_I18N: ${GEM_I18N}"
-        log.info "GEM_PARSER: ${GEM_PARSER}"
-        log.info "GEM_AST: ${GEM_AST}"
+            log.info "FRAMEWORK_LIB_PATH: ${FRAMEWORK_LIB_PATH}"
+            log.info "GEM_INFLECTOR: ${GEM_INFLECTOR}"
+            log.info "GEM_I18N: ${GEM_I18N}"
+            log.info "GEM_PARSER: ${GEM_PARSER}"
+            log.info "GEM_AST: ${GEM_AST}"
+        }
     }
 
     static void configureEnvironment(String gherkinFilesRelativePath, String stepFilesRelativePath,
@@ -273,11 +279,20 @@ abstract class Util {
         configureMandatoryProperties(v, ConstantData.DEFAULT_PRODUCTION_FOLDER)
     }
 
-    private static ArrayList<String> findGemCommand(){
+    private static ArrayList<String> findGemCommandInLinux() {
+        ["gem"]
+    }
+
+    private static ArrayList<String> findGemCommandInWindows(){
+        String[] pathValues = []
         def path = System.getenv("Path")
-        if(path == null) path = System.getenv("PATH")
-        def pathValues = path?.split(";")
-        def candidates = pathValues?.findAll{ it.endsWith("bin") }
+        if(path == null || path.empty) return []
+        if(path.contains(";")){
+            pathValues = path?.split(";")
+            pathValues = pathValues.toUnique() - [""]
+        }
+
+        def candidates = pathValues?.findAll{it.endsWith("bin")}
         def match = []
         candidates?.each{candidate ->
             def files = findFilesFromDirectory(candidate)
@@ -322,8 +337,9 @@ abstract class Util {
     private static configureFrameworkBySystem(){
         def frameworkPath = []
         def gemPath = []
-        def commands = findGemCommand()
-        commands.each{ command ->
+        def commands = findGemCommandInWindows()
+        if(commands.empty) commands = findGemCommandInLinux()
+        commands?.each{ command ->
             log.info "command in configureFrameworkBySystem: ${command.toString()}"
             def result = findFrameworkAndGemsPath(command)
             frameworkPath += result.framework.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))

@@ -120,7 +120,7 @@ public class MainConflictAnalysis {
         /********* PREDICAO DE RISCO DE CONFLITO ENTRE CONJUNTO DE TAREFAS **********************************************/
         System.out.printf("Conflict prediction for planned task T(%d) and ongoing tasks T(%d) and T(%d)%n", id1, id2, id3);
 
-        double conflictResult = conflictAnalyzer.sumAbsoluteConflictRiskForTasks(plannedTask1,
+            double conflictResult = conflictAnalyzer.sumAbsoluteConflictRiskForTasks(plannedTask1,
                 new ArrayList<PlannedTask>(Arrays.asList(plannedTask2, plannedTask3)));
         System.out.printf("absolute sum rate of conflict risk = %f%n", conflictResult);
 

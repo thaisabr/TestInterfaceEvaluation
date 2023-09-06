@@ -12,7 +12,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jdk.version>11</jdk.version>
+        <jdk.version>15</jdk.version>
         <junit.version>4.13.2</junit.version>
     </properties>
 
@@ -102,7 +102,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>br.ufpe.cin.tan.main.Main</mainClass>
+                            <mainClass>br.ufpe.cin.tan.main.MainConflictAnalysis</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
@@ -177,12 +177,12 @@
         <dependency>
             <groupId>org.jruby</groupId>
             <artifactId>jrubyparser</artifactId>
-            <version>0.5.1</version>
+            <version>0.5.5</version>
         </dependency>
         <dependency>
             <groupId>org.jruby</groupId>
             <artifactId>jruby-complete</artifactId>
-            <version>9.4.2.0</version>
+            <version>9.4.3.0</version>
         </dependency>
     </dependencies>
 </project>

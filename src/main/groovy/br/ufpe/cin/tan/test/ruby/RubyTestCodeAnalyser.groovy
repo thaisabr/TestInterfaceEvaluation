@@ -27,20 +27,6 @@ import org.jrubyparser.parser.ParserConfiguration
 
 import java.util.regex.Matcher
 
-/* PROBLEMAS NESSA CLASSE: ANTES SE USAVA A BIBLIOTECA JRUBYPASER-0.5.5.-SNAPSHOT. ELA NÃO EXISTE MAIS E ENTÃO SE
-* PASSOU A USAR A JRUBYPARSER-0.5.3, MAS ESTA NÃO TINHA OS MESMOS MÉTODOS E CONSTRUTORES EM USO. AÍ ESTAMOS USANDO
-* A VERSÃO 0.5.1.
-*
-* <dependency>
-    <groupId>org.jruby</groupId>
-    <artifactId>jrubyparser</artifactId>
-    <version>0.5.1</version>
-</dependency>
-*
-* ELA AINDA TEM A DEFICIÊNCIA DE NÃO SUPORTAR RUBY2_3. ONDE REFERENCIAVA ELE, PASSEI A REFERENCIAR RUBY1.9
-* */
-
-
 @Slf4j
 class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
 
@@ -68,7 +54,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
      * @return the root node of the AST
      */
     Node generateAstForFile(String path) {
-        def result1 = parseFile(new FileReader(path), path, CompatVersion.RUBY1_9)
+        def result1 = parseFile(new FileReader(path), path, CompatVersion.RUBY2_3)
         if (result1.errors.empty && result1.node) {
             return result1.node
         }
@@ -104,7 +90,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     }
 
     Node generateAst(String path, String content) {
-        def result1 = parseFile(new StringReader(content), path, CompatVersion.RUBY1_9)
+        def result1 = parseFile(new StringReader(content), path, CompatVersion.RUBY2_3)
         if (result1.errors.empty && result1.node) {
             return result1.node
         }

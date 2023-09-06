@@ -102,7 +102,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>br.ufpe.cin.tan.main.MainConflictAnalysis</mainClass>
+                            <mainClass>br.ufpe.cin.tan.main.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

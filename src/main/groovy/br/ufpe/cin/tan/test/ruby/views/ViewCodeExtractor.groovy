@@ -1,7 +1,6 @@
 package br.ufpe.cin.tan.test.ruby.views
 
 import br.ufpe.cin.tan.util.Util
-import br.ufpe.cin.tan.util.ruby.RubyConstantData
 import groovy.util.logging.Slf4j
 import org.jruby.embed.ScriptingContainer
 
@@ -22,9 +21,6 @@ class ViewCodeExtractor {
         String classpath = System.getProperty("java.class.path")
         log.info "CLASSPATH: " + classpath
 
-        ClassLoader loader = Thread.currentThread().getContextClassLoader()
-        InputStream is = loader.getResourceAsStream(RubyConstantData.VIEW_ANALYSER_FILE)
-        //receiver = container.runScriptlet(is, RubyConstantData.VIEW_ANALYSER_FILE)
         String code = """
             require 'rubygems'
             require 'lib/task_analyser'

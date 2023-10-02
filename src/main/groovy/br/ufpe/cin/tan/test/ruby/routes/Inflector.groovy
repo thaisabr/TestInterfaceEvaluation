@@ -15,9 +15,18 @@ class Inflector {
         container.loadPaths.add(Util.GEM_INFLECTOR)
         container.loadPaths.add(Util.GEM_I18N)
 
-        ClassLoader loader = Thread.currentThread().getContextClassLoader()
-        InputStream is = loader.getResourceAsStream(ConstantData.INFLECTOR_FILE)
-        receiver = container.runScriptlet(is, ConstantData.INFLECTOR_FILE)
+        String code = """
+            require 'rubygems'
+            require 'active_support/inflector'
+            
+            def plural(text)
+              text.pluralize
+            end
+            
+            def singular(text)
+              text.singularize
+            end"""
+        receiver = container.runScriptlet(code)
     }
 
     String pluralize(String word) {

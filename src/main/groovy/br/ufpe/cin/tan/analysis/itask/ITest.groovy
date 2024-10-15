@@ -149,7 +149,7 @@ class ITest extends TaskInterface {
      *
      * @return a list of files
      */
-    Set<String> findAllFiles() {
+    private Set<String> findAllFiles() {
         def classes = classes*.file
         def methodFiles = methods?.findAll { it.type != null && !it.type.empty && it.type != "StepCall" }*.file
         def viewFiles = referencedPages*.file
@@ -158,7 +158,7 @@ class ITest extends TaskInterface {
         files?.findResults { i -> i ? i - canonicalPath : null } as Set
     }
 
-    private Set<String> getAllProdFiles() {
+    Set<String> getAllProdFiles() {
         //production classes
         def classes = (classes?.findAll { Util.isProductionFile(it.file) })*.file
 
@@ -171,7 +171,9 @@ class ITest extends TaskInterface {
         def viewFiles = referencedPages*.file
 
         //production files
-        ((classes + methodFiles + viewFiles) as Set)?.sort()
+        def files = ((classes + methodFiles + viewFiles) as Set)?.sort()
+        def canonicalPath = Util.getRepositoriesCanonicalPath()
+        files?.findResults { i -> i ? i - canonicalPath : null } as Set
     }
 
     String toStringDetailed() {

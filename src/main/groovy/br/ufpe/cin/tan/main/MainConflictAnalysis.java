@@ -4,8 +4,6 @@ import br.ufpe.cin.tan.analysis.task.TodoTask;
 import br.ufpe.cin.tan.conflict.ConflictAnalyzer;
 import br.ufpe.cin.tan.conflict.PlannedTask;
 import br.ufpe.cin.tan.util.CsvUtil;
-import groovy.lang.Closure;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
 import java.io.Serializable;
 import java.util.*;
@@ -32,7 +30,7 @@ public class MainConflictAnalysis {
             task1 = new TodoTask(url, id1, tests);
             plannedTask1 = task1.generateTaskForConflictAnalysis();
 
-            Set<String> files = plannedTask1.getItest().findAllFiles();
+            Set<String> files = plannedTask1.getItest().getAllProdFiles();
             System.out.printf("TestI(%d): %d%n", id1, files.size());
 
             List<String[]> content = new ArrayList<>();
@@ -62,7 +60,7 @@ public class MainConflictAnalysis {
             task2 = new TodoTask(url, id2, tests);
             plannedTask2 = task2.generateTaskForConflictAnalysis();
 
-            Set<String> files = plannedTask2.getItest().findAllFiles();
+            Set<String> files = plannedTask2.getItest().getAllProdFiles();
             System.out.printf("TestI(%d): %d%n", id2, files.size());
 
             List<String[]> content = new ArrayList<>();
@@ -104,7 +102,7 @@ public class MainConflictAnalysis {
             task3 = new TodoTask(url, id3, tests);
             plannedTask3 = task3.generateTaskForConflictAnalysis();
 
-            Set<String> files = plannedTask3.getItest().findAllFiles();
+            Set<String> files = plannedTask3.getItest().getAllProdFiles();
             System.out.printf("TestI(%d): %d%n", id3, files.size());
 
             List<String[]> content = new ArrayList<>();

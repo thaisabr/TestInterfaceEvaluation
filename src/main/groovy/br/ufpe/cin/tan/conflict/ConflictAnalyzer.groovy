@@ -5,8 +5,8 @@ class ConflictAnalyzer {
     PairConflictResult conflictResult
 
     def computeConflictRiskForPair(PlannedTask task1, PlannedTask task2){
-        def files1 = task1.itest.findAllFiles()
-        def files2 = task2.itest.findAllFiles()
+        def files1 = task1.itest.getAllProdFiles()
+        def files2 = task2.itest.getAllProdFiles()
         def intersection = files1.intersect(files2)
         def union = (files1 + files2).unique()
         def relativeConflictRate = 0.0D

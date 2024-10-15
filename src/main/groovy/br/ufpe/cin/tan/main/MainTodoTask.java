@@ -43,7 +43,7 @@ public class MainTodoTask {
             itest = task.computeTestBasedInterface();
 
             /* Exibindo o conjunto de arquivos no console */
-            Set<String> files = itest.findAllFiles();
+            Set<String> files = itest.getAllProdFiles();
             System.out.printf("TestI(%d): %d%n", id, files.size());
             for (String file : files) {
                 System.out.println(file);

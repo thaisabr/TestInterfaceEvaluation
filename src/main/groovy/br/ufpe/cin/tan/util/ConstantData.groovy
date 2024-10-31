@@ -91,7 +91,7 @@ abstract class ConstantData {
 
     public static final String PROP_VIEW_ANALYSIS = "spgroup.itest.views"
     public static final boolean DEFAULT_VIEW_ANALYSIS = true
-    public static final String DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER = "error"
+    public static final String DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER = System.getProperty("user.home") + File.separator + "error"
 
     public static final String PROP_CONTROLLER_FILTER = "spgroup.itest.filter.controller"
     public static final boolean DEFAULT_CONTROLLER_FILTER = false

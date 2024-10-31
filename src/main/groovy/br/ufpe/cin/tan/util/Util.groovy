@@ -471,7 +471,7 @@ abstract class Util {
 
     private static createFolders() {
         if (!RUNNING_ALL_CONFIGURATIONS) createFolder(ConstantData.DEFAULT_EVALUATION_FOLDER)
-        createFolder(ConstantData.DEFAULT_REPOSITORY_FOLDER)
+        createFolder(REPOSITORY_FOLDER_PATH)
         createFolder(ConstantData.DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER)
     }
 

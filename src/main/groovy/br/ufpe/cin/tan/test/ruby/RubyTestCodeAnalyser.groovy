@@ -497,7 +497,8 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
             } catch (Exception ex) {
                 def src = new File(path)
                 if (src.exists()) {
-                    def dst = new File(ConstantData.DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER + File.separator + src.name + counter)
+                    String fileName = ConstantData.DEFAULT_VIEW_ANALYSIS_ERROR_FOLDER + File.separator + src.name + counter
+                    def dst = new File(fileName)
                     dst << src.text
                 }
                 log.error "Error to extract code from view file: $path (${ex.message})"

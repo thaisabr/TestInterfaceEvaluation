@@ -45,6 +45,7 @@ class GitRepository {
 
     GherkinManager gherkinManager
     static List<GitRepository> repositories = []
+    String reposDirectory
     String url
     String name
     String localPath
@@ -140,14 +141,21 @@ class GitRepository {
         return repository
     }
 
+    private configureReposDirectory(){
+        String userHome = System.getProperty("user.home");
+        this.reposDirectory = userHome + File.separator + Util.REPOSITORY_FOLDER_PATH
+    }
+
     private GitRepository(String path) throws CloningRepositoryException {
         this.gherkinManager = new GherkinManager()
         this.removedSteps = [] as Set
+
         if (path.startsWith("http")) {
             if (path.endsWith(ConstantData.GIT_EXTENSION)) this.url = path
             else this.url = path + ConstantData.GIT_EXTENSION
             this.name = Util.configureGitRepositoryName(url)
-            this.localPath = Util.REPOSITORY_FOLDER_PATH + name
+            configureReposDirectory()
+            this.localPath = this.reposDirectory + name
             if (isCloned()) {
                 this.lastCommit = searchAllRevCommits()?.last()?.name
             } else {
@@ -157,7 +165,7 @@ class GitRepository {
         } else {
             this.localPath = path
             this.lastCommit = searchAllRevCommits()?.last()?.name
-            def git = Git.open(new File(localPath))
+            def git = Git.open(new File(this.localPath))
             this.url = git.repository.config.getString("remote", "origin", "url")
             git.close()
             this.name = Util.configureGitRepositoryName(url)
@@ -168,7 +176,7 @@ class GitRepository {
      * Verifies if a repository is already cloned
      */
     private isCloned() {
-        File dir = new File(localPath)
+        File dir = new File(this.localPath)
         File[] files = dir.listFiles()
         if (files && files.length > 0) true
         else false
@@ -178,16 +186,23 @@ class GitRepository {
      * Clones a repository if it was not cloned yet.
      */
     private cloneRepository() throws CloningRepositoryException {
+        String command = "git clone $url $name"
+
         try {
-            def folder = new File(localPath)
+            def reposFolder = new File(this.reposDirectory)
+            if (!reposFolder.exists()) {
+                reposFolder.mkdir()
+            }
+
+            def folder = new File(this.localPath)
             if (!folder.exists()) {
                 folder.mkdir()
             }
-            String command = "git clone $url $name"
-            Process p = Runtime.getRuntime().exec(command, null, new File(Util.REPOSITORY_FOLDER_PATH))
+
+            Process p = Runtime.getRuntime().exec(command, null, reposFolder)
             p.waitFor()
         } catch (Exception ex) {
-            Util.deleteFolder(localPath)
+            Util.deleteFolder(this.localPath)
             throw new CloningRepositoryException(ex.message)
         }
     }

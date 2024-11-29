@@ -11,9 +11,6 @@ class Inflector {
 
     Inflector() {
         container = new ScriptingContainer()
-        container.loadPaths.add(Util.GEMS_PATH)
-        container.loadPaths.add(Util.GEM_INFLECTOR)
-        container.loadPaths.add(Util.GEM_I18N)
 
         String code = """
             require 'rubygems'

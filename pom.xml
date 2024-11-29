@@ -123,6 +123,13 @@
 
     <dependencies>
         <dependency>
+            <groupId>local.gems</groupId>
+            <artifactId>gems</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/gems.jar</systemPath>
+        </dependency>
+        <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-dateutil</artifactId>
             <version>3.0.8</version>

@@ -123,13 +123,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>local.gems</groupId>
-            <artifactId>gems</artifactId>
-            <version>1.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/gems.jar</systemPath>
-        </dependency>
-        <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-dateutil</artifactId>
             <version>3.0.8</version>
@@ -190,6 +183,11 @@
             <groupId>org.jruby</groupId>
             <artifactId>jruby-complete</artifactId>
             <version>9.4.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>gems</groupId>
+            <artifactId>gems</artifactId>
+            <version>1.0</version>
         </dependency>
     </dependencies>
 </project>

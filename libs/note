@@ -1,8 +1,10 @@
 On the first project build, please run mvn install:install-file.
 -Dfile=<path-to-file>
 
-mvn install:install-file -Dfile=X:\TAITIr\TestInterfaceEvaluation\libs\jrubyparser-0.5.5-SNAPSHOT.jar -DgroupId=org.jruby -DartifactId=jrubyparser -Dversion=0.5.5 -Dpackaging=jar -DgeneratePom=true
+mvn install:install-file -Dfile=<project-folder>\libs\jrubyparser-0.5.5-SNAPSHOT.jar -DgroupId=org.jruby -DartifactId=jrubyparser -Dversion=0.5.5 -Dpackaging=jar -DgeneratePom=true
+mvn install:install-file -Dfile=<project-folder>\libs\gems-1.0.jar -DgroupId=gems -DartifactId=gems -Dversion=1.0 -Dpackaging=jar -DgeneratePom=true
+
 
 linux:
 
-mvn install:install-file -Dfile=/media/alex/BUCKET/TAITIr/TestInterfaceEvaluation/libs/jrubyparser-0.5.5-SNAPSHOT.jar -DgroupId=org.jruby -DartifactId=jrubyparser -Dversion=0.5.5 -Dpackaging=jar -DgeneratePom=true
+mvn install:install-file -Dfile=<project-folder>/libs/jrubyparser-0.5.5-SNAPSHOT.jar -DgroupId=org.jruby -DartifactId=jrubyparser -Dversion=0.5.5 -Dpackaging=jar -DgeneratePom=true

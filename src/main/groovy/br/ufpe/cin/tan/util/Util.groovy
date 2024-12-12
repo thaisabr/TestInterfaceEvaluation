@@ -80,10 +80,6 @@ abstract class Util {
             log.info "Properties were loaded."
 
             log.info "FRAMEWORK_LIB_PATH: ${FRAMEWORK_LIB_PATH}"
-            log.info "GEM_INFLECTOR: ${GEM_INFLECTOR}"
-            log.info "GEM_I18N: ${GEM_I18N}"
-            log.info "GEM_PARSER: ${GEM_PARSER}"
-            log.info "GEM_AST: ${GEM_AST}"
         }
     }
 
@@ -158,11 +154,6 @@ abstract class Util {
         VALID_EXTENSIONS = [VALID_EXTENSION] + VALID_VIEW_FILES + [ConstantData.FEATURE_EXTENSION]
         VALID_FOLDERS = [GHERKIN_FILES_RELATIVE_PATH, PRODUCTION_FILES_RELATIVE_PATH, LIB_RELATIVE_PATH]
 
-        GEM_INFLECTOR = configureGemInflector()
-        GEM_I18N = configureGemI18n()
-        GEM_PARSER = configureGemParser()
-        GEM_AST = configureGemAst()
-
         VIEW_ANALYSIS = configureViewAnalysis()
         CONTROLLER_FILTER = configureControllerFilter()
         WHEN_FILTER = configureWhenFilter()
@@ -180,29 +171,6 @@ abstract class Util {
         if (!value || value.empty) value = defaultValue
         value.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
     }
-
-    /*private static identifyGem(String gem){
-        switch (gem){
-            case GEM_I18N : return ["i18n", "0.7.0"]
-            case GEM_INFLECTOR : return ["activesupport-inflector", "0.1.0"]
-            case GEM_PARSER : return ["parser", "2.3.1.4"]
-            case GEM_AST : return ["ast", "2.3.0"]
-        }
-    }*/
-
-    /*private static installRequiredGems(String gemProperty){
-        def gem = identifyGem(gemProperty)
-        def paths = FRAMEWORK_PATH.split(",")
-        paths.each{ path ->
-            println "installing ${gem.get(0)} ${gem.get(1)}"
-            ProcessBuilder builder = new ProcessBuilder("${path}/bin/gem", "install", gem.get(0), "-v", gem.get(1))
-            builder.directory(new File(System.getProperty("user.home")))
-            Process process = builder.start()
-            process.waitFor()
-            def output = process.inputStream.readLines()
-            process.inputStream.close()
-        }
-    }*/
 
     private static boolean configureBooleanProperties(String value, boolean defaultValue) {
         if (!value || value.empty) defaultValue
@@ -372,38 +340,6 @@ abstract class Util {
     private static configureGemPath(String v) {
         String value = v?.replace(File.separator, Matcher.quoteReplacement(File.separator))
         configureMandatoryProperties(value, "")
-    }
-
-    private static configureGemInflector() {
-        configureGem(properties?.(ConstantData.PROP_GEM_INFLECTOR), ConstantData.DEFAULT_GEM_INFLECTOR)
-    }
-
-    private static configureGemInflector(String v) {
-        configureGem(v, ConstantData.DEFAULT_GEM_INFLECTOR)
-    }
-
-    private static configureGemI18n() {
-        configureGem(properties?.(ConstantData.PROP_GEM_I18N), ConstantData.DEFAULT_GEM_I18N_FOLDER)
-    }
-
-    private static configureGemI18n(String v) {
-        configureGem(v, ConstantData.DEFAULT_GEM_I18N_FOLDER)
-    }
-
-    private static configureGemParser() {
-        configureGem(properties?.(ConstantData.PROP_GEM_PARSER), ConstantData.DEFAULT_GEM_PARSER_FOLDER)
-    }
-
-    private static configureGemParser(String v) {
-        configureGem(v, ConstantData.DEFAULT_GEM_PARSER_FOLDER)
-    }
-
-    private static configureGemAst() {
-        configureGem(properties?.(ConstantData.PROP_GEM_AST), ConstantData.DEFAULT_GEM_AST_FOLDER)
-    }
-
-    private static configureGemAst(String v) {
-        configureGem(v, ConstantData.DEFAULT_GEM_AST_FOLDER)
     }
 
     private static boolean configureViewAnalysis() {

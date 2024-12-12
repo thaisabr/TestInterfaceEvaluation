@@ -15,10 +15,6 @@ abstract class ConstantData {
     public static final String PROP_PRODUCTION = "spgroup.production.files.relative.path"
     public static final String PROP_FRAMEWORK = "spgroup.framework.path"
     public static final String PROP_GEMS = "spgroup.gems.path"
-    public static final String PROP_GEM_INFLECTOR = "spgroup.gems.activesupport-inflector.folder"
-    public static final String PROP_GEM_I18N = "spgroup.gems.i18n.folder"
-    public static final String PROP_GEM_PARSER = "spgroup.gems.parser"
-    public static final String PROP_GEM_AST = "spgroup.gems.ast"
     public static final String PROP_LIB = "spgroup.lib.path"
 
     public static final String DEFAULT_TASKS_FOLDER = "tasks"
@@ -29,11 +25,6 @@ abstract class ConstantData {
     public static final String DEFAULT_STEPS_FOLDER = "features/step_definitions"
     public static final String DEFAULT_UNITY_FOLDER = "spec"
     public static final String DEFAULT_PRODUCTION_FOLDER = "app"
-
-    public static final String DEFAULT_GEM_INFLECTOR = "activesupport-inflector-0.1.0"
-    public static final String DEFAULT_GEM_I18N_FOLDER = "i18n-0.7.0"
-    public static final String DEFAULT_GEM_PARSER_FOLDER = "parser-2.3.1.4"
-    public static final String DEFAULT_GEM_AST_FOLDER = "ast-2.3.0"
 
     public static String DEFAULT_EVALUATION_FOLDER = "output"
     public static final String DEFAULT_TEXT_FOLDER = "text"
@@ -86,8 +77,6 @@ abstract class ConstantData {
     public static final String AND_STEP_EN = new GherkinDialectProvider().defaultDialect.andKeywords.last()
     public static final String BUT_STEP_EN = new GherkinDialectProvider().defaultDialect.butKeywords.last()
     public static final String GENERIC_STEP = "* "
-
-    public static final String INFLECTOR_FILE = "inflector.rb"
 
     public static final String PROP_VIEW_ANALYSIS = "spgroup.itest.views"
     public static final boolean DEFAULT_VIEW_ANALYSIS = true

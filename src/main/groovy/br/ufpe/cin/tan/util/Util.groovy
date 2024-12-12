@@ -32,10 +32,6 @@ abstract class Util {
     public static List<String> VALID_VIEW_FILES
     public static List<String> SPECIAL_VALID_VIEW_FILES
     public static String GEMS_PATH
-    public static String GEM_INFLECTOR
-    public static String GEM_I18N
-    public static String GEM_PARSER
-    public static String GEM_AST
     public static boolean VIEW_ANALYSIS
     public static boolean CONTROLLER_FILTER
     public static boolean WHEN_FILTER

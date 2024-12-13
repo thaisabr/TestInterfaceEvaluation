@@ -13,9 +13,6 @@ class ViewCodeExtractor {
     ViewCodeExtractor() {
         container = new ScriptingContainer()
 
-        String classpath = System.getProperty("java.class.path")
-        log.info "CLASSPATH: " + classpath
-
         String code = """
             require 'lib/task_analyser'
             

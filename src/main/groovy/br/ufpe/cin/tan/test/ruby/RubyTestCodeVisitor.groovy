@@ -502,7 +502,7 @@ class RubyTestCodeVisitor extends NoopVisitor implements TestCodeVisitorInterfac
 
     def registryClassUsage(String name) {
         def paths = RubyUtil.getClassPathForRubyClass(name, projectFiles)
-        if (paths.empty && Util.FRAMEWORK_FILES.findAll { it.contains(name) }.empty) {
+        if (paths.empty) {
             taskInterface.classes += [name: name, file: null, step: configureStep()]
         } else {
             paths.each { path -> taskInterface.classes += [name: name, file: path, step: configureStep()] }

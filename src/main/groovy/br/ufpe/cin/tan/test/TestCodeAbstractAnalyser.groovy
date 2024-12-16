@@ -28,7 +28,6 @@ abstract class TestCodeAbstractAnalyser {
 
     List<StepRegex> regexList
     Set methods //keys: name, args, path
-    static Set apiMethods //keys: name, args, path
     List<String> projectFiles
     List<String> viewFiles
 
@@ -55,8 +54,6 @@ abstract class TestCodeAbstractAnalyser {
         compilationErrors = [] as Set
         codeFromViewAnalysis = [] as Set
         analysisData = new AnalysisData()
-        configureApiMethodsList()
-        log.info "apiMethods: ${apiMethods.size()}"
     }
 
     /***
@@ -579,13 +576,6 @@ abstract class TestCodeAbstractAnalyser {
             filesForSearchMethods += Util.findFilesFromDirectoryByLanguage(repositoryPath + File.separator + folder)
         }
         filesForSearchMethods.each { methods += doExtractMethodDefinitions(it) }
-    }
-
-    private configureApiMethodsList() {
-        if (apiMethods != null) return
-        apiMethods = [] as Set
-        def filesForSearchMethods = Util.findFrameworkClassFiles()
-        filesForSearchMethods.each { apiMethods += doExtractMethodDefinitions(it) }
     }
 
     private List<FileToAnalyse> identifyMethodsPerFileToVisitByStepCalls(List<StepCall> stepCalls) {

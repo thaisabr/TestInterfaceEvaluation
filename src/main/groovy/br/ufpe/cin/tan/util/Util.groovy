@@ -23,15 +23,11 @@ abstract class Util {
     public static String CONTROLLER_FILES_RELATIVE_PATH
     public static String MODEL_FILES_RELATIVE_PATH
     public static String LIB_RELATIVE_PATH
-    public static List<String> FRAMEWORK_PATH
-    public static String FRAMEWORK_LIB_PATH
-    public static List<String> FRAMEWORK_FILES
     public static List<String> VALID_FOLDERS
     public static String VALID_EXTENSION
     public static List<String> VALID_EXTENSIONS
     public static List<String> VALID_VIEW_FILES
     public static List<String> SPECIAL_VALID_VIEW_FILES
-    public static String GEMS_PATH
     public static boolean VIEW_ANALYSIS
     public static boolean CONTROLLER_FILTER
     public static boolean WHEN_FILTER
@@ -43,40 +39,9 @@ abstract class Util {
     public static boolean SIMILARITY_ANALYSIS
 
     static {
-        def gemsPathValue = configureFrameworkBySystem()
-        if( gemsPathValue.empty || gemsPathValue.size()==0) gemsPathValue = ""
-        else gemsPathValue = gemsPathValue.first()
-
-        if(FRAMEWORK_PATH.size()==0) {
-            FRAMEWORK_FILES = []
-        }
-        else if(FRAMEWORK_PATH.size()==1) {
-            FRAMEWORK_FILES = findFilesFromDirectory(FRAMEWORK_PATH.first())
-        }
-        else {
-            def files = []
-            FRAMEWORK_PATH.each{path ->
-                files += findFilesFromDirectory(path)
-            }
-            FRAMEWORK_FILES = files
-        }
-        log.info "FRAMEWORK_PATH: ${FRAMEWORK_PATH}"
-        log.info "FRAMEWORK_FILES: ${FRAMEWORK_FILES.size()}"
-
         REPOSITORY_FOLDER_PATH = configureRepositoryFolderPath()
-
-        GEMS_PATH = configureGemPath(gemsPathValue)
-        if(GEMS_PATH.empty){
-            log.error "It is not possible to configure gems path. Please, review the dependencies installation."
-            System.exit(-1)
-        } else {
-            log.info "GEMS_PATH: ${GEMS_PATH}"
-
-            loadProperties()
-            log.info "Properties were loaded."
-
-            log.info "FRAMEWORK_LIB_PATH: ${FRAMEWORK_LIB_PATH}"
-        }
+        loadProperties()
+        log.info "Properties were loaded."
     }
 
     static void configureEnvironment(String gherkinFilesRelativePath, String stepFilesRelativePath,
@@ -143,7 +108,6 @@ abstract class Util {
         VIEWS_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}views"
         CONTROLLER_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}controllers"
         MODEL_FILES_RELATIVE_PATH = "$PRODUCTION_FILES_RELATIVE_PATH${File.separator}models"
-        FRAMEWORK_LIB_PATH = configureLib()
 
         configurePropertiesRelatedToCodeLanguage()
 
@@ -298,34 +262,8 @@ abstract class Util {
         [framework: frameworkPath, gems: gemsPath]
     }
 
-    private static configureFrameworkBySystem(){
-        def frameworkPath = []
-        def gemPath = []
-        def commands = findGemCommandInWindows()
-        if(commands.empty) commands = findGemCommandInLinux()
-        commands?.each{ command ->
-            log.info "command in configureFrameworkBySystem: ${command.toString()}"
-            def result = findFrameworkAndGemsPath(command)
-            frameworkPath += result.framework.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-            gemPath += result.gems
-        }
-        FRAMEWORK_PATH = frameworkPath
-        gemPath
-    }
-
-    private static configureLib() {
-        configureMandatoryProperties(properties?.(ConstantData.PROP_LIB), GEMS_PATH)
-    }
-
     private static configureLib(String v) {
         configureMandatoryProperties(v, "")
-    }
-
-    private static configureGem(String value, String defaultValue) {
-        def folder = configureMandatoryProperties(value, defaultValue)
-        GEMS_PATH.replace(File.separator, Matcher.quoteReplacement(File.separator)) +
-                Matcher.quoteReplacement(File.separator) + "gems" +  Matcher.quoteReplacement(File.separator) +
-                folder + GEM_SUFFIX
     }
 
     private static configureGemPath() {
@@ -585,11 +523,6 @@ abstract class Util {
         }
     }
 
-    static List<String> findFrameworkClassFiles() {
-        if (FRAMEWORK_LIB_PATH.empty) return []
-        findFilesFromDirectoryByLanguage(FRAMEWORK_LIB_PATH)
-    }
-
     static List<String> findFilesFromDirectory(String directory) {
         def f = new File(directory)
         def files = []
@@ -652,6 +585,10 @@ abstract class Util {
         RESTRICT_GHERKIN_CHANGES = gherkinFilter
         ConstantData.DEFAULT_EVALUATION_FOLDER = folder
         createFolder(ConstantData.DEFAULT_EVALUATION_FOLDER)
+    }
+
+    static boolean isFrameworkFile(String file){
+        return file ==~ RegexUtil.LIB_PATH
     }
 
 }

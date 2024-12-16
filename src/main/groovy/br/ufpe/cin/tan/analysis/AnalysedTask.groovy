@@ -382,13 +382,7 @@ class AnalysedTask {
     }
 
     private configureUnknownMethods() {
-        if (TestCodeAbstractAnalyser.apiMethods == null || TestCodeAbstractAnalyser.apiMethods.empty) return methods
-        def unknownMethods = []
-        methods.each { m ->
-            def obj = TestCodeAbstractAnalyser.apiMethods.find { it.name == m }
-            if (!obj) unknownMethods += m
-        }
-        return unknownMethods
+        return methods
     }
 
 }

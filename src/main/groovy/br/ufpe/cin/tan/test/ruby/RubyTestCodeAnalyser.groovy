@@ -76,16 +76,11 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
     }
 
     Node generateAst(String path) {
-        def newpath = path.replaceAll(RegexUtil.FILE_SEPARATOR_REGEX, Matcher.quoteReplacement(File.separator))
-        def result = Util.FRAMEWORK_PATH.findAll{ newpath.contains(it) }
-
-        if(result.empty){
+        if(Util.isFrameworkFile(path)) return null
+        else {
             def index = path.indexOf(repositoryPath)
             def filename = index >= 0 ? path : repositoryPath + File.separator + path
             this.generateAstForFile(filename)
-        }
-        else {
-            this.generateAstForFile(path)
         }
     }
 
@@ -125,14 +120,7 @@ class RubyTestCodeAnalyser extends TestCodeAbstractAnalyser {
             reader?.close()
         }
 
-        def errorsToIgnore = errors.findAll{error ->
-            !(Util.FRAMEWORK_PATH.findAll{fp ->
-                error.path.contains(fp)
-            }).empty
-        }
-
-        def finalErrors = errors - errorsToIgnore
-        [node: result, errors: finalErrors]
+        [node: result, errors: errors]
     }
 
     private generateProjectRoutes() {
